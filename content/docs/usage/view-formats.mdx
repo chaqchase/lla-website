@@ -1,0 +1,82 @@
+---
+title: "View Formats"
+description: "lla view formats"
+order: 2
+published: true
+references: []
+---
+# Visualizing Your Files
+
+lla offers thoughtfully designed view formats, each crafted for specific workflows and visualization needs. Mix and match these formats with other options to build your ideal file exploration experience.
+
+## Core Views
+
+### Default View
+Clean, distraction-free listing for quick directory scans:
+```bash
+lla
+```
+
+### Long Format
+Rich metadata display for detailed file analysis:
+```bash
+lla -l
+```
+
+### Tree Structure
+Hierarchical exploration of directory relationships:
+```bash
+lla -t -d 3  # Navigate up to 3 levels deep
+```
+
+## Enhanced Organization
+
+### Table Layout
+Structured view optimized for data comparison:
+```bash
+lla -T
+```
+
+### Grid Display
+Space-efficient layout for dense directories:
+```bash
+lla -g
+```
+
+## Specialized Views
+
+### Git Integration
+Smart repository insights:
+```bash
+lla -G
+```
+
+### Timeline Organization
+Chronological file tracking:
+```bash
+lla --timeline
+```
+
+### Storage Analysis
+Visual disk usage insights:
+```bash
+lla -S # use --include-dirs to calculate directories sizes
+```
+
+## Advanced Navigation
+
+### Fuzzy Search
+Interactive file discovery:
+```bash
+lla --fuzzy
+```
+
+### Deep Directory Exploration
+Comprehensive subdirectory listing:
+```bash
+lla -R
+lla -R -d 3  # Set exploration depth
+```
+
+The `-R` option can be integrated with other options to create a more specific view. For example, `lla -R -l` 
+will show a detailed listing of all files and directories in the current directory.

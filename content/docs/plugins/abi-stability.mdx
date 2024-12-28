@@ -1,0 +1,140 @@
+---
+title: "ABI Stability"
+description: "Learn how lla's plugin system maintains ABI stability through Protocol Buffers and FFI layers. Understand how plugins can remain compatible across different lla versions and Rust compiler versions through careful API design and message-based communication patterns."
+order: 2
+published: true
+references: [https://github.com/triyanox/lla/tree/main/lla_plugin_interface]
+---
+# Building for Longevity: ABI Stability
+
+At the heart of lla's plugin ecosystem lies a thoughtfully designed ABI (Application Binary Interface) stability system. This foundation ensures your plugins remain reliable across lla versions and Rust compiler updates, providing a stable platform for extending lla's capabilities.
+
+## Core Architecture
+
+### Message-Based Foundation
+
+We've chosen Protocol Buffers as our communication backbone, creating a robust bridge between lla and its plugins:
+
+```protobuf
+message PluginMessage {
+    oneof message {
+        bool get_name = 1;
+        bool get_version = 2;
+        bool get_description = 3;
+        // ... other fields
+    }
+}
+```
+
+This approach delivers three key benefits:
+- Freedom from Rust ABI constraints
+- Language-neutral communication
+- Version resilience
+
+### Cross-Language Communication
+
+Our FFI layer speaks a universal language through C-compatible types:
+
+```rust
+#[repr(C)]
+pub struct RawBuffer {
+    pub ptr: *mut u8,
+    pub len: usize,
+    pub capacity: usize,
+}
+
+#[repr(C)]
+pub struct PluginApi {
+    pub version: u32,
+    pub handle_request: extern "C" fn(*mut std::ffi::c_void, *const u8, usize) -> RawBuffer,
+    pub free_response: extern "C" fn(*mut RawBuffer),
+}
+```
+
+### Version Intelligence
+
+Every plugin carries its identity:
+
+```rust
+pub const CURRENT_PLUGIN_API_VERSION: u32 = 1;
+```
+
+The system actively verifies version compatibility during loading, preventing unexpected behavior.
+
+## Data Interchange
+
+### Rich Metadata Exchange
+
+File information flows through a carefully structured Protocol Buffer format:
+
+```protobuf
+message EntryMetadata {
+    uint64 size = 1;
+    uint64 modified = 2;
+    uint64 accessed = 3;
+    uint64 created = 4;
+    bool is_dir = 5;
+    bool is_file = 6;
+    bool is_symlink = 7;
+    uint32 permissions = 8;
+    uint32 uid = 9;
+    uint32 gid = 10;
+}
+```
+
+### Extensible Design
+
+Plugins can enrich entries with their own insights:
+
+```protobuf
+message DecoratedEntry {
+    string path = 1;
+    EntryMetadata metadata = 2;
+    map<string, string> custom_fields = 3;
+}
+```
+
+## Implementation Intelligence
+
+### Smart Plugin Loading
+
+Our system leverages `libloading` for dynamic plugin management:
+- Isolated plugin environments
+- Message-based communication
+- Safe memory boundaries
+
+### Type Safety Guarantees
+
+We ensure reliability through:
+- Rigorous Protocol Buffer schemas
+- FFI-compatible type systems
+- Clear conversion pathways
+
+## Creating Plugins
+
+Building a plugin? Here's your path to success:
+
+1. Start with our FFI macros:
+   ```rust
+   declare_plugin!(MyPlugin);
+   ```
+
+2. Implement core functionality:
+   ```rust
+   impl Plugin for MyPlugin {
+       fn handle_raw_request(&mut self, request: &[u8]) -> Vec<u8> {
+           // Transform requests into responses
+       }
+   }
+   ```
+
+3. Handle data transformations:
+   ```rust
+   impl From<EntryMetadata> for proto::EntryMetadata {
+       fn from(meta: EntryMetadata) -> Self {
+           // Convert your data structures
+       }
+   }
+   ```
+
+You can use our [plugin utils](https://github.com/triyanox/lla/tree/main/lla_plugin_utils) which abstracts away the verbosity of the plugin interface implementation. View the other [plugins](https://github.com/triyanox/lla/tree/main/plugins) for more examples.

@@ -1,0 +1,82 @@
+---
+title: "File Filtering"
+description: "Filtering in lla"
+order: 3
+published: true
+references: []
+---
+# Finding Your Files
+
+lla's filtering system helps you quickly locate files using patterns, types, and logical combinations. Whether you need simple text matching or complex search criteria, lla provides intuitive tools to narrow down your results.
+
+## Pattern Matching
+
+### Basic Search
+Find files using simple text patterns:
+```bash
+lla -f "test"              # Match files containing "test"
+lla -f "test" -c          # Case-sensitive search
+lla -f ".rs"              # Find by extension
+```
+
+### Advanced Patterns
+
+#### Text Combinations
+```bash
+lla -f "test,spec"         # Find test OR spec
+lla -f "+test,api"         # Find test AND api
+```
+
+#### Regular Expressions
+```bash
+lla -f "regex:^test.*\.rs$"   # Rust test files
+lla -f "regex:\d{4}"          # Files with 4-digit numbers
+```
+
+#### Glob Patterns
+```bash
+lla -f "glob:*.{rs,toml}"     # Rust and TOML files
+lla -f "glob:test_*"          # Test-prefixed files
+```
+
+## File Type Filters
+
+### Show Specific Types
+```bash
+lla --dirs-only        # Directories
+lla --files-only       # Regular files
+lla --symlinks-only    # Symbolic links
+lla --dotfiles-only    # Hidden files/directories
+```
+
+### Hide Specific Types
+```bash
+lla --no-dirs          # No directories
+lla --no-files         # No regular files
+lla --no-symlinks      # No symbolic links
+lla --no-dotfiles      # No hidden files
+```
+
+## Logic Operations
+
+Craft precise searches with logical operators:
+```bash
+lla -f "test AND .rs"         # Test-related Rust files
+lla -f "test OR spec"         # Test or spec files
+lla -f "NOT test"             # Files without "test"
+lla -f "test XOR spec"        # Test or spec (not both)
+```
+
+## Combined Techniques
+
+Mix filters for precise results:
+```bash
+# Hidden directories only
+lla --dirs-only --dotfiles-only
+
+# Visible files only
+lla --files-only --no-dotfiles
+
+# Deep test file search
+lla -R -f "test" -d 2
+```

@@ -1,0 +1,59 @@
+---
+title: "Basic Usage"
+description: "Learn the essentials of lla"
+order: 1
+published: true
+references: []
+---
+# Getting Started with lla
+
+## Zero Configuration Design
+
+lla embraces simplicity with thoughtfully chosen defaults. While it offers deep customization options, you can start exploring your filesystem immediately. The default view presents a clean, information-rich layout that helps you understand your directory structure at a glance.
+
+## Core Command Structure
+
+lla follows familiar command-line patterns:
+
+```bash
+lla [options] [path]
+```
+
+The command works with both relative and absolute paths, defaulting to your current directory when no path is specified.
+
+## Default Experience
+
+Out of the box, lla provides:
+- Intuitive file and directory listings
+- Smart color coding for quick visual parsing
+- Optional file type icons
+- Alphabetical sorting
+- Hidden file visibility (toggle with --no-dotfiles)
+
+## Directory Navigation
+
+```bash
+lla                     # Current directory
+lla /path/to/dir       # Specific directory
+lla ..                 # Parent directory
+lla ~/Documents        # Home directory Documents
+```
+
+## Quick Filtering
+
+Rapidly find files using the `-f` flag:
+
+```bash
+lla -f "pattern"       # Match files containing "pattern"
+lla -f "*.rs"         # Find Rust files
+lla -f "test"         # Locate test-related files
+```
+
+## Essential Options
+
+```bash
+lla -l                 # Detailed view
+lla -t                 # Tree visualization
+lla -h                 # Help overview
+lla --version         # Version check
+```

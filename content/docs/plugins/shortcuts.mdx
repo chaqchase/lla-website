@@ -1,0 +1,114 @@
+---
+title: "Shortcuts"
+description: "Learn how to create and manage shortcuts for lla plugins to simplify common operations. Shortcuts allow you to create intuitive aliases for frequently used plugin actions, reducing typing and improving workflow efficiency."
+order: 3
+published: true
+references: []
+status: "new"
+---
+
+# Streamlining Your Workflow with Shortcuts
+
+Plugin shortcuts transform complex plugin commands into intuitive, memorable aliases. By creating thoughtful shortcuts for your most-used operations, you can focus on your work rather than remembering command syntax.
+
+## Creating Your Shortcuts
+
+The basic pattern for creating shortcuts is elegantly simple:
+
+```bash
+lla shortcut add NAME PLUGIN ACTION [-d DESCRIPTION]
+```
+
+Let's explore this with the Code Snippet Extractor plugin:
+
+```bash
+# Create an intuitive snippet extraction command
+lla shortcut add snip code_snippet_extractor extract -d "Extract code snippet"
+
+# Add a quick way to search your snippets
+lla shortcut add search code_snippet_extractor search -d "Search snippets"
+
+# Add a quick way to list your snippets
+lla shortcut add snippets code_snippet_extractor list -d "List all snippets"
+
+# Simple snippet viewing
+lla shortcut add view code_snippet_extractor get -d "View snippet details"
+```
+
+## Shortcuts in Action
+
+Transform verbose plugin commands into concise operations:
+
+```bash
+# Instead of this lengthy command:
+lla plugin --name code_snippet_extractor --action extract --args "file.rs" "function_name" 10 20 3
+
+# Simply use:
+lla snip "file.rs" "function_name" 10 20 3
+
+# Replace this:
+lla plugin --name code_snippet_extractor --action list
+
+# With this:
+lla snippets
+
+# Instead of:
+lla plugin --name code_snippet_extractor --action search --args "query"
+
+# Just type:
+lla search "query"
+```
+
+## Shortcut Management
+
+Keep your shortcuts organized:
+
+```bash
+# View all shortcuts
+lla shortcut list
+
+# Remove unused shortcuts
+lla shortcut remove snip
+```
+
+## Building a Complete Shortcut System
+
+Here's a thoughtfully designed set of shortcuts for the Code Snippet Extractor:
+
+```bash
+# Snippet Creation and Management
+lla shortcut add snip code_snippet_extractor extract -d "Extract code snippet"
+lla shortcut add tags code_snippet_extractor add-tags -d "Add tags to snippet"
+lla shortcut add cat code_snippet_extractor set-category -d "Set snippet category"
+
+# Viewing and Navigation
+lla shortcut add snippets code_snippet_extractor list -d "List all snippets"
+lla shortcut add view code_snippet_extractor get -d "View snippet details"
+
+# Data Portability
+lla shortcut add export code_snippet_extractor export -d "Export snippets"
+lla shortcut add import code_snippet_extractor import -d "Import snippets"
+```
+
+## Real-World Usage
+
+See how shortcuts simplify your daily workflow:
+
+```bash
+# Quick snippet extraction
+lla snip "main.rs" "process_data" 10 20 3
+
+# Effortless organization
+lla tags "abc123" "rust" "algorithm"
+lla cat "abc123" "Algorithms"
+
+# Simple navigation
+lla snippets
+lla view "abc123"
+
+# Search snippets
+lla search "abc123"
+
+# Data management
+lla export "my_snippets.json"
+```

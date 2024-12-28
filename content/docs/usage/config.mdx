@@ -1,0 +1,101 @@
+---
+title: "Configuration"
+description: "lla configuration"
+order: 5
+published: true
+references: []
+---
+# Customizing lla
+
+While lla works beautifully out of the box, you can tailor its behavior to match your workflow through a thoughtfully designed configuration system. This guide walks you through the available options and their impact on your experience.
+
+## Quick Setup
+
+Your configuration lives at `~/.config/lla/config.toml`. Get started with:
+
+```bash
+lla init              # Create your config
+lla config            # View current settings
+```
+
+## Core Settings
+
+Here's your blueprint for customization:
+
+```toml
+# Essential Behaviors
+default_sort = "name"          # name, size, or date
+default_format = "default"     # default, long, tree, etc.
+show_icons = true             # Enable file icons
+include_dirs = false          # Show directory sizes
+theme = "default"             # Your chosen theme
+default_depth = 3             # Directory traversal depth
+
+# Visual Organization
+[sort]
+dirs_first = false            # Directories before files
+case_sensitive = false        # Case-sensitive sorting
+natural = true               # Smart number sorting
+
+# Search Preferences
+[filter]
+case_sensitive = false        # Case-sensitive search
+no_dotfiles = false          # Hide hidden files
+
+# Performance Tuning
+[formatters.tree]
+max_lines = 20000            # Tree view limit
+
+[listers.recursive]
+max_entries = 20000          # Recursive listing limit
+
+[listers.fuzzy]
+ignore_patterns = [          # Fuzzy search exclusions
+    "node_modules",
+    "target",
+    ".git",
+    ".idea",
+    ".vscode"
+]
+```
+
+## Display Formats
+
+Choose your default view:
+- `default`: Clean, efficient listing
+- `long`: Detailed metadata view
+- `tree`: Hierarchical structure
+- `grid`: Space-optimized layout
+- `git`: Repository insights
+- `timeline`: Time-based grouping
+- `sizemap`: Storage visualization
+- `table`: Structured data view
+
+## Command-Line Configuration
+
+Quickly adjust settings without editing files:
+
+```bash
+# Core preferences
+lla config --set default_sort size
+lla config --set default_format long
+lla config --set show_icons true
+
+# Sorting behavior
+lla config --set sort.dirs_first true
+lla config --set sort.case_sensitive true
+
+# Search preferences
+lla config --set filter.case_sensitive true
+lla config --set filter.no_dotfiles true
+```
+
+## Performance Considerations
+
+lla includes thoughtful defaults for large directory operations:
+- Tree view: 20,000 entries maximum
+- Recursive listing: 20,000 entries maximum
+- Directory sizes: Optional for performance
+- Fuzzy search: Smart pattern exclusions
+
+These limits ensure smooth performance while handling substantial directory structures. Adjust them based on your system's capabilities and specific needs.

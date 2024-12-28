@@ -1,0 +1,82 @@
+---
+title: "Concepts"
+description: "Introduction to lla's plugin system and architecture. Learn how to extend lla's core functionality through plugins that can add new commands, modify displays, and integrate with external tools. Includes overview of installation, management, and updates."
+order: 1
+published: true
+references: [https://github.com/triyanox/lla/blob/main/plugins.md,https://github.com/triyanox/lla/tree/main/lla_plugin_interface]
+---
+# Extending lla's Capabilities
+
+The heart of lla's extensibility lies in its thoughtfully designed plugin system. Built on a foundation of version independence and robust message passing, this architecture lets you enhance and customize lla while maintaining stability and performance.
+
+## Core Design
+
+Our plugin system leverages Protocol Buffers to create a reliable, version-agnostic communication layer. This thoughtful approach ensures:
+
+- Isolated execution for stability and security
+- Seamless compatibility across lla versions
+- Consistent interface for developers
+- Sophisticated data handling capabilities
+
+## Getting Started
+
+Add new capabilities to your lla installation:
+
+```bash
+# Install plugins
+lla install --git https://github.com/user/plugin     # From Git repository
+lla install --dir path/to/plugin                     # From local directory
+
+# Manage your plugins
+lla use                    # Interactive management
+lla --enable-plugin name   # Enable functionality
+lla --disable-plugin name  # Disable when needed
+```
+
+## Plugin Organization
+
+Your plugins reside in:
+- Standard path: `~/.config/lla/plugins`
+- Custom location: Define via `plugins_dir` in config
+
+## Keeping Current
+
+Maintain your plugins' health:
+
+```bash
+lla update                 # Refresh all plugins
+lla update plugin_name     # Update specific functionality
+```
+
+## Enhancement Categories
+
+Plugins can transform lla in three key areas:
+
+1. **Visual Enhancements**
+   - Custom view formats
+   - Enhanced information display
+   - Visual styling options
+
+2. **Tool Integration**
+   - Version control awareness
+   - External tool connectivity
+   - Custom file handlers
+
+3. **Command Extensions**
+   - New functionality
+   - Custom operations
+   - Workflow automation
+
+## Plugin Management
+
+Fine-tune your plugin setup through configuration:
+
+```toml
+# In ~/.config/lla/config.toml
+
+# Active plugins
+enabled_plugins = ["git_status", "file_hash"]
+
+# Custom plugin location
+plugins_dir = "~/custom/plugin/path"
+```

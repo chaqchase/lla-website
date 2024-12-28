@@ -1,0 +1,62 @@
+---
+title: "Sorting and Organizing"
+description: "Sorting and organizing in lla"
+order: 4
+published: true
+references: []
+---
+# Organizing Your Files
+
+lla provides thoughtful sorting and organization capabilities that help you view your files exactly how you need them. From basic alphabetical sorting to advanced directory traversal, these features work together to create a clear, organized view of your filesystem.
+
+## Core Sorting
+
+Navigate your files with three intuitive sorting methods:
+```bash
+lla -s name            # Alphabetical by filename (default)
+lla -s size            # Size-based, largest first
+lla -s date            # Time-based, newest first
+```
+
+## Sorting Refinements
+
+Fine-tune your sort preferences:
+```bash
+lla -r                 # Reverse the order
+lla --sort-dirs-first  # Prioritize directories
+lla --sort-case-sensitive # Enable case sensitivity
+lla --sort-natural     # Smart number sorting (2.txt before 10.txt)
+```
+
+## Directory Navigation
+
+Control how deeply lla explores your directory structure:
+```bash
+lla -R                 # Show all subdirectories
+lla -R -d 2               # Limit exploration depth
+lla --include-dirs     # Show directory sizes
+```
+
+## Performance Safeguards
+
+lla intelligently handles large directories with built-in limits:
+```toml
+# Adjust in ~/.config/lla/config.toml
+[formatters.tree]
+max_lines = 20000      # Tree view entries
+
+[listers.recursive]
+max_entries = 20000    # Recursive listing entries
+```
+
+## Visual Preferences
+
+Customize your viewing experience:
+```bash
+lla --icons           # Show file icons
+lla --no-icons       # Hide icons
+lla --no-colors      # Disable colors
+
+# Combine preferences
+lla --icons -s size  # Size-sorted with icons
+```
