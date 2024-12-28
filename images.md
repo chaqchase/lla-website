@@ -11,3 +11,7 @@
 ![plugin-use](https://github.com/user-attachments/assets/c2feb6ac-6885-4c95-b2c9-cce8eedfa7ab)
 ![theme](https://github.com/user-attachments/assets/73c9a741-9b55-4109-a1e8-45a2ffaa787b)
 ![plugins-view](https://github.com/user-attachments/assets/8ecd56bc-6fee-4822-acb8-6699a7226920)
+
+
+https://github.com/user-attachments/assets/fbba78ee-e0e3-48c8-9b04-c3cfeeb8283c
+
