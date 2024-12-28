@@ -95,7 +95,9 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
                                   ? 'warning'
                                   : childValue.status === 'help'
                                     ? 'warning'
-                                    : 'info'
+                                    : childValue.status === 'new'
+                                      ? 'success'
+                                      : 'info'
                             }
                             className="lowercase -mr-1 text-xs"
                           >
