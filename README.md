@@ -1,5 +1,7 @@
 # LLA Website
 
+![baner](https://github.com/user-attachments/assets/16fd5f61-2398-4a59-b719-9d2e3e7b22a5)
+
 This is the official documentation website for `lla` - a modern, fast file explorer built in Rust that enhances the traditional ls command with powerful features like plugins, specialized views, and Git integration.
 
 ## About LLA
