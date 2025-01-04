@@ -1,0 +1,118 @@
+---
+title: "File Organizer"
+description: "Organizes files in directories using various strategies"
+order: 13
+published: true
+references: [https://github.com/chaqchase/lla/blob/main/plugins/file_organizer]
+status: "new"
+---
+
+# LLA File Organizer Plugin
+
+A powerful file organization plugin for `lla` that provides multiple strategies for organizing files with preview capabilities and rich formatting.
+
+## Features
+
+- Multiple organization strategies:
+  - Extension-based grouping
+  - Date-based organization
+  - Type-based categorization
+  - Size-based sorting
+- Preview mode before applying changes
+- Configurable ignore patterns
+- Color-coded output
+- Smart file type detection
+
+## Usage
+
+```bash
+# Organize using default strategy (extension)
+lla plugin --name file_organizer --action organize /path/to/dir
+
+# Organize using specific strategy
+lla plugin --name file_organizer --action organize /path/to/dir extension
+lla plugin --name file_organizer --action organize /path/to/dir date
+lla plugin --name file_organizer --action organize /path/to/dir type
+lla plugin --name file_organizer --action organize /path/to/dir size
+
+# Preview changes before organizing
+lla plugin --name file_organizer --action preview /path/to/dir extension
+
+# Show help and available options
+lla plugin --name file_organizer --action help
+```
+
+## Configuration
+
+Config file: `~/.config/lla/file_organizer/config.toml`
+
+```toml
+[colors]
+success = "bright_green"
+info = "bright_blue"
+error = "bright_red"
+path = "bright_yellow"
+
+[extension]
+enabled = true
+create_nested = true
+
+[date]
+enabled = true
+format = "%Y/%m/%d"
+group_by = "month"
+
+[type_strategy]
+enabled = true
+categories = {
+    "documents" = ["pdf", "doc", "docx", "txt"],
+    "images" = ["jpg", "png", "gif", "svg"],
+    "videos" = ["mp4", "mov", "avi"],
+    "audio" = ["mp3", "wav", "flac"]
+}
+
+[size]
+enabled = true
+ranges = [
+    { name = "tiny", max_bytes = 102400 },
+    { name = "small", max_bytes = 1048576 },
+    { name = "medium", max_bytes = 104857600 },
+    { name = "large", max_bytes = 1073741824 },
+    { name = "huge" }
+]
+```
+
+## Display Examples
+
+Preview mode:
+
+```
+📦 File Organization Preview
+══════════════════════════════
+Directory: /path/to/dir
+Strategy: extension
+══════════════════════════════
+
+📁 images/jpg
+  → photo.jpg
+  → screenshot.jpg
+
+📁 documents/pdf
+  → report.pdf
+  → invoice.pdf
+
+══════════════════════════════
+Summary: 4 files to organize
+══════════════════════════════
+```
+
+Result view:
+
+```
+📦 Organization Complete
+══════════════════════════════
+✓ Moved 2 files to images/jpg
+✓ Moved 2 files to documents/pdf
+══════════════════════════════
+Total: 4 files organized
+``` 
