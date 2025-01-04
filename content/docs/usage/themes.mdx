@@ -5,6 +5,7 @@ order: 6
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/themes]
 ---
+
 # Crafting Your Perfect Theme
 
 lla's theming system empowers you to create a file explorer that matches your aesthetic preferences and enhances your workflow. Through thoughtfully designed TOML configuration files, you can customize every aspect of your file listings, from basic colors to intricate pattern matching.
@@ -21,6 +22,22 @@ Your themes live in `~/.config/lla/themes/` with a `.toml` extension:
 ├── light.toml
 ├── poimandres.toml
 └── custom.toml
+```
+
+## Themes Installation
+
+lla ships with a default theme collection, you can pull all builtin themes with the following command:
+
+```bash
+lla theme pull # pull all builtin themes
+```
+
+you can also install custom themes using the following command:
+
+```bash
+lla theme install /path/to/theme.toml
+# or a directory with multiple themes
+lla theme install /path/to/themes/
 ```
 
 ## Theme Architecture
