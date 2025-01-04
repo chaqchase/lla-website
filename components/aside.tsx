@@ -63,7 +63,7 @@ const renderHierarchy = (node: HierarchyNode, level: number = 0) => {
     })
   return (
     <>
-      <Accordion type="multiple" defaultValue={['about', 'usage', 'plugins']} className="w-full">
+      <Accordion type="multiple" defaultValue={['about', 'usage', 'plugins', 'first-party-plugins']} className="w-full">
         {filteredNodeEntries.map(([key, value]) => (
           <AccordionItem key={key} value={key}>
             <Trigger className="[&_.jr131]:size-4 [&_.jr131]:text-zinc-500 [&_.jr131]:fill-zinc-500/10 dark:[&_.jr131]:fill-zinc-500/30">
@@ -77,8 +77,13 @@ const renderHierarchy = (node: HierarchyNode, level: number = 0) => {
                   <div className="h-full absolute left-0 bg-zinc-200 dark:bg-zinc-800 w-px ml-4" />
                   {Object.entries(value as HierarchyNode).map(([subKey, subValue]) =>
                     typeof subValue === 'object' && 'title' in subValue ? (
-                      <AsideLink className="pl-[2rem] flex items-center gap-x-2" key={subKey} href={`/${subValue.slug}`}>
-                        {goodTitle((subValue as Doc).title)} {subValue.status && (
+                      <AsideLink
+                        className="pl-[2rem] flex items-center gap-x-2"
+                        key={subKey}
+                        href={`/${subValue.slug}`}
+                      >
+                        {goodTitle((subValue as Doc).title)}{' '}
+                        {subValue.status && (
                           <Badge
                             intent={
                               subValue?.status === 'wip'
@@ -100,7 +105,7 @@ const renderHierarchy = (node: HierarchyNode, level: number = 0) => {
                     ) : (
                       <AccordionItem key={subKey} value={subKey}>
                         <Trigger className="pl-[2rem] text-muted-fg group-data-[state=open]:text-fg">
-                          {goodTitle(subKey)} 
+                          {goodTitle(subKey)}
                         </Trigger>
                         <AccordionContent className="relative overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
                           {Object.entries(subValue as HierarchyNode).map(([childKey, childValue]) =>
