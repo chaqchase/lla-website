@@ -10,8 +10,6 @@ interface InstallProps {
 const DefaultInstallation: React.FC<InstallProps> = ({ items = [] }) => {
   const getInstallCommand = (packageManager: string) => {
     switch (packageManager) {
-      case 'cargo':
-        return `cargo install ${items.join(' ')}`
       case 'brew':
         return `brew install ${items.join(' ')}`
       case 'paru':
@@ -27,9 +25,6 @@ const DefaultInstallation: React.FC<InstallProps> = ({ items = [] }) => {
     <div>
       <Tabs className="mt-4" aria-label="Packages">
         <TabList>
-          <Tab className="font-mono" id="cargo">
-            cargo
-          </Tab>
           <Tab className="font-mono" id="brew">
             brew
           </Tab>
@@ -40,9 +35,6 @@ const DefaultInstallation: React.FC<InstallProps> = ({ items = [] }) => {
             pkgin
           </Tab>
         </TabList>
-        <TabPanel id="cargo">
-          <Snippet className="bg-[#0e0e10] text-zinc-200" text={getInstallCommand('cargo')} />
-        </TabPanel>
         <TabPanel id="brew">
           <Snippet className="bg-[#0e0e10] text-zinc-200" text={getInstallCommand('brew')} />
         </TabPanel>

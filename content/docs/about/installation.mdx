@@ -7,9 +7,24 @@ references: []
 ---
 # Installation
 
+## Using Installation Script
+
+The easiest way to install lla is using our installation script:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
+```
+
+This script will automatically:
+
+- Detect your OS and architecture
+- Download the appropriate binary
+- Verify the checksum
+- Install lla to `/usr/local/bin`
+
 ## Quick Start with Cargo
 
-The recommended way to install lla is through Cargo, Rust's package manager:
+You can also install lla using Cargo, Rust's package manager:
 
 ```bash
 cargo install lla
