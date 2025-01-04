@@ -15,3 +15,4 @@
 
 https://github.com/user-attachments/assets/fbba78ee-e0e3-48c8-9b04-c3cfeeb8283c
 
+![fuzzy](https://github.com/user-attachments/assets/ec946fd2-34d7-40b7-b951-ffd9c4009ad6)
