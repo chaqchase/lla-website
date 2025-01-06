@@ -51,6 +51,13 @@ max_lines = 20000            # Tree view limit
 [listers.recursive]
 max_entries = 20000          # Recursive listing limit
 
+# Grid formatter configuration
+[formatters.grid]
+# Whether to ignore terminal width by default
+ignore_width = false
+# Maximum width for grid view when ignore_width is true
+max_width = 200
+
 [listers.fuzzy]
 ignore_patterns = [          # Fuzzy search exclusions
     "node_modules",

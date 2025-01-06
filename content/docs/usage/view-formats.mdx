@@ -45,6 +45,7 @@ lla -T
 Space-efficient layout for dense directories:
 ```bash
 lla -g
+lla -g --grid-ignore # Use grid view ignoring terminal width (Warning: output may extend beyond screen width) - you can configure the max width in the config file
 ```
 <img src="https://github.com/user-attachments/assets/b81d01ea-b830-4833-8791-7b62ff9137df" className="rounded-2xl" alt="grid" />
 
@@ -89,5 +90,5 @@ lla -R -d 3  # Set exploration depth
 ```
 <img src="https://github.com/user-attachments/assets/f8fa0901-8866-4b92-a76e-3b7fd307f04e" className="rounded-2xl" alt="recursive" />
 
-The `-R` option can be integrated with other options to create a more specific view. For example, `lla -R -l` 
+The `-R` option can be integrated with other options to create a more specific view. For example, `lla -R -l`
 will show a detailed listing of all files and directories in the current directory.

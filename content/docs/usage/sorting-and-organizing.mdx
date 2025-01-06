@@ -60,3 +60,13 @@ lla --no-colors      # Disable colors
 # Combine preferences
 lla --icons -s size  # Size-sorted with icons
 ```
+
+## Permission Formats
+
+```bash
+lla -l --permission-format=symbolic   # Standard rwx format (default)
+lla -l --permission-format=octal      # Numeric format (e.g., 644)
+lla -l --permission-format=binary     # Binary representation
+lla -l --permission-format=verbose    # Detailed text description
+lla -l --permission-format=compact    # Condensed numeric notation
+```
