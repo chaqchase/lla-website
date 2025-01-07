@@ -40,19 +40,19 @@ path = "bright_yellow"
 lla plugin --name file_copier --action add
 
 # Add files from a specific directory to clipboard
-lla plugin --name file_copier --action add /path/to/source
+lla plugin --name file_copier --action add --args /path/to/source
 
 # Copy all files from clipboard to current directory
 lla plugin --name file_copier --action copy-all
 
 # Copy all files from clipboard to specific directory
-lla plugin --name file_copier --action copy-all /path/to/destination
+lla plugin --name file_copier --action copy-all --args /path/to/destination
 
 # Copy selected files from clipboard to current directory
 lla plugin --name file_copier --action copy-partial
 
 # Copy selected files from clipboard to specific directory
-lla plugin --name file_copier --action copy-partial /path/to/destination
+lla plugin --name file_copier --action copy-partial --args /path/to/destination
 ```
 
 ### Clipboard Management
@@ -74,11 +74,11 @@ lla plugin --name file_copier --action help
 
 ```bash
 # Add files from source directory
-lla plugin --name file_copier --action add /path/to/source
+lla plugin --name file_copier --action add --args /path/to/source
 # Select files to copy using space, confirm with enter
 
 # Copy all files to target directory
-lla plugin --name file_copier --action copy-all /path/to/target
+lla plugin --name file_copier --action copy-all --args /path/to/target
 ```
 
 ### 2. Copying Files Using Current Directory Navigation
@@ -108,7 +108,7 @@ lla plugin --name file_copier --action add
 # Select files to add to clipboard
 
 # Copy selected files to a specific directory without changing location
-lla plugin --name file_copier --action copy-partial /path/to/target
+lla plugin --name file_copier --action copy-partial --args /path/to/target
 ```
 
 ## Display Format

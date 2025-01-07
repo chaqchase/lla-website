@@ -40,19 +40,19 @@ path = "bright_yellow"
 lla plugin --name file_mover --action add
 
 # Add files from a specific directory to clipboard
-lla plugin --name file_mover --action add /path/to/source
+lla plugin --name file_mover --action add --args /path/to/source
 
 # Move all files from clipboard to current directory
 lla plugin --name file_mover --action move-all
 
 # Move all files from clipboard to specific directory
-lla plugin --name file_mover --action move-all /path/to/destination
+lla plugin --name file_mover --action move-all --args /path/to/destination
 
 # Move selected files from clipboard to current directory
 lla plugin --name file_mover --action move-partial
 
 # Move selected files from clipboard to specific directory
-lla plugin --name file_mover --action move-partial /path/to/destination
+lla plugin --name file_mover --action move-partial --args /path/to/destination
 ```
 
 ### Clipboard Management
@@ -74,11 +74,11 @@ lla plugin --name file_mover --action help
 
 ```bash
 # Add files from source directory
-lla plugin --name file_mover --action add /path/to/source
+lla plugin --name file_mover --action add --args /path/to/source
 # Select files to move using space, confirm with enter
 
 # Move all files to target directory
-lla plugin --name file_mover --action move-all /path/to/target
+lla plugin --name file_mover --action move-all --args /path/to/target
 ```
 
 ### 2. Moving Files Using Current Directory Navigation
@@ -108,7 +108,7 @@ lla plugin --name file_mover --action add
 # Select files to add to clipboard
 
 # Move selected files to a specific directory without changing location
-lla plugin --name file_mover --action move-partial /path/to/target
+lla plugin --name file_mover --action move-partial --args /path/to/target
 ```
 
 ## Display Format
