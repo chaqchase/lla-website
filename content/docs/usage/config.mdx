@@ -7,7 +7,7 @@ references: []
 ---
 # Customizing lla
 
-While lla works beautifully out of the box, you can tailor its behavior to match your workflow through a thoughtfully designed configuration system. This guide walks you through the available options and their impact on your experience.
+lla is configurable. Use these options to match your workflow.
 
 <img src="https://github.com/user-attachments/assets/9299594e-292a-4179-9ab8-33cc8df03b69" className="rounded-2xl" alt="theme" />
 
@@ -22,7 +22,7 @@ lla config            # View current settings
 
 ## Core Settings
 
-Here's your blueprint for customization:
+Key settings:
 
 ```toml
 # Essential Behaviors
@@ -57,6 +57,10 @@ max_entries = 20000          # Recursive listing limit
 ignore_width = false
 # Maximum width for grid view when ignore_width is true
 max_width = 200
+
+[formatters.long]
+hide_group = false        # Hide the group column
+relative_dates = false    # Show dates like "2h ago"
 
 [listers.fuzzy]
 ignore_patterns = [          # Fuzzy search exclusions
@@ -101,10 +105,10 @@ lla config --set filter.no_dotfiles true
 
 ## Performance Considerations
 
-lla includes thoughtful defaults for large directory operations:
+Defaults for large directory operations:
 - Tree view: 20,000 entries maximum
 - Recursive listing: 20,000 entries maximum
 - Directory sizes: Optional for performance
 - Fuzzy search: Smart pattern exclusions
 
-These limits ensure smooth performance while handling substantial directory structures. Adjust them based on your system's capabilities and specific needs.
+Adjust these based on your system.

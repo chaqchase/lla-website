@@ -6,15 +6,15 @@ published: true
 references: [https://github.com/chaqchase/lla/tree/main/themes]
 ---
 
-# Crafting Your Perfect Theme
+# Themes
 
-lla's theming system empowers you to create a file explorer that matches your aesthetic preferences and enhances your workflow. Through thoughtfully designed TOML configuration files, you can customize every aspect of your file listings, from basic colors to intricate pattern matching.
+Customize colors and styles using TOML theme files.
 
 <img src="https://github.com/user-attachments/assets/73c9a741-9b55-4109-a1e8-45a2ffaa787b" className="rounded-2xl" alt="theme" />
 
 ## Theme Organization
 
-Your themes live in `~/.config/lla/themes/` with a `.toml` extension:
+Themes live in `~/.config/lla/themes/` with a `.toml` extension:
 
 ```
 ~/.config/lla/themes/
@@ -26,13 +26,13 @@ Your themes live in `~/.config/lla/themes/` with a `.toml` extension:
 
 ## Themes Installation
 
-lla ships with a default theme collection, you can pull all builtin themes with the following command:
+Pull built-in themes:
 
 ```bash
 lla theme pull # pull all builtin themes
 ```
 
-you can also install custom themes using the following command:
+Install custom themes:
 
 ```bash
 lla theme install /path/to/theme.toml
@@ -42,7 +42,7 @@ lla theme install /path/to/themes/
 
 ## Theme Architecture
 
-Every theme consists of carefully organized sections:
+Each theme has these sections:
 
 ```toml
 # Theme metadata
@@ -67,7 +67,7 @@ directory = "#89AFFF"
 
 ## Color Expression
 
-lla embraces flexibility in color definition:
+Define colors in several ways:
 
 ```toml
 [colors]
@@ -94,23 +94,23 @@ disabled = "none"
 
 ### Available Named Colors
 
-Basic Colors:
+Basic:
 
 - `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`
 
-Bright Variants:
+Bright variants:
 
 - `bright_black` (or `gray`/`grey`)
 - `bright_red`, `bright_green`, `bright_yellow`
 - `bright_blue`, `bright_magenta`, `bright_cyan`, `bright_white`
 
-Additional Colors:
+Additional:
 
 - `navy`, `teal`, `maroon`, `purple`, `olive`, `silver`
 
 ## Core Elements
 
-Define your foundation colors:
+Core UI colors:
 
 ```toml
 [colors]
@@ -136,7 +136,7 @@ permission_none = "#282E30"  # No permission
 
 ## Special File Handling
 
-Create sophisticated rules for specific files and patterns:
+Rules for specific files and patterns:
 
 ### 1. Custom Folders
 
@@ -182,7 +182,7 @@ Create sophisticated rules for specific files and patterns:
 
 ## Extension System
 
-Create logical groups of related file types:
+Group related file types:
 
 ### 1. Extension Groups
 
@@ -205,7 +205,7 @@ rs = "#FF0000"      # Override just .rs files
 
 ## Color Resolution Logic
 
-lla follows a careful priority system when determining colors:
+Color priority:
 
 1. For Directories:
    - Exact folder name match
@@ -222,7 +222,7 @@ lla follows a careful priority system when determining colors:
 
 # Built-in Theme Collection
 
-lla ships with carefully crafted themes for every preference:
+Included themes:
 
 - **[default](https://github.com/chaqchase/lla/blob/main/themes/default.toml)**: Traditional terminal colors with carefully selected colors for optimal visibility
 - **[dark](https://github.com/chaqchase/lla/blob/main/themes/dark.toml)**: Modern dark theme with enhanced visibility and rich colors for dark terminals
@@ -250,7 +250,7 @@ lla ships with carefully crafted themes for every preference:
 
 # Theme Application
 
-Apply your chosen theme through configuration, the chosen theme should be available in the `~/.config/lla/themes/` directory:
+Apply a theme (it must exist in `~/.config/lla/themes/`):
 
 ```toml
 # In ~/.config/lla/config.toml
@@ -267,13 +267,13 @@ lla theme
 lla config --set theme dark
 ```
 
-Disable theming when needed:
+Disable theming:
 
 ```bash
 lla config --set theme none
 ```
 
-For a completely color-free experience:
+No colors:
 
 ```bash
 lla --no-colors # works with all listing commands

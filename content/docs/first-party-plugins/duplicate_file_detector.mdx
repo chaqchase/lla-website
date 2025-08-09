@@ -7,14 +7,14 @@ references: [https://github.com/chaqchase/lla/blob/main/plugins/duplicate_file_d
 ---
 # LLA Duplicate File Detector Plugin
 
-A plugin for `lla` that identifies identical files using secure hash comparison.
+Find duplicate files by content hash.
 
 ## Features
 
-- SHA-256 content hashing with intelligent caching
-- Original file and duplicate chain tracking
-- Color-coded status display
-- Performance optimized with chunk-based processing
+- SHA-256 hashing with caching
+- Tracks originals and duplicates
+- Color-coded status
+- Chunk-based performance
 
 ## Configuration
 
@@ -67,7 +67,7 @@ Duplicate Copies: /path/to/copy1.txt
 
 ## Technical Details
 
-- Uses SHA-256 hashing with 8KB chunk-based reading
-- Implements efficient caching with automatic invalidation
-- Thread-safe operations
-- Color-coded status indicators for duplicates and originals
+- SHA-256 with 8KB chunks
+- Cache with invalidation
+- Thread-safe
+- Color-coded indicators

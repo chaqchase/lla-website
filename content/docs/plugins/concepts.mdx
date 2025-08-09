@@ -7,13 +7,13 @@ references: [https://github.com/chaqchase/lla/blob/main/plugins.md,https://githu
 ---
 # Extending lla's Capabilities
 
-The heart of lla's extensibility lies in its thoughtfully designed plugin system. Built on a foundation of version independence and robust message passing, this architecture lets you enhance and customize lla while maintaining stability and performance.
+lla supports plugins through a stable, message-based system. It’s version-independent and efficient.
 
 <video src="https://github.com/user-attachments/assets/fbba78ee-e0e3-48c8-9b04-c3cfeeb8283c" className="rounded-2xl" autoPlay loop muted playsInline/>
 
 ## Core Design
 
-Our plugin system leverages Protocol Buffers to create a reliable, version-agnostic communication layer. This thoughtful approach ensures:
+The plugin system uses Protocol Buffers for communication. This provides:
 
 - Isolated execution for stability and security
 - Seamless compatibility across lla versions
@@ -22,7 +22,7 @@ Our plugin system leverages Protocol Buffers to create a reliable, version-agnos
 
 ## Getting Started
 
-Add new capabilities to your lla installation:
+Install and manage plugins:
 
 > **Note:**
 > You will need to install rust to be able to install plugins.
@@ -45,13 +45,13 @@ lla --disable-plugin name  # Disable when needed
 
 ## Plugin Organization
 
-Your plugins reside in:
+Plugin locations:
 - Standard path: `~/.config/lla/plugins`
 - Custom location: Define via `plugins_dir` in config
 
 ## Keeping Current
 
-Maintain your plugins' health:
+Update plugins:
 
 ```bash
 lla update                 # Refresh all plugins
@@ -60,7 +60,7 @@ lla update plugin_name     # Update specific functionality
 
 ## Enhancement Categories
 
-Plugins can transform lla in three key areas:
+Plugins can add:
 
 1. **Visual Enhancements**
    - Custom view formats
@@ -79,7 +79,7 @@ Plugins can transform lla in three key areas:
 
 ## Plugin Management
 
-Fine-tune your plugin setup through configuration:
+Configure plugins:
 
 ```toml
 # In ~/.config/lla/config.toml

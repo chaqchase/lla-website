@@ -1,0 +1,61 @@
+---
+title: "Machine Output"
+description: "JSON, NDJSON, and CSV streaming outputs"
+order: 7
+published: true
+references: []
+---
+
+# Machine Output
+
+Use machine modes for structured output. Filters, sorts, and depth still apply; only the output format changes. Output is streamed to handle large listings.
+
+## Modes
+
+- `--json`: Single JSON array (streamed). Use `--pretty` for indentation.
+- `--ndjson`: One JSON object per line.
+- `--csv`: CSV with a header row.
+
+Flags are mutually exclusive. `--pretty` only affects `--json`.
+
+## Examples
+
+```bash
+lla --json --pretty
+lla --ndjson
+lla --csv
+```
+
+## JSON/NDJSON schema (stable)
+
+All fields are present; nulls where appropriate.
+
+```
+{
+  "path": "src/main.rs",
+  "name": "main.rs",
+  "extension": "rs" | null,
+  "file_type": "file" | "dir" | "symlink" | "other",
+  "size_bytes": 1234,
+  "modified": "2024-05-01T12:34:56Z",
+  "created": "..." | null,
+  "accessed": "..." | null,
+  "mode_octal": "0644",
+  "owner_user": "mohamed" | null,
+  "owner_group": "staff" | null,
+  "inode": 1234567 | null,
+  "hard_links": 1 | null,
+  "symlink_target": "..." | null,
+  "is_hidden": false,
+  "git_status": "M." | null,
+  "plugin": { /* plugin-provided fields, if any */ }
+}
+```
+
+## CSV columns (v1)
+
+```
+path,name,extension,file_type,size_bytes,modified,created,accessed,mode_octal,owner_user,owner_group,inode,hard_links,symlink_target,is_hidden,git_status
+```
+
+

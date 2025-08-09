@@ -7,53 +7,50 @@ references: []
 ---
 # Getting Started with lla
 
-## Zero Configuration Design
+## Zero configuration
 
-lla embraces simplicity with thoughtfully chosen defaults. While it offers deep customization options, you can start exploring your filesystem immediately. The default view presents a clean, information-rich layout that helps you understand your directory structure at a glance.
+lla works out of the box. Run it in any directory for a clear, useful listing.
 
-## Core Command Structure
-
-lla follows familiar command-line patterns:
+## Core command
 
 ```bash
 lla [options] [path]
 ```
 
-The command works with both relative and absolute paths, defaulting to your current directory when no path is specified.
+If no path is given, it lists the current directory. Relative and absolute paths are supported.
 
-## Default Experience
+## Defaults
 
-Out of the box, lla provides:
-- Intuitive file and directory listings
-- Smart color coding for quick visual parsing
-- Optional file type icons
-- Alphabetical sorting
-- Hidden file visibility (toggle with --no-dotfiles)
+- Clear listings
+- Color output
+- Optional file icons
+- Alphabetical sort
+- Hidden files included; hide with `--no-dotfiles`
 
-## Directory Navigation
+## Directory navigation
 
 ```bash
-lla                     # Current directory
-lla /path/to/dir       # Specific directory
-lla ..                 # Parent directory
-lla ~/Documents        # Home directory Documents
+lla                   # Current directory
+lla /path/to/dir      # Specific directory
+lla ..                # Parent directory
+lla ~/Documents       # Home directory Documents
 ```
 
-## Quick Filtering
+## Quick filtering
 
-Rapidly find files using the `-f` flag:
+Find files using the `-f` flag:
 
 ```bash
 lla -f "pattern"       # Match files containing "pattern"
-lla -f "*.rs"         # Find Rust files
-lla -f "test"         # Locate test-related fileslla -f ".*"           # List hidden files
+lla -f "test"          # Locate test-related files
+lla -f ".rs"           # Filter by extension
 ```
 
-## Essential Options
+## Essential options
 
 ```bash
 lla -l                 # Detailed view
-lla -t                 # Tree visualization
-lla -h                 # Help overview
-lla --version         # Version check
+lla -t                 # Tree view
+lla -h                 # Help
+lla --version          # Version
 ```

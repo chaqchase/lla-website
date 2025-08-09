@@ -5,15 +5,15 @@ order: 2
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/lla_plugin_interface]
 ---
-# Building for Longevity: ABI Stability
+# ABI Stability
 
-At the heart of lla's plugin ecosystem lies a thoughtfully designed ABI (Application Binary Interface) stability system. This foundation ensures your plugins remain reliable across lla versions and Rust compiler updates, providing a stable platform for extending lla's capabilities.
+lla’s plugin system keeps ABI stable across lla and Rust versions. Plugins remain compatible.
 
 ## Core Architecture
 
 ### Message-Based Foundation
 
-We've chosen Protocol Buffers as our communication backbone, creating a robust bridge between lla and its plugins:
+Protocol Buffers is the communication layer between lla and plugins:
 
 ```protobuf
 message PluginMessage {
@@ -26,14 +26,14 @@ message PluginMessage {
 }
 ```
 
-This approach delivers three key benefits:
-- Freedom from Rust ABI constraints
-- Language-neutral communication
-- Version resilience
+Benefits:
+- No Rust ABI coupling
+- Language-neutral
+- Version-resilient
 
 ### Cross-Language Communication
 
-Our FFI layer speaks a universal language through C-compatible types:
+The FFI layer uses C-compatible types:
 
 ```rust
 #[repr(C)]
@@ -51,21 +51,21 @@ pub struct PluginApi {
 }
 ```
 
-### Version Intelligence
+### Versioning
 
-Every plugin carries its identity:
+Every plugin declares its API version:
 
 ```rust
 pub const CURRENT_PLUGIN_API_VERSION: u32 = 1;
 ```
 
-The system actively verifies version compatibility during loading, preventing unexpected behavior.
+The loader checks compatibility.
 
 ## Data Interchange
 
 ### Rich Metadata Exchange
 
-File information flows through a carefully structured Protocol Buffer format:
+File metadata is exchanged via Protobuf:
 
 ```protobuf
 message EntryMetadata {
@@ -84,7 +84,7 @@ message EntryMetadata {
 
 ### Extensible Design
 
-Plugins can enrich entries with their own insights:
+Plugins can add custom fields:
 
 ```protobuf
 message DecoratedEntry {
@@ -96,23 +96,19 @@ message DecoratedEntry {
 
 ## Implementation Intelligence
 
-### Smart Plugin Loading
+### Loading
 
-Our system leverages `libloading` for dynamic plugin management:
-- Isolated plugin environments
-- Message-based communication
-- Safe memory boundaries
+`libloading` handles dynamic loading with isolation and message passing.
 
-### Type Safety Guarantees
+### Type Safety
 
-We ensure reliability through:
-- Rigorous Protocol Buffer schemas
-- FFI-compatible type systems
-- Clear conversion pathways
+- Strict Protobuf schemas
+- FFI-compatible types
+- Clear conversions
 
 ## Creating Plugins
 
-Building a plugin? Here's your path to success:
+Start with the macros and implement the handler:
 
 1. Start with our FFI macros:
    ```rust
@@ -137,4 +133,4 @@ Building a plugin? Here's your path to success:
    }
    ```
 
-You can use our [plugin utils](https://github.com/chaqchase/lla/tree/main/lla_plugin_utils) which abstracts away the verbosity of the plugin interface implementation. View the other [plugins](https://github.com/chaqchase/lla/tree/main/plugins) for more examples.
+Use the [plugin utils](https://github.com/chaqchase/lla/tree/main/lla_plugin_utils) to reduce boilerplate. See other [plugins](https://github.com/chaqchase/lla/tree/main/plugins) for examples.

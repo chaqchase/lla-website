@@ -8,16 +8,16 @@ status: "new"
 ---
 # LLA File Copier Plugin
 
-A plugin for `lla` that provides an intuitive clipboard-based interface for copying files and directories.
+Clipboard-based copying for files and directories.
 
 ## Features
 
-- **Clipboard Management**: Persistent clipboard for files and directories
-- **Interactive Selection**: Multi-select interface for files and operations
-- **Flexible Copying**: Copy all or selected items from clipboard
-- **Path Flexibility**: Support for both current and specified directories
-- **Safe Operations**: Validation and error handling for copy operations
-- **User Interface**: Colored output and interactive menus
+- Persistent clipboard
+- Multi-select interface
+- Copy all or selected items
+- Works in current or specified directories
+- Validation and error handling
+- Colored output and interactive menus
 
 ## Configuration
 
@@ -70,7 +70,7 @@ lla plugin --name file_copier --action help
 
 ## Common Workflows
 
-### 1. Copying Files Between Directories (Using Explicit Paths)
+### 1. Copying Files Between Directories (Explicit Paths)
 
 ```bash
 # Add files from source directory
@@ -81,7 +81,7 @@ lla plugin --name file_copier --action add --args /path/to/source
 lla plugin --name file_copier --action copy-all --args /path/to/target
 ```
 
-### 2. Copying Files Using Current Directory Navigation
+### 2. Copying Files Using Current Directory
 
 ```bash
 # In source directory

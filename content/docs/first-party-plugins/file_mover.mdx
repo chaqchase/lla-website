@@ -8,16 +8,16 @@ status: "new"
 ---
 # LLA File Mover Plugin
 
-A plugin for `lla` that provides an intuitive clipboard-based interface for moving files and directories.
+Clipboard-based moving for files and directories.
 
 ## Features
 
-- **Clipboard Management**: Persistent clipboard for files and directories
-- **Interactive Selection**: Multi-select interface for files and operations
-- **Flexible Moving**: Move all or selected items from clipboard
-- **Path Flexibility**: Support for both current and specified directories
-- **Safe Operations**: Validation and error handling for move operations
-- **User Interface**: Colored output and interactive menus
+- Persistent clipboard
+- Multi-select interface
+- Move all or selected items
+- Works in current or specified directories
+- Validation and error handling
+- Colored output and interactive menus
 
 ## Configuration
 
@@ -70,7 +70,7 @@ lla plugin --name file_mover --action help
 
 ## Common Workflows
 
-### 1. Moving Files Between Directories (Using Explicit Paths)
+### 1. Moving Files Between Directories (Explicit Paths)
 
 ```bash
 # Add files from source directory
@@ -81,7 +81,7 @@ lla plugin --name file_mover --action add --args /path/to/source
 lla plugin --name file_mover --action move-all --args /path/to/target
 ```
 
-### 2. Moving Files Using Current Directory Navigation
+### 2. Moving Files Using Current Directory
 
 ```bash
 # In source directory

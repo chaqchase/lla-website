@@ -7,12 +7,12 @@ references: []
 ---
 # Finding Your Files
 
-lla's filtering system helps you quickly locate files using patterns, types, and logical combinations. Whether you need simple text matching or complex search criteria, lla provides intuitive tools to narrow down your results.
+Use patterns, types, and logic to filter results.
 
 ## Pattern Matching
 
 ### Basic Search
-Find files using simple text patterns:
+Simple text patterns:
 ```bash
 lla -f "test"              # Match files containing "test"
 lla -f "test" -c          # Case-sensitive search
@@ -59,7 +59,7 @@ lla --no-dotfiles      # No hidden files
 
 ## Logic Operations
 
-Craft precise searches with logical operators:
+Logical operators:
 ```bash
 lla -f "test AND .rs"         # Test-related Rust files
 lla -f "test OR spec"         # Test or spec files
