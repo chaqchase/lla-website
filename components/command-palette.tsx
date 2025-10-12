@@ -53,20 +53,17 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
     return () => document.removeEventListener('keydown', down)
   }, [setOpen])
 
-  // Close modal on pathname change
-  React.useEffect(() => {
-    closeModal()
-  }, [pathname, closeModal])
-
   // Close modal on hash changes (for same-page section navigation)
   React.useEffect(() => {
+    if (!open) return
+
     const handleHashChange = () => {
       closeModal()
     }
 
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
-  }, [closeModal])
+  }, [open, closeModal])
 
   // Perform search when query changes
   React.useEffect(() => {
@@ -112,6 +109,7 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
                     result.sectionSlug ??
                     (result.section ? result.section.toLowerCase().replace(/\s+/g, '-') : undefined)
                   const url = anchor ? `/${result.slug}#${anchor}` : `/${result.slug}`
+                  closeModal()
                   router.push(url)
                 }}
                 className="flex flex-col items-start gap-1 px-4 py-3"
@@ -151,6 +149,7 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
                       className="pl-[2rem]"
                       key={`${key}-${subKey}`}
                       onSelect={() => {
+                        closeModal()
                         router.push(`/${subValue.slug}`)
                       }}
                     >
@@ -173,6 +172,7 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
                           value={goodTitle(subKey + ' ' + (childValue as Doc).title)}
                           key={`${key}-${subKey}-${childKey}`}
                           onSelect={() => {
+                            closeModal()
                             router.push(`/${childValue.slug}`)
                           }}
                         >
