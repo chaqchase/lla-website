@@ -3,8 +3,8 @@
 import { docs } from '@/.velite'
 import type { Doc, HierarchyNode } from '@/components/aside'
 import { createHierarchy } from '@/components/aside'
+import { getHighlightedSnippet, searchDocs, type SearchResult } from '@/lib/search'
 import { goodTitle } from '@/lib/utils'
-import { searchDocs, getHighlightedSnippet, type SearchResult } from '@/lib/search'
 import { usePathname, useRouter } from 'next/navigation'
 import React from 'react'
 import {
@@ -28,7 +28,7 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
   const pathname = usePathname()
   const [query, setQuery] = React.useState('')
   const [searchResults, setSearchResults] = React.useState<SearchResult[]>([])
-  
+
   // Close modal handler
   const closeModal = React.useCallback(() => {
     if (setOpen) {
@@ -58,15 +58,8 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
     closeModal()
   }, [pathname, closeModal])
 
-  // Close modal when navigating with hash/anchor (same page)
-  React.useEffect(() => {
-    const handleHashChange = () => {
-      closeModal()
-    }
-
-    window.addEventListener('hashchange', handleHashChange)
-    return () => window.removeEventListener('hashchange', handleHashChange)
-  }, [closeModal])
+  // Note: We intentionally do NOT close on hash changes to avoid flicker/loops
+  // when parents control modal state via URL hash.
 
   // Perform search when query changes
   React.useEffect(() => {
@@ -85,27 +78,21 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
     const order: string[] = []
     return order.indexOf(a) - order.indexOf(b)
   })
-  
+
   const showSearchResults = query.trim().length >= 2 && searchResults.length > 0
   const showEmptySearch = query.trim().length >= 2 && searchResults.length === 0
 
   return (
-    <CommandModal 
-      isOpen={open} 
-      onOpenChange={setOpen}
-      isDismissable={true}
-    >
-      <CommandInput 
-        autoFocus={isDesktop} 
-        placeholder="Search documentation..." 
+    <CommandModal isOpen={open} onOpenChange={setOpen} isDismissable={true}>
+      <CommandInput
+        autoFocus={isDesktop}
+        placeholder="Search documentation..."
         value={query}
         onValueChange={setQuery}
       />
       <CommandList>
-        {showEmptySearch && (
-          <CommandEmpty>No results found for &quot;{query}&quot;</CommandEmpty>
-        )}
-        
+        {showEmptySearch && <CommandEmpty>No results found for &quot;{query}&quot;</CommandEmpty>}
+
         {/* Show search results when user is typing */}
         {showSearchResults && (
           <CommandSection heading="Search Results">
@@ -114,8 +101,9 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
                 key={result.id}
                 value={result.id}
                 onSelect={() => {
-                  const anchor = result.sectionSlug
-                    ?? (result.section ? result.section.toLowerCase().replace(/\s+/g, '-') : undefined)
+                  const anchor =
+                    result.sectionSlug ??
+                    (result.section ? result.section.toLowerCase().replace(/\s+/g, '-') : undefined)
                   const url = anchor ? `/${result.slug}#${anchor}` : `/${result.slug}`
                   closeModal()
                   router.push(url)
@@ -125,19 +113,17 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
                 <div className="flex items-center justify-between w-full">
                   <div className="font-medium text-sm">
                     {result.title}
-                    {result.section && (
-                      <span className="text-muted-fg ml-1">
-                        › {result.section}
-                      </span>
-                    )}
+                    {result.section && <span className="text-muted-fg ml-1">› {result.section}</span>}
                   </div>
                 </div>
                 {result.content && (
-                  <div 
+                  <div
                     className="text-xs text-muted-fg line-clamp-2"
-                    dangerouslySetInnerHTML={{ 
-                      __html: getHighlightedSnippet(result.content, query, 120)
-                        .replace(/<mark>/g, '<mark class="bg-primary/20 text-fg font-medium rounded px-0.5">')
+                    dangerouslySetInnerHTML={{
+                      __html: getHighlightedSnippet(result.content, query, 120).replace(
+                        /<mark>/g,
+                        '<mark class="bg-primary/20 text-fg font-medium rounded px-0.5">'
+                      )
                     }}
                   />
                 )}
@@ -145,68 +131,74 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
             ))}
           </CommandSection>
         )}
-        
+
         {/* Show browse structure when not searching */}
-        {!showSearchResults && query.trim().length < 2 && filteredNodeEntries.map(([key, value]) => (
-          <React.Fragment key={key}>
-            <CommandSection key={`${key}-section`} heading={goodTitle(key)}>
+        {!showSearchResults &&
+          query.trim().length < 2 &&
+          filteredNodeEntries.map(([key, value]) => (
+            <React.Fragment key={key}>
+              <CommandSection key={`${key}-section`} heading={goodTitle(key)}>
+                {Object.entries(value as HierarchyNode).map(([subKey, subValue]) =>
+                  typeof subValue === 'object' && 'title' in subValue ? (
+                    <CommandItem
+                      value={goodTitle(key + ' ' + (subValue as Doc).title)}
+                      className="pl-[2rem]"
+                      key={`${key}-${subKey}`}
+                      onSelect={() => {
+                        closeModal()
+                        router.push(`/${subValue.slug}`)
+                      }}
+                    >
+                      {goodTitle((subValue as Doc).title)}
+                    </CommandItem>
+                  ) : null
+                )}
+              </CommandSection>
               {Object.entries(value as HierarchyNode).map(([subKey, subValue]) =>
-                typeof subValue === 'object' && 'title' in subValue ? (
-                  <CommandItem
-                    value={goodTitle(key + ' ' + (subValue as Doc).title)}
-                    className="pl-[2rem]"
-                    key={`${key}-${subKey}`}
-                    onSelect={() => {
-                      closeModal()
-                      router.push(`/${subValue.slug}`)
-                    }}
+                typeof subValue === 'object' && 'title' in subValue ? null : (
+                  <CommandSection
+                    key={`${key}-${subKey}-section`}
+                    value={goodTitle(subKey)}
+                    heading={goodTitle(subKey)}
                   >
-                    {goodTitle((subValue as Doc).title)}
-                  </CommandItem>
-                ) : null
-              )}
-            </CommandSection>
-            {Object.entries(value as HierarchyNode).map(([subKey, subValue]) =>
-              typeof subValue === 'object' && 'title' in subValue ? null : (
-                <CommandSection key={`${key}-${subKey}-section`} value={goodTitle(subKey)} heading={goodTitle(subKey)}>
-                  {Object.entries(subValue as HierarchyNode).map(([childKey, childValue]) =>
-                    typeof childValue === 'object' && 'title' in childValue ? (
-                      <CommandItem
-                        className="justify-between"
-                        value={goodTitle(subKey + ' ' + (childValue as Doc).title)}
-                        key={`${key}-${subKey}-${childKey}`}
-                        onSelect={() => {
-                          closeModal()
-                          router.push(`/${childValue.slug}`)
-                        }}
-                      >
-                        {goodTitle((childValue as Doc).title)}
-                        {childValue.status && (
-                          <Badge
-                            intent={
-                              childValue?.status === 'wip'
-                                ? 'primary'
-                                : childValue.status === 'beta'
-                                  ? 'warning'
-                                  : childValue.status === 'help'
+                    {Object.entries(subValue as HierarchyNode).map(([childKey, childValue]) =>
+                      typeof childValue === 'object' && 'title' in childValue ? (
+                        <CommandItem
+                          className="justify-between"
+                          value={goodTitle(subKey + ' ' + (childValue as Doc).title)}
+                          key={`${key}-${subKey}-${childKey}`}
+                          onSelect={() => {
+                            closeModal()
+                            router.push(`/${childValue.slug}`)
+                          }}
+                        >
+                          {goodTitle((childValue as Doc).title)}
+                          {childValue.status && (
+                            <Badge
+                              intent={
+                                childValue?.status === 'wip'
+                                  ? 'primary'
+                                  : childValue.status === 'beta'
                                     ? 'warning'
-                                    : childValue.status === 'new'
-                                      ? 'success'
-                                      : 'info'
-                            }
-                            className="lowercase -mr-1 text-xs"
-                          >
-                            {childValue?.status as Doc['status']}
-                          </Badge>
-                        )}
-                      </CommandItem>
-                    ) : null
-                  )}
-                </CommandSection>
-              )
-            )}
-          </React.Fragment>
-        ))}
+                                    : childValue.status === 'help'
+                                      ? 'warning'
+                                      : childValue.status === 'new'
+                                        ? 'success'
+                                        : 'info'
+                              }
+                              className="lowercase -mr-1 text-xs"
+                            >
+                              {childValue?.status as Doc['status']}
+                            </Badge>
+                          )}
+                        </CommandItem>
+                      ) : null
+                    )}
+                  </CommandSection>
+                )
+              )}
+            </React.Fragment>
+          ))}
       </CommandList>
     </CommandModal>
   )
