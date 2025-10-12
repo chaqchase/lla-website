@@ -1,56 +1,367 @@
 ---
 title: "Basic Usage"
-description: "Learn the essentials of lla"
+description: "Master the fundamentals of lla with practical examples, common patterns, and essential workflows for everyday file management."
 order: 1
 published: true
 references: []
 ---
 # Getting Started with lla
 
-## Zero configuration
+Welcome to the practical guide for using lla! This guide covers the essentials you'll use every day, with real-world examples and helpful tips.
 
-lla works out of the box. Run it in any directory for a clear, useful listing.
+## Zero Configuration Required
 
-## Core command
+lla is designed to work perfectly out of the box. Simply run `lla` in any directory to get a beautiful, informative listing. No configuration files to create, no settings to adjust—though you can customize everything if you want to.
+
+## Basic Command Structure
+
+The fundamental lla command follows this pattern:
 
 ```bash
 lla [options] [path]
 ```
 
-If no path is given, it lists the current directory. Relative and absolute paths are supported.
+- **options**: Flags that modify behavior (e.g., `-l`, `-t`, `-f`)
+- **path**: The directory or file to list (defaults to current directory)
 
-## Defaults
+### Understanding the Defaults
 
-- Clear listings
-- Color output
-- Optional file icons
-- Alphabetical sort
-- Hidden files included; hide with `--no-dotfiles`
+When you run `lla` without any options, you get:
 
-## Directory navigation
+- **Clean, organized layout**: Files displayed in a readable format
+- **Color-coded output**: Different colors for files, directories, executables
+- **Icon support**: File type icons (if your terminal supports Nerd Fonts)
+- **Alphabetical sorting**: Files sorted by name
+- **All files visible**: Hidden files (dotfiles) are shown by default
+
+Want to hide hidden files? Use `--no-dotfiles`:
+```bash
+lla --no-dotfiles
+```
+
+## Navigating Directories
+
+### Basic Navigation
+
+List different locations:
 
 ```bash
 lla                   # Current directory
-lla /path/to/dir      # Specific directory
-lla ..                # Parent directory
-lla ~/Documents       # Home directory Documents
+lla /path/to/dir      # Specific directory (absolute path)
+lla ../other          # Relative path navigation
+lla ~/Documents       # Home directory expansion
+lla .                 # Explicitly list current directory
 ```
 
-## Quick filtering
+### Listing Multiple Paths
 
-Find files using the `-f` flag:
+Compare different directories side by side:
 
 ```bash
-lla -f "pattern"       # Match files containing "pattern"
-lla -f "test"          # Locate test-related files
-lla -f ".rs"           # Filter by extension
+lla ~/projects ~/backups    # List multiple directories
+lla src/ tests/ docs/       # Compare project folders
 ```
 
-## Essential options
+### Special Path Handling
 
 ```bash
-lla -l                 # Detailed view
-lla -t                 # Tree view
-lla -h                 # Help
-lla --version          # Version
+lla ~                 # Your home directory
+lla /                 # Root directory
+lla -                 # Previous directory (if supported by shell)
+```
+
+## Quick File Discovery
+
+### Simple Pattern Matching
+
+Find files quickly with the `-f` (filter) flag:
+
+```bash
+lla -f "pattern"         # Find files containing "pattern"
+lla -f "test"            # All test-related files
+lla -f ".rs"             # Filter by extension
+lla -f "README"          # Find README files
+```
+
+### Case Sensitivity
+
+By default, filtering is case-insensitive. Make it case-sensitive with `-c`:
+
+```bash
+lla -f "Test"            # Matches "test", "TEST", "Test"
+lla -f "Test" -c         # Matches only "Test"
+```
+
+### Common Filtering Patterns
+
+```bash
+# Development files
+lla -f ".js"             # JavaScript files
+lla -f ".rs"             # Rust source files
+lla -f ".py"             # Python scripts
+
+# Configuration files
+lla -f "config"          # Any file with "config" in name
+lla -f ".toml"           # TOML configuration files
+lla -f ".env"            # Environment files
+
+# Documentation
+lla -f "README"          # README files
+lla -f ".md"             # Markdown files
+lla -f "doc"             # Documentation-related files
+```
+
+## Essential Views
+
+### Default View: Quick Browsing
+
+Perfect for quickly scanning a directory:
+
+```bash
+lla
+```
+
+Clean, columnar output optimized for readability.
+
+### Long Format: Detailed Information
+
+When you need comprehensive metadata:
+
+```bash
+lla -l
+```
+
+Shows:
+- Permissions (rwxr-xr-x)
+- Owner and group
+- File size
+- Modification time
+- File name
+
+**Pro tip**: Combine with other options:
+```bash
+lla -l --relative-dates  # "2 hours ago" instead of timestamps
+lla -l --hide-group      # Simplify output on single-user systems
+```
+
+### Tree View: Directory Structure
+
+Visualize directory hierarchies:
+
+```bash
+lla -t                   # Tree view, default depth
+lla -t -d 2              # Limit to 2 levels deep
+lla -t -d 5              # Deeper exploration
+```
+
+Perfect for understanding project structure at a glance.
+
+## Sorting Your Way
+
+### Sort by Name (Default)
+
+```bash
+lla                      # Alphabetical, ascending
+lla -r                   # Alphabetical, reversed
+lla --sort-natural       # Natural sorting (2.txt before 10.txt)
+```
+
+### Sort by Size
+
+Find the largest files:
+
+```bash
+lla -s size              # Largest files first
+lla -s size -r           # Smallest files first
+```
+
+### Sort by Date
+
+See what's new:
+
+```bash
+lla -s date              # Newest first
+lla -s date -r           # Oldest first
+```
+
+### Combined Sorting Options
+
+```bash
+lla -s size --sort-dirs-first    # Directories first, then by size
+lla -s date --sort-dirs-first    # Directories first, then by date
+```
+
+## Practical Workflows
+
+### Developer Workflows
+
+**Exploring a new codebase:**
+```bash
+# Get an overview
+lla -t -d 2
+
+# Find test files
+lla -R -f "test"
+
+# Check what's changed recently
+lla -s date | head -20
+```
+
+**Working with Git:**
+```bash
+# See Git status integrated into listing
+lla -G
+
+# List only modified files
+lla -G --files-only
+```
+
+### System Administration
+
+**Disk space investigation:**
+```bash
+# See largest files
+lla -s size -l
+
+# Visualize space usage
+lla -S --include-dirs
+```
+
+**Permission auditing:**
+```bash
+# Detailed permissions
+lla -l --permission-format verbose
+
+# Find executable files
+lla -l | grep "rwx"
+```
+
+### Quick Reference Scenarios
+
+**Find configuration files:**
+```bash
+lla -f ".conf"
+lla -f "config"
+lla --dotfiles-only
+```
+
+**Compare directories:**
+```bash
+lla src/ | wc -l         # Count files in src
+lla tests/ | wc -l       # Count files in tests
+```
+
+**Recently modified files:**
+```bash
+lla -s date -l | head    # Top 10 most recent
+```
+
+## Getting Help
+
+### Built-in Help
+
+```bash
+lla -h                   # Quick help
+lla --help               # Detailed help
+lla --version            # Version information
+```
+
+### Command-Specific Help
+
+```bash
+lla plugin --help        # Plugin command help
+lla config --help        # Configuration help
+lla theme --help         # Theme management help
+```
+
+## Common Patterns and Tips
+
+### Combining Options
+
+lla's options are designed to work together:
+
+```bash
+# Detailed tree view
+lla -t -l -d 3
+
+# Filtered, sorted, detailed view
+lla -f "test" -s size -l
+
+# Recursive listing with depth limit
+lla -R -d 2 --no-dotfiles
+```
+
+### Shell Integration
+
+**Create useful aliases:**
+```bash
+# Add to your ~/.bashrc or ~/.zshrc
+alias ll='lla -l'
+alias lt='lla -t'
+alias lf='lla --fuzzy'
+alias lg='lla -G'
+```
+
+**Pipe to other tools:**
+```bash
+lla -l | grep "\.rs"     # Traditional grep
+lla --json | jq          # JSON processing
+lla --csv > files.csv    # Export to CSV
+```
+
+### Performance Tips
+
+For very large directories:
+
+```bash
+# Limit tree depth
+lla -t -d 3              # Faster than unlimited depth
+
+# Skip directory sizes
+lla -l                   # Instead of lla -l --include-dirs
+
+# Use specific filters to reduce output
+lla -f "pattern"         # Faster than listing everything
+```
+
+## What's Next?
+
+Now that you understand the basics:
+
+- **[View Formats](/docs/usage/view-formats)**: Explore specialized views like grid, table, and sizemap
+- **[File Filtering](/docs/usage/file-filtering)**: Master advanced filtering with regex and logic operators
+- **[Configuration](/docs/usage/config)**: Customize lla to match your preferences
+- **[Plugins](/docs/plugins/concepts)**: Extend lla with additional functionality
+
+## Quick Reference Card
+
+```bash
+# Navigation
+lla                      # List current directory
+lla /path               # List specific path
+lla -R                  # Recursive listing
+
+# Views
+lla -l                  # Long format (detailed)
+lla -t                  # Tree view
+lla -g                  # Grid layout
+lla -T                  # Table view
+lla -G                  # Git view
+
+# Sorting
+lla -s name             # Sort by name
+lla -s size             # Sort by size
+lla -s date             # Sort by date
+lla -r                  # Reverse order
+
+# Filtering
+lla -f "pattern"        # Filter files
+lla --files-only        # Only files
+lla --dirs-only         # Only directories
+lla --no-dotfiles       # Hide hidden files
+
+# Other
+lla --fuzzy             # Interactive search
+lla --version           # Show version
+lla -h                  # Show help
 ```

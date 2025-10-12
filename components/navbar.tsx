@@ -51,9 +51,7 @@ export function Navbar() {
                     <NavLink isActive={pathname?.startsWith('/docs')} href="/docs/about/introduction">
                       Docs
                     </NavLink>
-                    <NavLink target="_blank" href="https://github.com/chaqchase/lla">
-                      Github
-                    </NavLink>
+                    <NavLink href="https://github.com/chaqchase/lla">Github</NavLink>
                   </Collection>
                 </div>
 

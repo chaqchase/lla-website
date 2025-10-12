@@ -1,0 +1,584 @@
+---
+title: "CLI Reference"
+description: "Complete command-line reference for lla covering all commands, flags, options, and arguments with detailed descriptions and examples."
+order: 1
+published: true
+references: []
+---
+
+# Command Line Reference
+
+Complete reference for all lla commands, options, and flags. For practical examples, see the [Basic Usage Guide](/docs/usage/basic-usage).
+
+## Command Structure
+
+```bash
+lla [OPTIONS] [PATH]
+```
+
+- **OPTIONS**: Flags and settings that modify behavior
+- **PATH**: Directory or file to list (defaults to current directory)
+
+## Global Options
+
+### Display Modes
+
+| Flag | Long Form | Description |
+|------|-----------|-------------|
+| `-l` | `--long` | Long format with detailed metadata |
+| `-t` | `--tree` | Hierarchical tree view |
+| `-T` | `--table` | Structured table format |
+| `-g` | `--grid` | Multi-column grid layout |
+| `-G` | `--git` | Git-aware view with status information |
+| `-S` | `--sizemap` | Visual size distribution map |
+| `-R` | `--recursive` | Recursive directory listing |
+| `-F` | `--fuzzy` | Interactive fuzzy search mode (experimental) |
+| | `--timeline` | Chronological timeline view |
+
+**Examples:**
+
+```bash
+lla -l                    # Long format
+lla -t -d 3               # Tree view, 3 levels deep
+lla -G                    # Git view
+lla --timeline            # Timeline organization
+```
+
+### Sorting Options
+
+| Flag | Long Form | Values | Description |
+|------|-----------|--------|-------------|
+| `-s` | `--sort` | `name`, `size`, `date` | Sort criterion |
+| `-r` | `--sort-reverse` | | Reverse sort order |
+| | `--sort-dirs-first` | | List directories before files |
+| | `--sort-case-sensitive` | | Enable case-sensitive sorting |
+| | `--sort-natural` | | Natural number sorting (2.txt before 10.txt) |
+
+**Examples:**
+
+```bash
+lla -s size               # Sort by size, largest first
+lla -s date -r            # Sort by date, oldest first
+lla -s name --sort-dirs-first  # Alphabetical with directories first
+lla -s name --sort-natural     # Natural sorting: file2.txt, file10.txt
+```
+
+### Filtering Options
+
+| Flag | Long Form | Description |
+|------|-----------|-------------|
+| `-f` | `--filter` | Filter files by pattern |
+| `-c` | `--case-sensitive` | Case-sensitive filtering |
+| `-d` | `--depth` | Maximum depth for recursive operations |
+| | `--files-only` | Show only regular files |
+| | `--dirs-only` | Show only directories |
+| | `--symlinks-only` | Show only symbolic links |
+| | `--dotfiles-only` | Show only hidden files/directories |
+| | `--no-files` | Hide regular files |
+| | `--no-dirs` | Hide directories |
+| | `--no-symlinks` | Hide symbolic links |
+| | `--no-dotfiles` | Hide hidden files/directories |
+
+**Examples:**
+
+```bash
+lla -f "test"             # Files containing "test"
+lla -f ".rs"              # Rust source files
+lla -f "test" -c          # Case-sensitive match
+lla -d 3                  # Limit depth to 3 levels
+lla --files-only --no-dotfiles  # Only visible regular files
+```
+
+**Advanced filtering patterns:**
+
+```bash
+# OR operation
+lla -f "test,spec"        # Match "test" OR "spec"
+
+# AND operation
+lla -f "+test,api"        # Match "test" AND "api"
+
+# Regular expressions
+lla -f "regex:^test.*\.rs$"  # Regex pattern
+
+# Glob patterns
+lla -f "glob:*.{rs,toml}"    # Multiple extensions
+
+# Logic operators
+lla -f "test AND .rs"     # Logical AND
+lla -f "test OR spec"     # Logical OR
+lla -f "NOT test"         # Logical NOT
+lla -f "test XOR spec"    # Logical XOR
+```
+
+### Content Search
+
+| Flag | Long Form | Description |
+|------|-----------|-------------|
+| | `--search` | Search file contents (ripgrep-powered) |
+| | `--search-context` | Number of context lines (default: 2) |
+
+**Examples:**
+
+```bash
+lla --search "TODO"                    # Find "TODO" in files
+lla --search "main()"                  # Literal search (default)
+lla --search "regex:^func.*\("         # Regex search
+lla --search "TODO" --search-context 5 # Show 5 context lines
+lla --search "Error" -f ".rs"          # Search only in .rs files
+lla --search "FIXME" --case-sensitive  # Case-sensitive search
+```
+
+### Visual Options
+
+| Flag | Long Form | Description |
+|------|-----------|-------------|
+| | `--icons` | Show file icons |
+| | `--no-icons` | Hide file icons |
+| | `--no-colors` | Disable colored output |
+| | `--permission-format` | Permission display format |
+| | `--grid-ignore` | Ignore terminal width in grid view |
+| | `--relative-dates` | Show relative timestamps ("2h ago") |
+| | `--hide-group` | Hide group column in long format |
+
+**Permission formats:**
+
+- `symbolic`: Standard rwxr-xr-x format (default)
+- `octal`: Numeric format (e.g., 644)
+- `binary`: Binary representation
+- `verbose`: Detailed text description
+- `compact`: Condensed numeric notation
+
+**Examples:**
+
+```bash
+lla --no-icons            # Disable icons
+lla --no-colors           # Plain text output
+lla -l --permission-format octal    # Numeric permissions
+lla -l --relative-dates   # "2 hours ago" instead of timestamp
+lla -l --hide-group       # Simplify long format output
+lla -g --grid-ignore      # Grid extending beyond screen width
+```
+
+### Machine Output
+
+| Flag | Long Form | Description |
+|------|-----------|-------------|
+| | `--json` | JSON array output |
+| | `--ndjson` | Newline-delimited JSON |
+| | `--csv` | CSV format |
+| | `--pretty` | Pretty-print JSON (use with --json) |
+
+**Examples:**
+
+```bash
+lla --json                # Compact JSON
+lla --json --pretty       # Formatted JSON
+lla --ndjson              # One JSON object per line
+lla --csv                 # CSV with headers
+
+# Processing with jq
+lla --json | jq '.[] | select(.size_bytes > 1000000)'
+
+# Export to CSV
+lla --csv > files.csv
+```
+
+**JSON/NDJSON schema:**
+
+```json
+{
+  "path": "src/main.rs",
+  "name": "main.rs",
+  "extension": "rs",
+  "file_type": "file",
+  "size_bytes": 1234,
+  "modified": "2024-05-01T12:34:56Z",
+  "created": "2024-05-01T10:00:00Z",
+  "accessed": "2024-05-01T14:00:00Z",
+  "mode_octal": "0644",
+  "owner_user": "username",
+  "owner_group": "groupname",
+  "inode": 1234567,
+  "hard_links": 1,
+  "symlink_target": null,
+  "is_hidden": false,
+  "git_status": "M.",
+  "plugin": {}
+}
+```
+
+### Other Options
+
+| Flag | Long Form | Description |
+|------|-----------|-------------|
+| | `--include-dirs` | Calculate directory sizes (slower) |
+| `-h` | `--help` | Show help information |
+| `-V` | `--version` | Show version information |
+
+**Examples:**
+
+```bash
+lla -S --include-dirs     # Size map including directory sizes
+lla -h                    # Quick help
+lla --help                # Detailed help
+lla --version             # Version and plugin info
+```
+
+## Plugin Commands
+
+### Plugin Management
+
+```bash
+lla install [OPTIONS]
+```
+
+**Options:**
+
+| Flag | Long Form | Description |
+|------|-----------|-------------|
+| | `--prebuilt` | Install from prebuilt release (default) |
+| | `--git URL` | Install from Git repository |
+| | `--dir PATH` | Install from local directory |
+
+**Examples:**
+
+```bash
+lla install                                    # Install all first-party plugins
+lla install --git https://github.com/user/plugin  # Install from Git
+lla install --dir /path/to/plugin              # Install from local directory
+```
+
+### Plugin Control
+
+```bash
+lla use                                        # Interactive plugin manager
+lla --enable-plugin NAME                       # Enable specific plugin
+lla --disable-plugin NAME                      # Disable specific plugin
+```
+
+**Examples:**
+
+```bash
+lla use                                   # Arrow keys to navigate, Space to toggle
+lla --enable-plugin git_status            # Enable Git status plugin
+lla --disable-plugin file_hash            # Disable hash plugin
+```
+
+### Plugin Actions
+
+```bash
+lla plugin --name NAME --action ACTION [--args ARG...]
+```
+
+**Examples:**
+
+```bash
+lla plugin --name file_tagger --action help
+lla plugin --name file_tagger --action add-tag --args "file.txt" "important"
+lla plugin --name code_complexity --action show-report
+```
+
+### Plugin Updates
+
+```bash
+lla update [PLUGIN_NAME]
+```
+
+**Examples:**
+
+```bash
+lla update                # Update all plugins
+lla update git_status     # Update specific plugin
+```
+
+### Plugin Cleanup
+
+```bash
+lla clean
+```
+
+Remove invalid or corrupted plugins.
+
+## Shortcut Commands
+
+```bash
+lla shortcut SUBCOMMAND [OPTIONS]
+```
+
+### Subcommands
+
+| Command | Description |
+|---------|-------------|
+| `add NAME PLUGIN ACTION [-d DESCRIPTION]` | Create a new shortcut |
+| `remove NAME` | Delete a shortcut |
+| `list` | Show all shortcuts |
+
+**Examples:**
+
+```bash
+# Create shortcuts
+lla shortcut add snip code_snippet_extractor extract -d "Extract code"
+lla shortcut add tags code_snippet_extractor add-tags -d "Add tags"
+
+# Use shortcuts
+lla snip "main.rs" "function_name" 10 20 3
+lla tags "snippet_id" "rust" "algorithm"
+
+# List shortcuts
+lla shortcut list
+
+# Remove shortcut
+lla shortcut remove snip
+```
+
+## Configuration Commands
+
+```bash
+lla config [OPTIONS]
+```
+
+**Options:**
+
+| Flag | Long Form | Description |
+|------|-----------|-------------|
+| | `--set KEY VALUE` | Set configuration value |
+| | `--get KEY` | Get configuration value |
+| | (no options) | Display full configuration |
+
+**Examples:**
+
+```bash
+lla config                          # View all config
+lla config --get theme              # Get current theme
+lla config --set theme dark         # Set theme
+lla config --set default_sort size  # Set default sort
+lla config --set show_icons true    # Enable icons by default
+
+# More config examples
+lla config --set default_format long
+lla config --set sort.dirs_first true
+lla config --set filter.no_dotfiles false
+```
+
+## Theme Commands
+
+```bash
+lla theme [SUBCOMMAND]
+```
+
+### Subcommands
+
+| Command | Description |
+|---------|-------------|
+| (no subcommand) | Interactive theme selector |
+| `pull` | Download all built-in themes |
+| `install PATH` | Install theme from file or directory |
+
+**Examples:**
+
+```bash
+lla theme                                    # Interactive selector
+lla theme pull                               # Get all themes
+lla theme install custom-theme.toml          # Install single theme
+lla theme install /path/to/themes/           # Install from directory
+```
+
+## Jump Commands
+
+```bash
+lla jump [OPTIONS]
+```
+
+**Options:**
+
+| Flag | Long Form | Description |
+|------|-----------|-------------|
+| | `--setup` | Setup shell integration |
+| | `--shell SHELL` | Specify shell (bash, zsh, fish) |
+| | `--add PATH` | Add directory to bookmarks |
+| | `--remove PATH` | Remove bookmark |
+| | `--list` | List bookmarks and history |
+| | `--clear-history` | Clear navigation history |
+| | (no options) | Interactive directory selector |
+
+**Examples:**
+
+```bash
+# One-time setup
+lla jump --setup
+
+# Use jump (after setup, use `j`)
+j                                    # Interactive selector
+
+# Manage bookmarks
+lla jump --add ~/projects/myapp
+lla jump --remove ~/old-project
+lla jump --list
+
+# Clear history
+lla jump --clear-history
+```
+
+## Initialization Commands
+
+```bash
+lla init                            # Create default configuration
+lla completion SHELL                # Generate shell completion
+```
+
+**Completion shells:**
+
+- `bash`
+- `zsh`
+- `fish`
+- `elvish`
+
+**Examples:**
+
+```bash
+# Initialize config
+lla init
+
+# Generate completions
+lla completion bash > ~/.lla-completion.bash
+lla completion zsh > ~/.zsh/completions/_lla
+lla completion fish > ~/.config/fish/completions/lla.fish
+```
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `RUST_LOG` | Set logging level (debug, info, warn, error) |
+| `NO_COLOR` | Disable colors (any value) |
+
+**Examples:**
+
+```bash
+RUST_LOG=debug lla                  # Debug output
+NO_COLOR=1 lla                      # Disable colors
+```
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | General error |
+| 2 | Invalid arguments |
+| 3 | File not found |
+| 4 | Permission denied |
+
+## Common Command Combinations
+
+### Development Workflows
+
+```bash
+# Overview of project
+lla -t -d 3
+
+# Find and examine test files
+lla -R -f "test" -l -s date
+
+# Check recent changes with Git
+lla -G --files-only -s date
+
+# Find large files
+lla -R -s size -l | head -20
+```
+
+### System Administration
+
+```bash
+# Disk usage analysis
+lla -S --include-dirs -s size
+
+# Find recently modified configs
+lla -f "config" -s date -l
+
+# Permission audit
+lla -l --permission-format verbose
+
+# Check log files
+lla -f ".log" -s date
+```
+
+### Data Export and Scripting
+
+```bash
+# Export file list to JSON
+lla --json --pretty > files.json
+
+# Process with jq
+lla --json | jq '[.[] | select(.file_type == "file")]'
+
+# Generate CSV report
+lla -R --csv > inventory.csv
+
+# Count files by extension
+lla --ndjson | jq -r '.extension' | sort | uniq -c
+```
+
+## Tips and Tricks
+
+### Create Useful Aliases
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+alias ll='lla -l'
+alias lt='lla -t -d 3'
+alias lg='lla -G'
+alias lf='lla --fuzzy'
+alias lls='lla -l -s size'
+alias llt='lla -l -s date'
+```
+
+### Use as ls Replacement
+
+```bash
+alias ls='lla'
+alias ll='lla -l'
+alias la='lla -a'
+```
+
+### Pipe to Other Commands
+
+```bash
+lla -l | grep "\.rs"              # Traditional grep
+lla --json | jq                   # JSON processing
+lla --csv | column -t -s,         # Format CSV
+lla | fzf                         # External fuzzy finder
+```
+
+### Configuration Profiles
+
+Create different config files for different scenarios:
+
+```bash
+# Work profile
+cp ~/.config/lla/config.toml ~/.config/lla/work-config.toml
+
+# Use specific config
+cp ~/.config/lla/work-config.toml ~/.config/lla/config.toml
+```
+
+## See Also
+
+- [Basic Usage Guide](/docs/usage/basic-usage): Practical examples and workflows
+- [Configuration Guide](/docs/usage/config): Detailed configuration options
+- [Plugin System](/docs/plugins/concepts): Extend lla with plugins
+- [Troubleshooting](/docs/support/troubleshooting): Common issues and solutions
+
+## Getting Help
+
+```bash
+lla -h                    # Quick help
+lla --help                # Detailed help
+lla command --help        # Command-specific help
+
+# Online resources
+# Documentation: https://lla.chaqchase.com
+# GitHub: https://github.com/chaqchase/lla
+# Issues: https://github.com/chaqchase/lla/issues
+```

@@ -6,6 +6,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { nightOwl as theme } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { cn, CopyButton } from 'ui'
 import { copyToClipboard } from 'usemods'
+import { Mermaid } from './mermaid'
 
 function Code({
   lang = 'tsx',
@@ -28,6 +29,11 @@ function Code({
         setTimeout(() => setCopied(''), 2000)
       })
       .catch((err) => console.error('Copy failed: ', err))
+  }
+
+  // Handle Mermaid diagrams
+  if (lang === 'mermaid') {
+    return <Mermaid chart={code} />
   }
 
   return (

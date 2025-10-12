@@ -4,6 +4,7 @@ import { docs } from '@/.velite'
 import type { Doc, HierarchyNode } from '@/components/aside'
 import { createHierarchy } from '@/components/aside'
 import { goodTitle } from '@/lib/utils'
+import { searchDocs, getHighlightedSnippet, type SearchResult } from '@/lib/search'
 import { usePathname, useRouter } from 'next/navigation'
 import React from 'react'
 import {
@@ -25,9 +26,12 @@ export interface OpenCloseProps {
 export function CommandPalette({ open, setOpen }: OpenCloseProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const [query, setQuery] = React.useState('')
+  const [searchResults, setSearchResults] = React.useState<SearchResult[]>([])
+  
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.key === 'k') {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         // @ts-ignore
         setOpen((open: boolean) => !open)
@@ -42,8 +46,20 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
   React.useEffect(() => {
     if (setOpen) {
       setOpen(false)
+      setQuery('')
+      setSearchResults([])
     }
   }, [pathname, setOpen])
+
+  // Perform search when query changes
+  React.useEffect(() => {
+    if (query && query.trim().length >= 2) {
+      const results = searchDocs(query, 15)
+      setSearchResults(results)
+    } else {
+      setSearchResults([])
+    }
+  }, [query])
 
   const isDesktop = useMediaQuery('(min-width: 1024px)')
 
@@ -52,13 +68,64 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
     const order: string[] = []
     return order.indexOf(a) - order.indexOf(b)
   })
+  
+  const showSearchResults = query.trim().length >= 2 && searchResults.length > 0
+  const showEmptySearch = query.trim().length >= 2 && searchResults.length === 0
 
   return (
     <CommandModal isOpen={open} onOpenChange={setOpen}>
-      <CommandInput autoFocus={isDesktop} placeholder="Search..." />
+      <CommandInput 
+        autoFocus={isDesktop} 
+        placeholder="Search documentation..." 
+        value={query}
+        onValueChange={setQuery}
+      />
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
-        {filteredNodeEntries.map(([key, value]) => (
+        {showEmptySearch && (
+          <CommandEmpty>No results found for &quot;{query}&quot;</CommandEmpty>
+        )}
+        
+        {/* Show search results when user is typing */}
+        {showSearchResults && (
+          <CommandSection heading="Search Results">
+            {searchResults.map((result) => (
+              <CommandItem
+                key={result.id}
+                value={result.id}
+                onSelect={() => {
+                  const anchor = result.sectionSlug
+                    ?? (result.section ? result.section.toLowerCase().replace(/\s+/g, '-') : undefined)
+                  const url = anchor ? `/${result.slug}#${anchor}` : `/${result.slug}`
+                  router.push(url)
+                }}
+                className="flex flex-col items-start gap-1 px-4 py-3"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="font-medium text-sm">
+                    {result.title}
+                    {result.section && (
+                      <span className="text-muted-fg ml-1">
+                        › {result.section}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {result.content && (
+                  <div 
+                    className="text-xs text-muted-fg line-clamp-2"
+                    dangerouslySetInnerHTML={{ 
+                      __html: getHighlightedSnippet(result.content, query, 120)
+                        .replace(/<mark>/g, '<mark class="bg-primary/20 text-fg font-medium rounded px-0.5">')
+                    }}
+                  />
+                )}
+              </CommandItem>
+            ))}
+          </CommandSection>
+        )}
+        
+        {/* Show browse structure when not searching */}
+        {!showSearchResults && query.trim().length < 2 && filteredNodeEntries.map(([key, value]) => (
           <React.Fragment key={key}>
             <CommandSection key={`${key}-section`} heading={goodTitle(key)}>
               {Object.entries(value as HierarchyNode).map(([subKey, subValue]) =>

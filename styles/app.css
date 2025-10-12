@@ -13,7 +13,7 @@
     --popover: 0 0% 100%;
     --popover-fg: 240 10% 3.9%;
 
-    --primary: 216 98% 52%;
+    --primary: 27 100% 50%;
     --primary-fg: 0 0% 100%;
 
     --secondary: 240 4.8% 95.9%;
@@ -40,7 +40,7 @@
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
     --toggle: 240 5% 84%;
-    --ring: 211 100% 58%;
+    --ring: 27 100% 50%;
 
     --radius: 0.55rem;
   }

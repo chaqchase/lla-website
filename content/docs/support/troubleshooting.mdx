@@ -1,0 +1,692 @@
+---
+title: "Troubleshooting"
+description: "Solutions to common problems with lla including installation issues, display problems, performance concerns, and plugin troubleshooting."
+order: 2
+published: true
+references: []
+---
+
+# Troubleshooting Guide
+
+Having issues with lla? This guide covers common problems and their solutions. If you don't find your issue here, check the [FAQ](/docs/support/faq) or [open an issue](https://github.com/chaqchase/lla/issues).
+
+## Installation Issues
+
+### "command not found" After Installation
+
+**Symptom**: Running `lla` shows "command not found"
+
+**Cause**: The installation directory isn't in your PATH
+
+**Solution**:
+
+```bash
+# Check where lla is installed
+which lla
+
+# If not found, try these locations
+ls /usr/local/bin/lla
+ls ~/.cargo/bin/lla
+
+# Add to PATH temporarily
+export PATH="/usr/local/bin:$PATH"
+
+# Add to PATH permanently (bash)
+echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Add to PATH permanently (zsh)
+echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+
+# Add to PATH permanently (fish)
+fish_add_path /usr/local/bin
+```
+
+### Permission Denied
+
+**Symptom**: "Permission denied" when trying to run lla
+
+**Cause**: Binary doesn't have execute permissions
+
+**Solution**:
+
+```bash
+# Add execute permission
+chmod +x /usr/local/bin/lla
+
+# If you need sudo
+sudo chmod +x /usr/local/bin/lla
+
+# Verify permissions
+ls -l /usr/local/bin/lla
+# Should show: -rwxr-xr-x
+```
+
+### Installation Script Fails
+
+**Symptom**: curl command fails or script errors out
+
+**Common causes and solutions**:
+
+1. **Network issues**:
+   ```bash
+   # Try with verbose output
+   curl -v -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
+   
+   # Or download first, then run
+   curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh > install.sh
+   bash install.sh
+   ```
+
+2. **Checksum verification failed**:
+   ```bash
+   # Clear any partial downloads
+   rm -f /tmp/lla-*
+   
+   # Try again
+   curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
+   ```
+
+3. **Insufficient permissions**:
+   ```bash
+   # The script may need sudo for /usr/local/bin
+   curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | sudo bash
+   ```
+
+### Build from Source Fails
+
+**Symptom**: `cargo build` or `cargo install` fails
+
+**Common causes**:
+
+1. **Outdated Rust version**:
+   ```bash
+   # Update Rust
+   rustup update
+   
+   # Check version (needs 1.70+)
+   rustc --version
+   ```
+
+2. **Missing dependencies** (Linux):
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get install build-essential pkg-config libssl-dev
+   
+   # Fedora/RHEL
+   sudo dnf install gcc openssl-devel
+   
+   # Arch
+   sudo pacman -S base-devel openssl
+   ```
+
+3. **Out of disk space**:
+   ```bash
+   # Check available space
+   df -h
+   
+   # Rust builds can use several GB
+   # Clean up old builds
+   cargo clean
+   ```
+
+## Display Issues
+
+### Icons Not Showing
+
+**Symptom**: File icons appear as squares, question marks, or missing characters
+
+**Cause**: Terminal doesn't have a Nerd Font installed
+
+**Solution**:
+
+1. **Install a Nerd Font**:
+   - Visit [nerdfonts.com](https://www.nerdfonts.com/)
+   - Download a font (recommended: FiraCode, JetBrainsMono, or Hack)
+   - Install on your system:
+     ```bash
+     # macOS
+     cp *.ttf ~/Library/Fonts/
+     
+     # Linux
+     cp *.ttf ~/.local/share/fonts/
+     fc-cache -f -v
+     
+     # Windows
+     # Right-click font files and select "Install"
+     ```
+
+2. **Configure your terminal**:
+   - Open terminal preferences
+   - Set font to the installed Nerd Font
+   - Restart terminal
+
+3. **Temporary workaround**:
+   ```bash
+   # Disable icons
+   lla --no-icons
+   
+   # Or set in config
+   lla config --set show_icons false
+   ```
+
+### Colors Look Wrong
+
+**Symptom**: Colors don't match your theme or look strange
+
+**Possible causes and solutions**:
+
+1. **Terminal color settings**:
+   - Check terminal's color scheme
+   - Ensure terminal supports 256 colors or truecolor
+   - Test: `echo $TERM` (should be xterm-256color or similar)
+
+2. **Try a different lla theme**:
+   ```bash
+   lla theme           # Interactive selector
+   lla theme pull      # Download all built-in themes
+   ```
+
+3. **Disable colors temporarily**:
+   ```bash
+   lla --no-colors
+   ```
+
+4. **Check theme conflicts**:
+   ```bash
+   # View current theme
+   lla config
+   
+   # Try the default theme
+   lla config --set theme default
+   ```
+
+### Corrupted or Garbled Output
+
+**Symptom**: Output shows weird characters or is misaligned
+
+**Possible causes**:
+
+1. **Terminal encoding issues**:
+   ```bash
+   # Check encoding
+   echo $LANG
+   
+   # Should be UTF-8
+   export LANG=en_US.UTF-8
+   export LC_ALL=en_US.UTF-8
+   ```
+
+2. **Terminal size detection**:
+   ```bash
+   # Check terminal size
+   echo $COLUMNS x $LINES
+   
+   # Force recalculation
+   resize
+   ```
+
+3. **Terminal compatibility**:
+   ```bash
+   # Try with basic output
+   lla --no-icons --no-colors
+   
+   # Some terminal emulators have better Unicode support:
+   # - Alacritty
+   # - Kitty
+   # - iTerm2 (macOS)
+   # - Windows Terminal (Windows)
+   ```
+
+### Grid/Table Layout Issues
+
+**Symptom**: Grid or table view doesn't fit terminal width
+
+**Solution**:
+
+```bash
+# For grid view
+lla -g --grid-ignore      # Ignore terminal width
+lla config --set formatters.grid.ignore_width true
+
+# For table view
+lla -T                    # Should auto-adjust
+```
+
+## Performance Issues
+
+### Slow on Large Directories
+
+**Symptom**: lla takes a long time to list directories with many files
+
+**Solutions**:
+
+1. **Adjust performance limits**:
+   ```toml
+   # In ~/.config/lla/config.toml
+   [formatters.tree]
+   max_lines = 10000    # Reduce from 20000
+   
+   [listers.recursive]
+   max_entries = 10000  # Reduce from 20000
+   ```
+
+2. **Disable expensive operations**:
+   ```bash
+   # Don't calculate directory sizes
+   lla -l                    # Instead of lla -l --include-dirs
+   
+   # Limit tree depth
+   lla -t -d 2              # Instead of unlimited depth
+   
+   # Use filters to reduce output
+   lla -f ".rs"             # Only .rs files
+   ```
+
+3. **Disable unused plugins**:
+   ```bash
+   lla use                  # Disable plugins you don't need
+   
+   # Or disable all for testing
+   lla --disable-all-plugins
+   ```
+
+4. **Optimize for your use case**:
+   ```bash
+   # Fast overview
+   lla                      # Default view is fastest
+   
+   # Detailed info only when needed
+   lla -l                   # Long format when necessary
+   ```
+
+### Git Status is Slow
+
+**Symptom**: `-G` flag makes lla very slow
+
+**Cause**: Git status checks can be expensive in large repositories
+
+**Solutions**:
+
+1. **Use Git view only when needed**:
+   ```bash
+   # Regular listing (fast)
+   lla
+   
+   # Git view (slower, when needed)
+   lla -G
+   ```
+
+2. **Check repository size**:
+   ```bash
+   git status   # If this is slow, lla's Git view will be too
+   ```
+
+3. **Optimize Git repository**:
+   ```bash
+   git gc                   # Garbage collection
+   git prune               # Remove unnecessary files
+   ```
+
+4. **Exclude large directories**:
+   ```toml
+   # In ~/.config/lla/config.toml
+   exclude_paths = [
+     "~/large-repo/node_modules",
+     "~/large-repo/target"
+   ]
+   ```
+
+### High Memory Usage
+
+**Symptom**: lla uses excessive memory
+
+**Common causes**:
+
+1. **Very large directories**:
+   - Use pagination: `lla | less`
+   - Use filters to reduce output
+   - Increase system limits if needed
+
+2. **Memory leak** (rare):
+   - Update to latest lla version
+   - Report the issue with details
+
+## Plugin Issues
+
+### Plugins Not Loading
+
+**Symptom**: Plugins don't appear in `lla --version` or don't work
+
+**Diagnostic steps**:
+
+```bash
+# 1. Check plugin directory
+ls ~/.config/lla/plugins/
+
+# 2. Check plugin permissions
+ls -l ~/.config/lla/plugins/
+
+# 3. Try loading plugins explicitly
+lla --enable-plugin plugin_name
+
+# 4. Check for errors
+lla clean                # Remove invalid plugins
+```
+
+**Common issues**:
+
+1. **Wrong file extension**:
+   - Linux: must be `.so`
+   - macOS: must be `.dylib`
+   - Windows: must be `.dll`
+
+2. **Wrong location**:
+   ```bash
+   # Check configured plugin directory
+   lla config | grep plugins_dir
+   
+   # Default is ~/.config/lla/plugins/
+   ```
+
+3. **Missing dependencies**:
+   ```bash
+   # Rebuild plugin
+   cd plugin-directory
+   cargo build --release
+   cp target/release/lib*.so ~/.config/lla/plugins/
+   ```
+
+### Plugin Crashes or Errors
+
+**Symptom**: lla crashes when using a plugin, or plugin shows errors
+
+**Solutions**:
+
+1. **Disable problematic plugin**:
+   ```bash
+   lla --disable-plugin plugin_name
+   ```
+
+2. **Update plugin**:
+   ```bash
+   lla update plugin_name
+   ```
+
+3. **Reinstall plugin**:
+   ```bash
+   lla install --git https://github.com/user/plugin-repo
+   ```
+
+4. **Check plugin logs**:
+   ```bash
+   # Many plugins log to stderr
+   lla 2>&1 | tee lla-debug.log
+   ```
+
+5. **Report to plugin author**:
+   - Include lla version: `lla --version`
+   - Include plugin version
+   - Describe the error
+   - Share error logs
+
+### Plugin Installation Fails
+
+**Symptom**: `lla install` fails
+
+**Common causes**:
+
+1. **Rust not installed**:
+   ```bash
+   # Install Rust
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   ```
+
+2. **Build error**:
+   ```bash
+   # Install manually to see full error
+   git clone https://github.com/user/plugin-repo
+   cd plugin-repo
+   cargo build --release
+   # Check error messages
+   ```
+
+3. **Network issues**:
+   ```bash
+   # Check connectivity
+   curl -I https://github.com
+   
+   # Try direct installation
+   lla install --dir /path/to/plugin
+   ```
+
+## Configuration Issues
+
+### Configuration Not Loading
+
+**Symptom**: Changes to config don't take effect
+
+**Solutions**:
+
+1. **Verify config location**:
+   ```bash
+   # Should be ~/.config/lla/config.toml
+   ls -l ~/.config/lla/config.toml
+   
+   # View current config
+   lla config
+   ```
+
+2. **Check syntax**:
+   ```bash
+   # TOML syntax errors prevent loading
+   # Validate your config
+   cat ~/.config/lla/config.toml
+   ```
+
+3. **Regenerate config**:
+   ```bash
+   # Backup current config
+   cp ~/.config/lla/config.toml ~/.config/lla/config.toml.backup
+   
+   # Regenerate
+   lla init
+   
+   # Manually merge your changes
+   ```
+
+4. **Command-line flags override config**:
+   ```bash
+   # Config says show_icons = false
+   # But this still shows icons:
+   lla --icons
+   ```
+
+### Theme Not Applying
+
+**Symptom**: Theme changes don't appear
+
+**Solutions**:
+
+1. **Verify theme exists**:
+   ```bash
+   ls ~/.config/lla/themes/
+   
+   # Pull built-in themes
+   lla theme pull
+   ```
+
+2. **Check theme name in config**:
+   ```toml
+   # Should match filename without .toml
+   theme = "dark"  # For dark.toml
+   ```
+
+3. **Try interactive selector**:
+   ```bash
+   lla theme
+   ```
+
+4. **Validate theme file**:
+   ```bash
+   # Check for TOML syntax errors
+   cat ~/.config/lla/themes/your-theme.toml
+   ```
+
+## Fuzzy Search Issues
+
+### Fuzzy Search Not Working
+
+**Symptom**: `lla --fuzzy` doesn't start or crashes
+
+**Requirements**:
+
+- lla version 0.2.0 or later
+- Terminal with sufficient size (min 80x24)
+- Working terminal input
+
+**Solutions**:
+
+1. **Check version**:
+   ```bash
+   lla --version    # Must be 0.2.0+
+   ```
+
+2. **Check terminal size**:
+   ```bash
+   echo $COLUMNS x $LINES    # Should be large enough
+   ```
+
+3. **Test in smaller directory**:
+   ```bash
+   cd /tmp
+   mkdir test-fuzzy
+   cd test-fuzzy
+   touch file1 file2 file3
+   lla --fuzzy
+   ```
+
+4. **Terminal compatibility**:
+   - Some terminals have better support
+   - Try: Alacritty, Kitty, iTerm2, Windows Terminal
+
+## Archive Listing Issues
+
+### Archives Not Listing
+
+**Symptom**: `lla archive.zip` doesn't work
+
+**Solutions**:
+
+1. **Verify archive format support**:
+   - Supported: .zip, .tar, .tar.gz, .tgz
+   - Not supported yet: .rar, .7z, .bz2
+
+2. **Check archive integrity**:
+   ```bash
+   # Test archive
+   unzip -t archive.zip
+   # or
+   tar -tzf archive.tar.gz
+   ```
+
+3. **Permissions**:
+   ```bash
+   # Ensure archive is readable
+   ls -l archive.zip
+   chmod +r archive.zip
+   ```
+
+## Content Search Issues
+
+### Search Not Finding Results
+
+**Symptom**: `--search` doesn't find expected results
+
+**Solutions**:
+
+1. **Check search pattern**:
+   ```bash
+   # Default is literal search
+   lla --search "main()"     # Literal
+   
+   # Use regex: prefix for patterns
+   lla --search "regex:main.*\("
+   ```
+
+2. **Case sensitivity**:
+   ```bash
+   # Default is case-insensitive
+   lla --search "Test"       # Finds test, TEST, Test
+   
+   # Use --case-sensitive for exact case
+   lla --search "Test" --case-sensitive
+   ```
+
+3. **Check file filters**:
+   ```bash
+   # Make sure you're searching the right files
+   lla --search "pattern" --files-only
+   lla --search "pattern" -f ".rs"
+   ```
+
+4. **Binary files**:
+   - Content search skips binary files by default
+   - Use file filters to search specific file types
+
+## Getting More Help
+
+### Enable Debug Output
+
+```bash
+# Set debug level
+export RUST_LOG=debug
+lla
+
+# Or just for lla
+RUST_LOG=debug lla
+```
+
+### Collect Diagnostic Information
+
+When reporting issues, include:
+
+```bash
+# 1. lla version and plugin info
+lla --version
+
+# 2. System information
+uname -a
+
+# 3. Config
+lla config
+
+# 4. Rust version (if relevant)
+rustc --version
+
+# 5. Error output
+lla 2>&1 | tee error.log
+```
+
+### Report a Bug
+
+If you've tried these solutions and still have issues:
+
+1. Check if it's a known issue: [GitHub Issues](https://github.com/chaqchase/lla/issues)
+2. Create a new issue with:
+   - Clear description
+   - Steps to reproduce
+   - Expected vs actual behavior
+   - Diagnostic information (above)
+   - Screenshots if relevant
+
+### Get Community Help
+
+- **GitHub Discussions**: Ask questions and share solutions
+- **Issue Tracker**: Report bugs and request features
+- **Documentation**: Check other guides and references
+
+---
+
+**Still stuck?** Open an issue on [GitHub](https://github.com/chaqchase/lla/issues) with full diagnostic information.

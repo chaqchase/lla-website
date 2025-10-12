@@ -10,7 +10,27 @@ references: []
 
 # Welcome to lla
 
-lla is a fast terminal file explorer written in Rust. It replaces and extends `ls` with multiple views, plugins, and Git integration.
+**lla** is a modern file listing tool that reimagines the traditional `ls` command for today's developers and system administrators. Built with Rust for exceptional performance and reliability, lla transforms how you interact with your filesystem through intelligent views, powerful plugins, and seamless Git integration.
+
+## Why lla?
+
+The traditional `ls` command has served us well for decades, but modern workflows demand more. Whether you're navigating large codebases, managing cloud infrastructure, or organizing complex project hierarchies, lla provides the tools you need without sacrificing speed or simplicity.
+
+### Built for Modern Workflows
+
+- **Zero Configuration Required**: Works beautifully out of the box with sensible defaults
+- **Blazing Fast**: Written in Rust, optimized for performance on directories with thousands of files
+- **Git-Aware**: Native Git integration shows repository status at a glance
+- **Extensible**: Robust plugin system lets you add exactly the features you need
+- **Beautiful Output**: Carefully designed themes and formatting that respect your terminal
+
+### Who is lla for?
+
+- **Developers** navigating large codebases and managing multiple projects
+- **System Administrators** monitoring file systems and organizing server directories
+- **DevOps Engineers** automating workflows with machine-readable output
+- **Power Users** who want more from their command line tools
+- **Anyone** who spends significant time in the terminal
 
 ## Views
 
@@ -33,24 +53,66 @@ lla is a fast terminal file explorer written in Rust. It replaces and extends `l
 - **Fuzzy search (experimental)**: Fast file finding
 <img src="https://github.com/user-attachments/assets/ec946fd2-34d7-40b7-b951-ffd9c4009ad6" className="rounded-2xl" alt="fuzzy" />
 
-## Performance
+## Key Features at a Glance
 
-- Efficient memory use
-- Responsive on large directories
-- Optimized recursion
-- Fast filters
+### Multiple Specialized Views
 
-## Plugins
+Different tasks require different perspectives. lla provides specialized views optimized for specific workflows:
 
-- Stable API
-- Isolated execution
-- Workflow integration
-- Community-driven add-ons
+- **Default View**: Clean, distraction-free listings for quick navigation
+- **Long Format**: Comprehensive metadata including permissions, ownership, and timestamps
+- **Tree View**: Hierarchical visualization of directory structures
+- **Table Layout**: Structured data display perfect for comparisons
+- **Grid Display**: Space-efficient layout for dense directories
+- **Git View**: Repository insights with file status indicators
+- **Timeline View**: Chronological organization for time-based workflows
+- **Size Map**: Visual storage analysis to identify space usage
+- **Fuzzy Search**: Interactive file discovery with multi-select
+
+### Intelligent File Operations
+
+lla goes beyond simple listing with smart filtering and organization:
+
+- **Advanced Filtering**: Complex patterns using OR, AND, NOT, XOR logic
+- **Regex Support**: Powerful pattern matching with regular expressions
+- **Content Search**: Ripgrep-powered search across file contents with syntax highlighting
+- **Smart Sorting**: Multiple criteria including natural number sorting
+- **Type Filtering**: Show or hide specific file types instantly
+
+### Performance Engineering
+
+Built with performance as a first-class concern:
+
+- **Efficient Memory Usage**: Handles directories with thousands of files effortlessly
+- **Optimized Recursion**: Fast traversal even in deep directory trees
+- **Smart Caching**: Intelligent caching where it matters
+- **Streaming Output**: Machine-readable formats stream for minimal memory footprint
+- **Responsive**: Always feels snappy, even on network filesystems
+
+### Plugin Ecosystem
+
+Extend lla's capabilities through a robust plugin system:
+
+- **Stable API**: Version-independent protocol ensures plugins work across updates
+- **Isolated Execution**: Plugins run safely without affecting core stability
+- **Rich Ecosystem**: 16+ first-party plugins for common tasks
+- **Easy Development**: Well-documented API and helper libraries
+- **Community-Driven**: Share and discover plugins from the community
 
 <img src="https://github.com/user-attachments/assets/8ecd56bc-6fee-4822-acb8-6699a7226920" className="rounded-2xl" alt="plugin-use" />
 
-## Roadmap
+## Perfect for Integration
 
-1. API stability
-2. Integrations
-3. Performance
+lla is designed to work seamlessly with your existing tools and workflows:
+
+- **Machine-Readable Output**: JSON, NDJSON, and CSV formats for scripting
+- **Shell Completion**: First-class completion support for bash, zsh, fish, and elvish
+- **Exit Codes**: Meaningful exit codes for reliable scripting
+- **Pipe-Friendly**: Designed to work well in command pipelines
+- **Archive Support**: List archive contents without extraction
+
+## What's Next?
+
+Ready to get started? Head over to the [Installation Guide](/docs/about/installation) to install lla on your system, or jump directly to [Basic Usage](/docs/usage/basic-usage) to learn the fundamentals.
+
+Want to extend lla? Check out our [Plugin Development Guide](/docs/guides/plugin-development-tutorial) to create your first plugin.

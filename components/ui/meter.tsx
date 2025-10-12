@@ -44,7 +44,7 @@ export function Meter({ label, ...props }: MeterProps) {
 
 function getColor(percentage: number) {
   if (percentage < 30) {
-    return '#0d6efd' // Blue
+    return '#FF7300' // Orange
   }
 
   if (percentage < 50) {

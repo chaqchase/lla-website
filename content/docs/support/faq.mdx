@@ -1,0 +1,478 @@
+---
+title: "FAQ"
+description: "Frequently asked questions about lla, covering installation, usage, plugins, performance, and common issues with detailed answers."
+order: 1
+published: true
+references: []
+---
+
+# Frequently Asked Questions
+
+Quick answers to common questions about lla. Can't find what you're looking for? Check the [Troubleshooting Guide](/docs/support/troubleshooting) or [open an issue](https://github.com/chaqchase/lla/issues).
+
+## General Questions
+
+### What is lla?
+
+lla is a modern file listing tool that enhances the traditional `ls` command with multiple views, powerful filtering, Git integration, and an extensible plugin system. It's written in Rust for optimal performance and reliability.
+
+### Why choose lla over ls or exa?
+
+lla offers several advantages:
+
+- **Multiple specialized views**: Tree, grid, table, timeline, sizemap, and more
+- **Plugin system**: Extend functionality without modifying core code
+- **Git integration**: Native repository status in your listings
+- **Content search**: Ripgrep-powered search across file contents
+- **Modern design**: Beautiful output with theme support
+- **Active development**: Regular updates and new features
+
+### Is lla free?
+
+Yes! lla is open-source software licensed under the MIT License. It's free to use, modify, and distribute.
+
+### What platforms does lla support?
+
+lla works on:
+- **Linux** (x86_64, ARM64)
+- **macOS** (Intel, Apple Silicon)
+- **Windows** (via WSL)
+
+Native Windows support is planned for future releases.
+
+## Installation & Setup
+
+### How do I install lla?
+
+The quickest method is using the installation script:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
+```
+
+See the [Installation Guide](/docs/about/installation) for other methods including package managers and building from source.
+
+### Why can't I find lla after installation?
+
+The installation directory might not be in your PATH. Add it:
+
+```bash
+export PATH="/usr/local/bin:$PATH"
+
+# Make it permanent
+echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Do I need to configure lla before using it?
+
+No! lla works perfectly out of the box with sensible defaults. However, you can customize it by running:
+
+```bash
+lla init    # Creates ~/.config/lla/config.toml
+```
+
+### How do I uninstall lla?
+
+```bash
+# Remove the binary
+sudo rm /usr/local/bin/lla
+
+# Remove configuration (optional)
+rm -rf ~/.config/lla
+```
+
+## Usage
+
+### Why are icons not displaying correctly?
+
+Icons require a Nerd Font. Install one from [nerdfonts.com](https://www.nerdfonts.com/), configure your terminal to use it, and restart your terminal.
+
+Popular choices:
+- FiraCode Nerd Font
+- JetBrainsMono Nerd Font
+- Hack Nerd Font
+
+### Can I use lla as a drop-in replacement for ls?
+
+Yes! Create an alias in your shell configuration:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+alias ls='lla'
+alias ll='lla -l'
+```
+
+### How do I exclude hidden files?
+
+Use the `--no-dotfiles` flag:
+
+```bash
+lla --no-dotfiles
+```
+
+Or set it as default in your config:
+
+```toml
+[filter]
+no_dotfiles = true
+```
+
+### What's the difference between -R and -t?
+
+- **`-R` (recursive)**: Lists all files in subdirectories in a flat format
+- **`-t` (tree)**: Shows hierarchical directory structure with indentation
+
+Both support depth limiting with `-d`:
+```bash
+lla -R -d 2    # Recursive, 2 levels deep
+lla -t -d 2    # Tree view, 2 levels deep
+```
+
+### Can lla list archive contents?
+
+Yes! lla can list contents of zip, tar, and tar.gz archives without extraction:
+
+```bash
+lla archive.zip -t       # Tree view of archive
+lla project.tar.gz -l    # Long format of archive contents
+```
+
+## Plugins
+
+### How do I install plugins?
+
+Install all first-party plugins:
+
+```bash
+lla install
+```
+
+Install from a Git repository:
+
+```bash
+lla install --git https://github.com/username/plugin-repo
+```
+
+Install from a local directory:
+
+```bash
+lla install --dir /path/to/plugin
+```
+
+### Do I need Rust to install plugins?
+
+Yes, currently plugins need to be built from source, which requires Rust. Install it from [rustup.rs](https://rustup.rs).
+
+Pre-built plugin binaries are planned for future releases.
+
+### How do I enable/disable plugins?
+
+Interactive mode:
+```bash
+lla use    # Navigate with arrow keys, toggle with space
+```
+
+Command line:
+```bash
+lla --enable-plugin plugin_name
+lla --disable-plugin plugin_name
+```
+
+### Where are plugins stored?
+
+Default location: `~/.config/lla/plugins/`
+
+You can customize this in your config:
+
+```toml
+plugins_dir = "~/custom/plugin/path"
+```
+
+### Can I write plugins in other languages?
+
+Currently, plugins must be written in Rust. However, the Protocol Buffer-based interface is language-agnostic, so support for other languages is theoretically possible in the future.
+
+### How do I create a plugin?
+
+Follow our comprehensive [Plugin Development Tutorial](/docs/guides/plugin-development-tutorial) which walks you through creating your first plugin step-by-step.
+
+### Do plugins slow down lla?
+
+Disabled plugins have zero performance impact. Enabled plugins only run when needed, and lla's architecture ensures they can't significantly slow down listings.
+
+## Performance
+
+### Is lla slower than ls?
+
+For small directories, lla and ls perform similarly. For large directories, lla's Rust implementation and optimized algorithms often match or exceed ls performance, while providing much more information.
+
+### Why is lla slow on my large directory?
+
+A few possible reasons:
+
+1. **Directory size calculation**: Use `--no-dirs` to skip this expensive operation
+2. **Deep recursion**: Limit depth with `-d 3`
+3. **Plugin overhead**: Disable unused plugins with `lla use`
+4. **Network filesystems**: These are inherently slower; consider using filters to reduce output
+
+Adjust performance limits in your config:
+
+```toml
+[formatters.tree]
+max_lines = 10000
+
+[listers.recursive]
+max_entries = 10000
+```
+
+### Can I speed up Git status?
+
+Git status checks can be slow in large repositories. Disable Git integration when not needed:
+
+```bash
+lla         # Without Git status
+lla -G      # With Git status (only when needed)
+```
+
+### Why is the first run slow?
+
+The first run may need to:
+- Load and verify plugins
+- Generate configuration
+- Cache Git repository information
+
+Subsequent runs should be much faster due to caching.
+
+## Customization
+
+### How do I change colors?
+
+lla uses themes. Switch themes:
+
+```bash
+lla theme              # Interactive theme selector
+```
+
+Or edit your config:
+
+```toml
+theme = "dark"
+```
+
+Available themes include: default, dark, light, dracula, nord, gruvbox_dark, and many more.
+
+### Can I create my own theme?
+
+Yes! Create a TOML file in `~/.config/lla/themes/`:
+
+```toml
+name = "my_theme"
+author = "Your Name"
+description = "My custom theme"
+
+[colors]
+file = "#FFFFFF"
+directory = "#89AFFF"
+# ... more colors
+```
+
+See the [Themes Guide](/docs/usage/themes) for complete documentation.
+
+### How do I change the default view?
+
+Edit your config:
+
+```toml
+default_format = "long"    # Options: default, long, tree, grid, table
+```
+
+### Can I set defaults for flags?
+
+Yes, in your config:
+
+```toml
+show_icons = true
+default_sort = "size"
+default_depth = 3
+
+[sort]
+dirs_first = true
+case_sensitive = false
+
+[filter]
+no_dotfiles = true
+```
+
+## Machine Output
+
+### What output formats does lla support?
+
+lla supports three machine-readable formats:
+
+- **JSON**: `lla --json` (add `--pretty` for formatted output)
+- **NDJSON**: `lla --ndjson` (newline-delimited JSON)
+- **CSV**: `lla --csv`
+
+### How do I use lla output in scripts?
+
+JSON example with jq:
+
+```bash
+# Get all .rs files larger than 1KB
+lla --json | jq '[.[] | select(.extension == "rs" and .size_bytes > 1024)]'
+
+# Export file sizes to CSV
+lla --csv > files.csv
+```
+
+NDJSON for streaming:
+
+```bash
+# Process large directories line-by-line
+lla --ndjson | while read -r line; do
+  echo "$line" | jq '.name'
+done
+```
+
+### Is the output format stable?
+
+Yes! The machine output format is versioned and stable. We guarantee backward compatibility and announce any changes in advance.
+
+## Git Integration
+
+### Does lla require Git?
+
+No, Git integration is optional. If Git is not installed or you're not in a repository, lla works normally without Git features.
+
+### Why isn't Git status showing?
+
+Possible reasons:
+
+1. Not in a Git repository: `git status` to verify
+2. Git not installed: Install Git for your platform
+3. Git view not active: Use `lla -G` to enable Git view
+
+### Can I see untracked files?
+
+Yes! The Git view shows:
+- Modified files
+- Staged files
+- Untracked files
+- Conflicts
+- Branch and commit information
+
+```bash
+lla -G    # Git view with full status
+```
+
+## Troubleshooting
+
+### lla crashes when I run it
+
+1. Check your lla version: `lla --version`
+2. Update to the latest version
+3. Disable plugins: `lla --disable-all-plugins`
+4. Check for file permission issues
+5. Report the issue with crash details
+
+### Output looks corrupted
+
+This usually indicates a terminal compatibility issue:
+
+1. Ensure your terminal supports Unicode
+2. Check that your font supports special characters
+3. Try disabling icons: `lla --no-icons`
+4. Try disabling colors: `lla --no-colors`
+
+### Fuzzy search isn't working
+
+Fuzzy search is experimental and requires:
+
+1. lla version 0.2.0 or later
+2. Sufficient terminal size
+3. Working terminal input
+
+Try: `lla --fuzzy` in a test directory.
+
+### Plugins fail to load
+
+Check:
+
+1. Plugin file has correct extension (.so, .dylib, or .dll)
+2. Plugin has execute permissions: `chmod +x plugin.so`
+3. Plugin is in the correct directory: `~/.config/lla/plugins/`
+4. Run `lla clean` to remove invalid plugins
+
+## Contributing
+
+### How can I contribute to lla?
+
+Many ways to contribute:
+
+- **Report bugs**: Open issues on GitHub
+- **Suggest features**: Start a discussion
+- **Write plugins**: Share your plugins with the community
+- **Improve docs**: Submit documentation improvements
+- **Write code**: Submit pull requests
+
+See our [Contributing Guide](/docs/support/contributing) for details.
+
+### I found a bug, what should I include in the report?
+
+Include:
+
+1. lla version: `lla --version`
+2. Operating system and version
+3. Steps to reproduce
+4. Expected vs actual behavior
+5. Any error messages
+6. Output of `lla --version` (shows loaded plugins)
+
+### Can I request a feature?
+
+Absolutely! Open a feature request on GitHub with:
+
+- Clear description of the feature
+- Use cases and examples
+- Why it would benefit other users
+
+## Migration
+
+### I'm coming from exa/eza, what are the equivalents?
+
+| exa/eza | lla equivalent |
+|---------|----------------|
+| `exa -l` | `lla -l` |
+| `exa -T` | `lla -t` |
+| `exa --git` | `lla -G` |
+| `exa --sort=size` | `lla -s size` |
+| `exa --reverse` | `lla -r` |
+
+Most flags are similar or identical!
+
+### Can I import my exa configuration?
+
+lla uses its own configuration format, but most exa settings have lla equivalents. See the [Configuration Guide](/docs/usage/config) for mapping your preferences.
+
+## Getting Help
+
+### Where can I get help?
+
+- **Documentation**: Browse our comprehensive guides
+- **FAQ**: You're reading it!
+- **Troubleshooting**: Check the [Troubleshooting Guide](/docs/support/troubleshooting)
+- **GitHub Issues**: [Report bugs or ask questions](https://github.com/chaqchase/lla/issues)
+- **Discussions**: Join community discussions on GitHub
+
+### Is there a community chat?
+
+Check the GitHub repository for links to community channels like Discord or Matrix.
+
+### How often is lla updated?
+
+lla follows semantic versioning with regular releases. Check the [Changelog](https://github.com/chaqchase/lla/blob/main/CHANGELOG.md) for update history.
+
+---
+
+**Still have questions?** Open an issue on [GitHub](https://github.com/chaqchase/lla/issues) or check the [Troubleshooting Guide](/docs/support/troubleshooting).

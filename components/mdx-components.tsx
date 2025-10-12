@@ -1,4 +1,5 @@
 import { DefaultInstallation } from '@/components/default-installation'
+import { Mermaid } from '@/components/docs/rehype/mermaid'
 import { PlainCode } from '@/components/docs/rehype/plain-code'
 import { ManualInstallation } from '@/components/manual-installation'
 import { useMDXComponent } from '@/lib/hooks/use-mdx'
@@ -18,8 +19,9 @@ export function MDXContent({ code }: MdxProps) {
         Image,
         Default: DefaultInstallation,
         ManualInstall: ManualInstallation,
+        Mermaid: Mermaid,
         a: (props: LinkProps) => (
-          <Link target="_blank" intent="primary" {...props} className="not-prose xd2432 font-medium hover:underline" />
+          <Link intent="primary" {...props} className="not-prose xd2432 font-medium hover:underline" />
         ),
         PlainCode: PlainCode,
         Snippet: (props: SnippetProps) => <Snippet {...props} className="bg-[#0e0e10] text-white" />,

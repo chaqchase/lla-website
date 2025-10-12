@@ -63,7 +63,6 @@ export function DocRefs({ references }: any) {
     <Menu className="not-prose gap-x-2 flex" aria-label="Link References" items={urls}>
       {(item: any) => (
         <MenuItem
-          target="_blank"
           className={cn(buttonStyles({ appearance: 'outline', size: 'small', className: 'focus:outline-0' }))}
           id={item.url}
           href={item.url}

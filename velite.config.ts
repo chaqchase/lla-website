@@ -2,6 +2,7 @@ import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import rehypePrettyCode from 'rehype-pretty-code'
 import rehypeSlug from 'rehype-slug'
 import { defineCollection, defineConfig, s } from 'velite'
+import { rehypeMermaid } from './lib/rehype-mermaid'
 
 const computedFields = <T extends { slug: string }>(data: T) => ({
   ...data,
@@ -20,6 +21,7 @@ const docs = defineCollection({
       published: s.boolean().default(true),
       references: s.array(s.string()).optional(),
       body: s.mdx(),
+      content: s.markdown(), // Raw markdown content for search indexing
       toc: s.toc(),
       status: s.string().optional()
     })
@@ -39,6 +41,7 @@ export default defineConfig({
   mdx: {
     rehypePlugins: [
       rehypeSlug,
+      rehypeMermaid, // Handle mermaid blocks BEFORE rehype-pretty-code
       [rehypePrettyCode, { defaultLang: 'bash', theme: 'vesper' }],
       [
         rehypeAutolinkHeadings,

@@ -1,40 +1,66 @@
 ---
 title: "Installation"
-description: "lla installation"
+description: "Complete installation guide for lla across different platforms and package managers with verification and troubleshooting steps."
 order: 2
 published: true
 references: []
 ---
 # Installation
 
-## Using Installation Script
+Getting lla up and running is quick and straightforward. Choose the installation method that best fits your workflow.
 
-Install with the script:
+## Quick Install (Recommended)
+
+The easiest way to install lla is using our automated installation script, which handles platform detection and verification:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
 ```
 
-This script will automatically:
+**What this script does:**
 
-- Detect your OS and architecture
-- Download the appropriate binary
-- Verify the checksum
-- Install lla to `/usr/local/bin`
+- Automatically detects your operating system and CPU architecture
+- Downloads the appropriate pre-compiled binary for your platform
+- Verifies the integrity of the download using checksums
+- Installs lla to `/usr/local/bin` (requires sudo on some systems)
+- Sets proper executable permissions
 
-## Quick Start with Cargo
+**Supported platforms:**
 
-Install via Cargo:
+- Linux (x86_64, ARM64)
+- macOS (Intel, Apple Silicon)
+- Windows (via WSL)
+
+## Install from Cargo
+
+If you have Rust's package manager `cargo` installed, you can build and install lla from source:
 
 ```bash
 cargo install lla
 ```
 
+This method:
+- Compiles lla specifically for your system
+- Always gives you the latest stable release from crates.io
+- Installs to `~/.cargo/bin` (ensure it's in your PATH)
+
+**Note:** Building from source requires a Rust toolchain. Install Rust from [rustup.rs](https://rustup.rs) if needed.
+
 ## Package Managers
 
-Available via package managers:
+lla is available through several package managers for convenient installation and automatic updates:
 
 <Default items={[`lla`]} />
+
+**Platform-specific commands:**
+
+| Platform | Package Manager | Command |
+|----------|----------------|---------|
+| macOS | Homebrew | `brew install lla` |
+| Arch Linux | paru | `paru -S lla` |
+| NetBSD | pkgin | `pkgin install lla` |
+| Cross-platform | X-CMD | `x install lla` |
+| Any with Cargo | cargo | `cargo install lla` |
 
 ## Manual Installation
 
@@ -76,23 +102,216 @@ sudo mv lla /usr/local/bin/lla
 
 # Post-Installation Setup
 
-### Shell Completion
-Shell completion:
-```bash
-lla completion bash    # for bash
-lla completion zsh     # for zsh
-lla completion fish    # for fish
-lla completion elvish  # for elvish
-```
+After installing lla, follow these steps to complete your setup and verify everything works correctly.
 
-### Configuration
-Initialize:
-```bash
-lla init              # Create default config
-lla config            # View your config
-```
+## 1. Verify Installation
 
-### Verify
+Confirm lla is installed and accessible:
+
 ```bash
 lla --version
 ```
+
+You should see output similar to:
+```
+lla 0.3.9
+```
+
+If you see "command not found", ensure the installation directory is in your PATH:
+
+```bash
+# For manual installations
+export PATH="/usr/local/bin:$PATH"
+
+# For cargo installations
+export PATH="$HOME/.cargo/bin:$PATH"
+```
+
+## 2. Shell Completion (Highly Recommended)
+
+Enable tab completion for your shell to dramatically improve your lla workflow:
+
+### Bash
+
+```bash
+# Generate completion script
+lla completion bash > ~/.lla-completion.bash
+
+# Add to your ~/.bashrc
+echo 'source ~/.lla-completion.bash' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Zsh
+
+```bash
+# Generate completion script
+lla completion zsh > ~/.zsh/completions/_lla
+
+# Add to your ~/.zshrc (if not already present)
+echo 'fpath=(~/.zsh/completions $fpath)' >> ~/.zshrc
+echo 'autoload -Uz compinit && compinit' >> ~/.zshrc
+source ~/.zshrc
+```
+
+### Fish
+
+```bash
+# Generate and install completion
+lla completion fish > ~/.config/fish/completions/lla.fish
+```
+
+### Elvish
+
+```bash
+# Generate completion
+lla completion elvish > ~/.elvish/lib/lla-completion.elv
+
+# Add to your ~/.elvish/rc.elv
+echo 'use lla-completion' >> ~/.elvish/rc.elv
+```
+
+## 3. Initialize Configuration
+
+Create your configuration file with sensible defaults:
+
+```bash
+lla init
+```
+
+This creates `~/.config/lla/config.toml` with default settings. You can view it anytime:
+
+```bash
+lla config              # View your configuration
+```
+
+To customize settings, either edit the file directly or use the config command:
+
+```bash
+# View current theme
+lla config --get theme
+
+# Change theme
+lla config --set theme dark
+
+# Enable icons by default
+lla config --set show_icons true
+```
+
+## 4. Install Plugins (Optional)
+
+Enhance lla with plugins for additional functionality:
+
+```bash
+# Install all first-party plugins
+lla install
+
+# Or install specific plugins from Git
+lla install --git https://github.com/chaqchase/lla-plugin-name
+```
+
+Learn more about plugins in the [Plugin System](/docs/plugins/concepts) documentation.
+
+## Quick Test
+
+Try these commands to see lla in action:
+
+```bash
+lla                    # List current directory
+lla -l                 # Long format with details
+lla -t                 # Tree view
+lla --fuzzy            # Interactive fuzzy search
+```
+
+## Troubleshooting
+
+### "command not found" Error
+
+**Problem:** Shell cannot find lla after installation.
+
+**Solution:** Add the installation directory to your PATH:
+
+```bash
+# Check where lla is installed
+which lla
+
+# If in /usr/local/bin, add to PATH
+export PATH="/usr/local/bin:$PATH"
+
+# Make it permanent (add to ~/.bashrc or ~/.zshrc)
+echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Permission Denied
+
+**Problem:** Cannot execute lla after manual installation.
+
+**Solution:** Ensure the binary has execute permissions:
+
+```bash
+sudo chmod +x /usr/local/bin/lla
+```
+
+### Checksum Verification Failed
+
+**Problem:** Installation script reports checksum mismatch.
+
+**Solution:** This usually indicates a corrupted download. Try again:
+
+```bash
+# Clear any partial downloads
+rm -f /tmp/lla-*
+
+# Run installation script again
+curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
+```
+
+### Icons Not Displaying
+
+**Problem:** File icons appear as squares or question marks.
+
+**Solution:** Install a Nerd Font and configure your terminal to use it:
+
+1. Download a Nerd Font from [nerdfonts.com](https://www.nerdfonts.com/)
+2. Install the font on your system
+3. Configure your terminal emulator to use the Nerd Font
+4. Restart your terminal
+
+Popular choices: FiraCode Nerd Font, JetBrainsMono Nerd Font, Hack Nerd Font
+
+### Slow Performance on Large Directories
+
+**Problem:** lla is slow when listing directories with many files.
+
+**Solution:** Adjust performance settings in your config:
+
+```toml
+# In ~/.config/lla/config.toml
+[formatters.tree]
+max_lines = 10000     # Reduce from default 20000
+
+[listers.recursive]
+max_entries = 10000   # Reduce from default 20000
+
+# Disable directory size calculation
+include_dirs = false
+```
+
+## Getting Help
+
+If you encounter issues not covered here:
+
+- Check our [FAQ](/docs/support/faq)
+- Visit the [Troubleshooting Guide](/docs/support/troubleshooting)
+- Open an issue on [GitHub](https://github.com/chaqchase/lla/issues)
+- Join our community discussions
+
+## Next Steps
+
+Now that lla is installed and configured:
+
+- Read the [Basic Usage](/docs/usage/basic-usage) guide to learn the fundamentals
+- Explore [View Formats](/docs/usage/view-formats) to see different ways to visualize your files
+- Check out [Configuration](/docs/usage/config) for customization options
+- Browse [First-Party Plugins](/docs/first-party-plugins/file_meta) to extend functionality

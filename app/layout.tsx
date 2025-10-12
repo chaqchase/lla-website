@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils'
 import '@/styles/app.css'
 import type { Metadata } from 'next'
 import { JetBrains_Mono } from 'next/font/google'
-import localFont from 'next/font/local'
 import React from 'react'
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -18,9 +17,8 @@ const mono = JetBrains_Mono({
   variable: '--font-mono'
 })
 
-const sans = localFont({
-  src: './fonts/pretendard-variable.woff2',
-  display: 'auto',
+const sans = JetBrains_Mono({
+  subsets: ['latin'],
   variable: '--font-sans'
 })
 
