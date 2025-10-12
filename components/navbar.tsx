@@ -118,7 +118,6 @@ export function ResponsiveAside({ open, setOpen }: OpenCloseProps) {
   const isDesktop = useMediaQuery('(min-width: 1024px)')
   return (
     <nav className="sm:hidden z-10 relative">
-      {!isDesktop && <CommandPalette setOpen={setOpen} open={open} />}
       <div className={cn('flex items-center justify-between pl-4 pr-2 -mb-2 pt-2')}>
         <Button
           aria-label="Open Menu"
