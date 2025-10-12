@@ -35,10 +35,11 @@ interface CommandModalProps extends ModalOverlayProps {
   children: React.ReactNode
 }
 
-const CommandModal = ({ children, ...props }: CommandModalProps) => {
+const CommandModal = ({ children, isDismissable = true, ...props }: CommandModalProps) => {
   const isDesktop = useMediaQuery('(min-width: 1024px)')
+  
   return (
-    <ModalOverlay {...props}>
+    <ModalOverlay isDismissable={isDismissable} {...props}>
       <Modal
         className={twJoin(
           'fixed bottom-0 left-[50%] top-auto z-50 grid h-[calc(100vh-35%)] w-full max-w-full translate-x-[-50%] gap-4 overflow-hidden rounded-t-xl bg-background p-0 shadow-lg ring-1 ring-border sm:bottom-auto sm:top-[6rem] sm:h-auto sm:w-full sm:max-w-2xl sm:rounded-xl',
@@ -46,7 +47,7 @@ const CommandModal = ({ children, ...props }: CommandModalProps) => {
           'exiting:duration-300 exiting:animate-out exiting:fade-out-0 exiting:slide-out-to-bottom-1/2 exiting:slide-out-to-left-1/2 exiting:[transition-timing-function:ease] sm:exiting:slide-out-to-top-[4rem]'
         )}
       >
-        <Dialog>
+        <Dialog role="dialog" aria-label="Command palette">
           {({ close }) => (
             <>
               <Command>{children}</Command>

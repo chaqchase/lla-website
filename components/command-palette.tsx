@@ -29,6 +29,16 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
   const [query, setQuery] = React.useState('')
   const [searchResults, setSearchResults] = React.useState<SearchResult[]>([])
   
+  // Close modal handler
+  const closeModal = React.useCallback(() => {
+    if (setOpen) {
+      setOpen(false)
+      setQuery('')
+      setSearchResults([])
+    }
+  }, [setOpen])
+
+  // Handle CMD+K / CTRL+K
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
@@ -41,15 +51,22 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
     document.addEventListener('keydown', down)
 
     return () => document.removeEventListener('keydown', down)
-  }, [pathname, setOpen])
+  }, [setOpen])
 
+  // Close modal on pathname change
   React.useEffect(() => {
-    if (setOpen) {
-      setOpen(false)
-      setQuery('')
-      setSearchResults([])
+    closeModal()
+  }, [pathname, closeModal])
+
+  // Close modal when navigating with hash/anchor (same page)
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      closeModal()
     }
-  }, [pathname, setOpen])
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [closeModal])
 
   // Perform search when query changes
   React.useEffect(() => {
@@ -73,7 +90,11 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
   const showEmptySearch = query.trim().length >= 2 && searchResults.length === 0
 
   return (
-    <CommandModal isOpen={open} onOpenChange={setOpen}>
+    <CommandModal 
+      isOpen={open} 
+      onOpenChange={setOpen}
+      isDismissable={true}
+    >
       <CommandInput 
         autoFocus={isDesktop} 
         placeholder="Search documentation..." 
@@ -96,6 +117,7 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
                   const anchor = result.sectionSlug
                     ?? (result.section ? result.section.toLowerCase().replace(/\s+/g, '-') : undefined)
                   const url = anchor ? `/${result.slug}#${anchor}` : `/${result.slug}`
+                  closeModal()
                   router.push(url)
                 }}
                 className="flex flex-col items-start gap-1 px-4 py-3"
@@ -134,7 +156,10 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
                     value={goodTitle(key + ' ' + (subValue as Doc).title)}
                     className="pl-[2rem]"
                     key={`${key}-${subKey}`}
-                    onSelect={() => router.push(`/${subValue.slug}`)}
+                    onSelect={() => {
+                      closeModal()
+                      router.push(`/${subValue.slug}`)
+                    }}
                   >
                     {goodTitle((subValue as Doc).title)}
                   </CommandItem>
@@ -150,7 +175,10 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
                         className="justify-between"
                         value={goodTitle(subKey + ' ' + (childValue as Doc).title)}
                         key={`${key}-${subKey}-${childKey}`}
-                        onSelect={() => router.push(`/${childValue.slug}`)}
+                        onSelect={() => {
+                          closeModal()
+                          router.push(`/${childValue.slug}`)
+                        }}
                       >
                         {goodTitle((childValue as Doc).title)}
                         {childValue.status && (
