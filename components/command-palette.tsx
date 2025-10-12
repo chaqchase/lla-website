@@ -58,8 +58,15 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
     closeModal()
   }, [pathname, closeModal])
 
-  // Note: We intentionally do NOT close on hash changes to avoid flicker/loops
-  // when parents control modal state via URL hash.
+  // Close modal on hash changes (for same-page section navigation)
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      closeModal()
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [closeModal])
 
   // Perform search when query changes
   React.useEffect(() => {
@@ -105,7 +112,6 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
                     result.sectionSlug ??
                     (result.section ? result.section.toLowerCase().replace(/\s+/g, '-') : undefined)
                   const url = anchor ? `/${result.slug}#${anchor}` : `/${result.slug}`
-                  closeModal()
                   router.push(url)
                 }}
                 className="flex flex-col items-start gap-1 px-4 py-3"
@@ -145,7 +151,6 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
                       className="pl-[2rem]"
                       key={`${key}-${subKey}`}
                       onSelect={() => {
-                        closeModal()
                         router.push(`/${subValue.slug}`)
                       }}
                     >
@@ -168,7 +173,6 @@ export function CommandPalette({ open, setOpen }: OpenCloseProps) {
                           value={goodTitle(subKey + ' ' + (childValue as Doc).title)}
                           key={`${key}-${subKey}-${childKey}`}
                           onSelect={() => {
-                            closeModal()
                             router.push(`/${childValue.slug}`)
                           }}
                         >
