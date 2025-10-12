@@ -1,221 +1,66 @@
 ---
 title: "Content Search"
-description: "Search inside files with ripgrep integration for lightning-fast content discovery across your codebase."
+description: "Search file contents with ripgrep-backed matching, syntax‑highlighted snippets, and caret markers."
 order: 6
 published: true
 references: []
 ---
 
-# Content Search with Ripgrep Integration
+# Content Search
 
-lla integrates with ripgrep (rg), one of the fastest search tools available, to provide powerful content search capabilities. Search through file contents at blazing speed with support for regex patterns, multiple search terms, and context display.
+lla provides fast content search powered by ripgrep (rg). It shows syntax‑highlighted code snippets with line numbers and bright caret markers pointing to exact matches.
 
 <img src="https://github.com/user-attachments/assets/1acf5df8-b38b-4f85-881a-c02374c28235" className="rounded-2xl" alt="content search" />
 
-## What is Ripgrep?
-
-[Ripgrep](https://github.com/BurntSushi/ripgrep) is a line-oriented search tool that recursively searches directories for a regex pattern. It's designed to be fast, respecting `.gitignore` files by default, and comes with extensive filtering options.
-
-## Basic Content Search
-
-Use the content search feature to find text within files:
+## Usage
 
 ```bash
-# Search for a pattern in current directory
-lla search "function"
+# Search current directory (literal match by default)
+lla --search "TODO"
 
-# Search for a pattern in a specific directory
-lla search "TODO" ~/projects
+# Search a specific directory
+lla src/ --search "main()"
 
-# Case-sensitive search
-lla search "Main" --case-sensitive
+# Control context lines (default: 2)
+lla --search "TODO" --search-context 5
 ```
 
 ## Search Patterns
 
-### Simple Text Search
-
-Search for literal text strings:
+By default lla treats the pattern as a literal (safe for special characters). To use regex, prefix your pattern with `regex:`.
 
 ```bash
-lla search "error handling"
-lla search "import React"
-lla search "class MyClass"
-```
+# Literal (default)
+lla --search "main()"
 
-### Regex Patterns
-
-Use regular expressions for advanced pattern matching:
-
-```bash
-# Match function definitions
-lla search "fn \w+\("
-
-# Find email addresses
-lla search "\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
-
-# Match TODO comments with numbers
-lla search "TODO: #\d+"
-
-# Find hexadecimal colors
-lla search "#[0-9A-Fa-f]{6}"
-```
-
-### Multiple Search Terms
-
-Combine multiple search patterns:
-
-```bash
-# Search for multiple keywords (OR logic)
-lla search "error|warning|fatal"
-
-# Find lines with multiple terms
-lla search "class.*public"
+# Regex (use regex: prefix)
+lla --search "regex:^func.*\("
 ```
 
 ## Search Options
 
-### Context Display
+Options supported by lla’s CLI for content search:
 
-Show surrounding lines for better context:
-
-```bash
-# Show 3 lines before and after each match
-lla search "function" --context 3
-
-# Show 2 lines before matches
-lla search "import" --before-context 2
-
-# Show 5 lines after matches
-lla search "TODO" --after-context 5
-```
-
-### File Type Filtering
-
-Search only in specific file types:
-
-```bash
-# Search only in Rust files
-lla search "impl" --type rust
-
-# Search only in JavaScript/TypeScript
-lla search "async" --type js
-
-# Search in Python files
-lla search "def " --type python
-
-# Search in multiple file types
-lla search "function" --type js --type ts
-```
-
-### Search Scope
-
-Control where to search:
-
-```bash
-# Search recursively (default)
-lla search "pattern" --recursive
-
-# Limit search depth
-lla search "pattern" --max-depth 3
-
-# Follow symbolic links
-lla search "pattern" --follow-links
-
-# Search in hidden files
-lla search "pattern" --hidden
-```
+- Context lines: `--search-context <n>` (applies symmetrically before/after, default 2)
+- Case sensitivity: `--case-sensitive` (default is case‑insensitive)
+- File/name filter: `-f ".ext"` or `-f "glob:pattern"` (mapped to ripgrep `--glob`)
+- Directory target: pass a directory as the first positional argument
 
 ## Advanced Features
 
-### Case Sensitivity
+What you’ll see:
 
-Control case matching behavior:
-
-```bash
-# Case-insensitive (default)
-lla search "main"
-
-# Case-sensitive
-lla search "Main" --case-sensitive
-
-# Smart case (case-sensitive if uppercase present)
-lla search "Main" --smart-case
-```
-
-### Invert Match
-
-Find lines that DON'T match a pattern:
-
-```bash
-# Find files without TODOs
-lla search "TODO" --invert-match
-
-# Exclude lines with comments
-lla search "function" --invert-match "^\\s*//"
-```
-
-### File Pattern Matching
-
-Use glob patterns to filter files:
-
-```bash
-# Search only in specific files
-lla search "function" --glob "*.rs"
-
-# Search in multiple patterns
-lla search "import" --glob "*.{js,ts,jsx,tsx}"
-
-# Exclude certain files
-lla search "TODO" --glob "!*.min.js"
-```
-
-### Line Numbers and Statistics
-
-Display additional information:
-
-```bash
-# Show line numbers (default)
-lla search "pattern"
-
-# Show only file names with matches
-lla search "pattern" --files-with-matches
-
-# Show count of matches per file
-lla search "pattern" --count
-
-# Show only files without matches
-lla search "pattern" --files-without-match
-```
+- Syntax‑highlighted snippets based on file extension
+- Line numbers for each snippet line
+- Bright yellow carets marking exact match spans
 
 ## Integration with lla Features
 
-### Combined with File Filtering
+Content search honors your other lla settings:
 
-Combine content search with lla's file filtering:
-
-```bash
-# Search in filtered files
-lla -f "*.rs" search "impl"
-
-# Search with specific view format
-lla -l search "TODO" --context 2
-
-# Tree view with search
-lla -t search "function"
-```
-
-### Using with Plugins
-
-Content search works seamlessly with lla plugins:
-
-```bash
-# Search and analyze with plugins
-lla plugin --name keyword_search --action search
-
-# Search with git status
-lla -G search "TODO"
-```
+- Works with `--filter`, `--files-only`, etc. (eligible files are passed to ripgrep)
+- Respects configured `exclude_paths`
+- Honors dotfile visibility flags (`--no-dotfiles`, `-A/--almost-all`)
 
 ## Practical Use Cases
 
@@ -223,198 +68,93 @@ lla -G search "TODO"
 
 **Finding API usage:**
 ```bash
-lla search "api\.fetch" --type js
-lla search "use \w+" --type rust
+lla --search "regex:api\\.fetch\("
+lla --search "regex:^use .*" -f ".rs"
 ```
 
 **Tracking TODOs and FIXMEs:**
 ```bash
-lla search "(TODO|FIXME|HACK):" --context 2
+lla --search "regex:(TODO|FIXME|HACK):" --search-context 2
 ```
 
 **Finding dependencies:**
 ```bash
-lla search "^import.*from" --type js
-lla search "^use " --type rust
+lla --search "regex:^import.*from" -f "glob:*.{js,ts,jsx,tsx}"
+lla --search "regex:^use " -f ".rs"
 ```
 
 ### Code Review
 
 **Finding console logs:**
 ```bash
-lla search "console\.(log|warn|error)" --type js
+lla --search "regex:console\\.(log|warn|error)" -f "glob:*.{js,ts,jsx,tsx}"
 ```
 
 **Checking error handling:**
 ```bash
-lla search "try\s*{|catch\s*\(" --context 5
+lla --search "regex:try\\s*\{|catch\\s*\(" --search-context 5
 ```
 
 **Finding deprecated code:**
 ```bash
-lla search "@deprecated" --context 3
+lla --search "@deprecated" --search-context 3
 ```
 
 ### Configuration Management
 
 **Finding configuration keys:**
 ```bash
-lla search "api_key|secret|password" --type toml
+lla --search "regex:api_key|secret|password" -f "glob:*.{toml,yaml,yml,json}"
 ```
 
 **Checking environment variables:**
 ```bash
-lla search "process\.env\." --type js
-lla search "std::env::" --type rust
+lla --search "process\.env\." -f "glob:*.{js,ts,jsx,tsx}"
+lla --search "std::env::" -f ".rs"
 ```
 
-## Performance Tips
+## Machine Output
 
-Ripgrep is already extremely fast, but here are ways to optimize further:
+For automation and tooling, lla passes through ripgrep’s JSON and also supports CSV:
 
 ```bash
-# Skip .gitignore files check (faster but less filtered)
-lla search "pattern" --no-ignore
+# Ripgrep JSON events (pass-through)
+lla --search "FIXME" --json
+lla --search "TODO" --ndjson
 
-# Search only tracked git files
-lla search "pattern" --git
-
-# Limit matches per file
-lla search "pattern" --max-count 10
-
-# Use parallel search (default, but can adjust)
-lla search "pattern" --threads 8
+# CSV (header: file,line,column,kind,text)
+lla --search "TODO" --csv
 ```
 
-## Output Formats
+Notes:
 
-Control how results are displayed:
-
-```bash
-# Standard output with colors
-lla search "pattern"
-
-# JSON output for processing
-lla search "pattern" --json
-
-# Compact output
-lla search "pattern" --compact
-
-# Show full file paths
-lla search "pattern" --absolute-paths
-```
+- Literal matching is the default; use `regex:` to enable regex.
+- Some ripgrep CLI flags (e.g., `--type`, `--before-context/--after-context`) are not exposed directly; use `-f` for globs and `--search-context` for symmetric context.
 
 ## Ignoring Files and Directories
 
-### Using .gitignore
-
-By default, ripgrep respects `.gitignore` files:
-
-```bash
-# Respect .gitignore (default)
-lla search "pattern"
-
-# Ignore .gitignore rules
-lla search "pattern" --no-ignore
-```
-
-### Custom Ignore Patterns
-
-Create a `.rgignore` file in your project root:
-
-```
-# Ignore node_modules
-node_modules/
-
-# Ignore build outputs
-dist/
-build/
-target/
-
-# Ignore specific file patterns
-*.min.js
-*.map
-```
+lla honors `.gitignore` via its internal walker and your configured `exclude_paths`. Use `--no-dotfiles`/`-A`/`--dotfiles-only` to control hidden files.
 
 ## Quick Reference
 
 ```bash
-# Basic search
-lla search "pattern"                    # Search for text
-lla search "pattern" --context 3        # Show context
-lla search "pattern" --case-sensitive   # Case-sensitive
+# Basics
+lla --search "TODO"                      # Literal search
+lla --search "regex:^func\("             # Regex search
+lla --search "Error" --case-sensitive    # Case‑sensitive
+lla --search "TODO" --search-context 3   # Context lines
 
-# File filtering
-lla search "pattern" --type rust        # Specific file type
-lla search "pattern" --glob "*.js"      # Glob pattern
-lla search "pattern" --hidden           # Include hidden files
+# Scope
+lla src/ --search "main"                 # Target directory
+lla --search "Error" -f ".rs"           # Filter by extension
+lla --search "import" -f "glob:*.{js,ts,jsx,tsx}"
 
-# Output control
-lla search "pattern" --count            # Count matches
-lla search "pattern" --files-with-matches  # List files only
-lla search "pattern" --json             # JSON output
-
-# Advanced
-lla search "pattern" --max-depth 2      # Limit depth
-lla search "pattern" --invert-match     # Invert results
-lla search "pattern" --follow-links     # Follow symlinks
-```
-
-## Comparing with Keyword Search Plugin
-
-While lla has a [keyword search plugin](/docs/first-party-plugins/keyword_search), the ripgrep integration offers:
-
-- **Speed**: Significantly faster for large codebases
-- **Regex**: Full regex pattern support
-- **Respect gitignore**: Automatically filters ignored files
-- **File type detection**: Built-in language-aware filtering
-- **Parallel search**: Multi-threaded for maximum performance
-
-The keyword search plugin is better for:
-- Interactive search with menu-driven workflows
-- Visual match highlighting with customizable colors
-- Match statistics and analysis
-- Copy to clipboard and save to file actions
-
-## Installing Ripgrep
-
-If ripgrep is not already installed:
-
-### macOS
-```bash
-brew install ripgrep
-```
-
-### Linux (Debian/Ubuntu)
-```bash
-apt-get install ripgrep
-```
-
-### Linux (Fedora)
-```bash
-dnf install ripgrep
-```
-
-### Windows
-```bash
-choco install ripgrep
-# or
-scoop install ripgrep
-```
-
-### Cargo
-```bash
-cargo install ripgrep
-```
-
-Verify installation:
-```bash
-rg --version
+# Machine output
+lla --search "FIXME" --json
+lla --search "TODO" --csv
 ```
 
 ## Learn More
 
-- **[File Filtering](/docs/usage/file-filtering)**: Advanced file filtering options
-- **[Keyword Search Plugin](/docs/first-party-plugins/keyword_search)**: Interactive search with rich UI
-- **[Basic Usage](/docs/usage/basic-usage)**: Core lla commands and patterns
-- **[Ripgrep User Guide](https://github.com/BurntSushi/ripgrep/blob/master/GUIDE.md)**: Complete ripgrep documentation
+- [Basic Usage](/docs/usage/basic-usage)
+- [File Filtering](/docs/usage/file-filtering)
