@@ -55,7 +55,7 @@ export function Navbar() {
                   </Collection>
                 </div>
 
-                <div className="flex items-center gap-x-1">
+                {/* <div className="flex items-center gap-x-1">
                   <>
                     <Button
                       onPress={() => setOpen((open: boolean) => !open)}
@@ -71,7 +71,7 @@ export function Navbar() {
 
                     <ThemeSwitcher />
                   </>
-                </div>
+                </div> */}
               </div>
             </div>
           </nav>
