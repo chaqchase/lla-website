@@ -4,7 +4,7 @@ import { Aside } from '@/components/aside'
 import { CommandPalette, type OpenCloseProps } from '@/components/command-palette'
 import { Logo } from '@/components/logo'
 import { ThemeSwitcher } from '@/components/theme-switcher'
-import { IconHamburger, IconSearch } from '@irsyadadl/paranoid'
+import { IconHamburger } from '@irsyadadl/paranoid'
 import { LayoutGroup, motion } from 'framer-motion'
 import { usePathname } from 'next/navigation'
 import React, { useEffect, useId, useState } from 'react'
@@ -14,7 +14,6 @@ import {
   cn,
   LinkPrimitive,
   type LinkProps,
-  MenuKeyboard,
   Separator,
   Sheet,
   SheetContent,
@@ -55,9 +54,9 @@ export function Navbar() {
                   </Collection>
                 </div>
 
-                {/* <div className="flex items-center gap-x-1">
+                <div className="flex items-center gap-x-1">
                   <>
-                    <Button
+                    {/* <Button
                       onPress={() => setOpen((open: boolean) => !open)}
                       size="small"
                       appearance="outline"
@@ -67,11 +66,11 @@ export function Navbar() {
                       <IconSearch />
 
                       <MenuKeyboard className="-mr-2 [&_kbd]:min-w-[3ch]" keys="⌘K" />
-                    </Button>
+                    </Button> */}
 
                     <ThemeSwitcher />
                   </>
-                </div> */}
+                </div>
               </div>
             </div>
           </nav>
@@ -132,7 +131,7 @@ export function ResponsiveAside({ open, setOpen }: OpenCloseProps) {
           <Logo className="size-7" />
         </Link>
         <div className="flex items-center gap-x-1">
-          <Button
+          {/* <Button
             // @ts-expect-error
             onPress={() => setOpen((open: boolean) => !open)}
             size="square-petite"
@@ -141,7 +140,7 @@ export function ResponsiveAside({ open, setOpen }: OpenCloseProps) {
           >
             <IconSearch />
             <MenuKeyboard className="-mr-2 [&_kbd]:min-w-[3ch]" keys="⌘K" />
-          </Button>
+          </Button> */}
 
           <ThemeSwitcher />
         </div>
