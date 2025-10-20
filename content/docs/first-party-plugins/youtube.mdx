@@ -1,0 +1,146 @@
+---
+title: "YouTube"
+description: "Search YouTube with autosuggestions and clipboard support"
+order: 19
+published: true
+references: [https://github.com/chaqchase/lla/blob/main/plugins/youtube]
+status: "new"
+---
+# LLA YouTube Plugin
+
+Search YouTube with live autosuggestions, history management, and clipboard support.
+
+## Features
+
+- Live YouTube search suggestions
+- Search with selected/clipboard text
+- Search history management
+- Clipboard fallback support
+- Search from history
+- Copy queries to clipboard
+- Search statistics
+- Top searches tracking
+- Configurable history size
+
+## Configuration
+
+Configuration file location: `~/.config/lla/youtube/config.toml`
+
+```toml
+remember_search_history = true
+use_clipboard_fallback = true
+max_history_size = 100
+
+[colors]
+success = "bright_green"
+info = "bright_cyan"
+warning = "bright_yellow"
+error = "bright_red"
+prompt = "bright_blue"
+link = "bright_magenta"
+```
+
+## Usage
+
+### Perform a YouTube search
+
+```bash
+lla action youtube search
+```
+
+This will:
+1. Prompt you to choose input method:
+   - Enter new search query (with live YouTube suggestions)
+   - Search from history
+   - Search clipboard content
+2. Fetch live suggestions as you type
+3. Open the search in your default browser
+4. Save the query to history
+
+### Search with selected text
+
+```bash
+lla action youtube search-selected
+```
+
+Automatically searches YouTube using the text currently in your clipboard.
+
+### Manage search history
+
+```bash
+lla action youtube history
+```
+
+Options:
+- Search selected entry
+- Copy queries to clipboard
+- Delete selected entries
+- Clear all history
+- Show search statistics
+
+### Configure preferences
+
+```bash
+lla action youtube preferences
+```
+
+Adjust settings:
+- Toggle search history
+- Toggle clipboard fallback
+- Set max history size
+
+### Display help
+
+```bash
+lla action youtube help
+```
+
+## Display Formats
+
+### Search with Suggestions
+When performing a search, the plugin displays live YouTube suggestions:
+
+```
+💡 Enter a search query to see live YouTube suggestions
+
+Search query: rust tutorial
+
+🔄 Fetching suggestions from YouTube...
+
+✨ 10 suggestions found:
+  🎬 rust tutorial (your input)
+  💡 rust tutorial for beginners
+  💡 rust tutorial 2024
+  💡 rust tutorial project
+  💡 rust tutorial web development
+  💡 rust tutorial async
+
+Info: Searching YouTube for: rust tutorial
+Success: Search completed and added to history!
+```
+
+### Search History Statistics
+```
+📊 Search History Statistics:
+──────────────────────────────────────────────────────
+ • Total searches: 38
+ • Unique queries: 31
+ • Oldest search: 2024-01-12 09:15:00
+ • Most recent: 2024-01-20 16:20:00
+
+🔥 Top 5 searches:
+ • rust tutorial (4x)
+ • python basics (3x)
+ • javascript async (2x)
+ • docker tutorial (2x)
+ • git tutorial (2x)
+──────────────────────────────────────────────────────
+```
+
+## Actions
+
+- `search` - Perform a YouTube search with suggestions
+- `search-selected` - Search YouTube with clipboard text
+- `history` - Manage search history
+- `preferences` - Configure plugin settings
+- `help` - Show help information

@@ -1,0 +1,174 @@
+---
+title: "Google Meet"
+description: "Create Google Meet rooms with browser profile support"
+order: 20
+published: true
+references: [https://github.com/chaqchase/lla/blob/main/plugins/google_meet]
+status: "new"
+---
+# LLA Google Meet Plugin
+
+Create Google Meet rooms and manage meeting links with browser profile support.
+
+## Features
+
+- Generate random Google Meet links
+- Auto-copy links to clipboard
+- Browser profile support
+- Meeting history management
+- Open meetings in specific browser profiles
+- Copy meeting links from history
+- Configurable auto-copy behavior
+
+## Configuration
+
+Configuration file location: `~/.config/lla/google_meet/config.toml`
+
+```toml
+auto_copy_link = true
+max_history_size = 50
+
+[[browser_profiles]]
+name = "Work"
+profile_path = "Profile 1"
+
+[[browser_profiles]]
+name = "Personal"
+profile_path = "Default"
+
+[colors]
+success = "bright_green"
+info = "bright_cyan"
+warning = "bright_yellow"
+error = "bright_red"
+link = "bright_blue"
+```
+
+## Usage
+
+### Create a new meeting
+
+```bash
+lla action google_meet create
+```
+
+This will:
+1. Generate a random Google Meet link
+2. Display the link
+3. Auto-copy to clipboard (if enabled)
+4. Open in default browser
+5. Save to meeting history
+
+### Create with browser profile
+
+```bash
+lla action google_meet create-with-profile
+```
+
+Allows you to:
+1. Select from configured browser profiles
+2. Create a meeting room
+3. Open the meeting in the selected browser profile
+
+### Manage meeting history
+
+```bash
+lla action google_meet history
+```
+
+Options:
+- Copy selected meeting link
+- Open selected meeting link
+- Clear all meeting history
+
+### Manage browser profiles
+
+```bash
+lla action google_meet profiles
+```
+
+Options:
+- Add new browser profile
+- List all profiles
+- Remove profile
+
+### Configure preferences
+
+```bash
+lla action google_meet preferences
+```
+
+Adjust settings:
+- Toggle auto-copy link
+- Set max history size
+
+### Display help
+
+```bash
+lla action google_meet help
+```
+
+## Display Formats
+
+### Creating a Meeting
+```
+Info: Creating Google Meet room...
+Link: https://meet.google.com/abc-defg-hij
+Success: Link copied to clipboard!
+Info: Opening with profile: Work
+Success: Meeting room created successfully!
+```
+
+### Meeting History
+```
+⚡ Choose action:
+  📋 Copy selected link
+  🌐 Open selected link
+  🗑️  Clear all history
+
+🔗 https://meet.google.com/abc-defg-hij (2024-01-20 14:30:00)
+🔗 https://meet.google.com/xyz-qrst-uvw (2024-01-20 10:15:00)
+🔗 https://meet.google.com/mno-pqrs-tuv (2024-01-19 16:45:00)
+```
+
+### Browser Profiles
+```
+📋 Browser Profiles:
+ 1. Work (Profile 1)
+ 2. Personal (Default)
+ 3. Development (Profile 2)
+```
+
+## Actions
+
+- `create` - Create a new meeting room
+- `create-with-profile` - Create meeting with browser profile
+- `history` - Manage meeting history
+- `profiles` - Manage browser profiles
+- `preferences` - Configure plugin settings
+- `help` - Show help information
+
+## Browser Profile Setup
+
+To set up browser profiles, you need to know the profile directory names used by your browser:
+
+### Chrome/Chromium
+Profile paths are typically:
+- `Default` - Default profile
+- `Profile 1`, `Profile 2`, etc. - Additional profiles
+
+To find your profile name:
+1. Open Chrome
+2. Go to `chrome://version`
+3. Look for "Profile Path"
+
+### Example Configuration
+```toml
+[[browser_profiles]]
+name = "Work Account"
+profile_path = "Profile 1"
+
+[[browser_profiles]]
+name = "Personal Account"
+profile_path = "Default"
+```

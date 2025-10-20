@@ -1,0 +1,135 @@
+---
+title: "JWT"
+description: "Decode, analyze, and search JWT tokens with beautiful formatting"
+order: 17
+published: true
+references: [https://github.com/chaqchase/lla/blob/main/plugins/jwt]
+status: "new"
+---
+# LLA JWT Plugin
+
+Decode, analyze, and search JWT tokens with beautiful formatting and history management.
+
+## Features
+
+- Decode JWT tokens (header, payload, signature)
+- Auto-check token expiration
+- Search JWT contents with regex support
+- Token history management
+- Copy JWT parts to clipboard
+- Highlighted important claims (sub, iss, aud, exp, iat, nbf)
+- Beautiful colored output
+- Multiple input methods (paste, clipboard, history)
+
+## Configuration
+
+Configuration file location: `~/.config/lla/jwt/config.toml`
+
+```toml
+max_history_size = 50
+auto_check_expiration = true
+save_to_history = true
+highlight_claims = ["sub", "iss", "aud", "exp", "iat", "nbf"]
+
+[colors]
+success = "bright_green"
+info = "bright_cyan"
+warning = "bright_yellow"
+error = "bright_red"
+header = "bright_blue"
+payload = "bright_magenta"
+claim = "bright_green"
+expired = "bright_red"
+valid = "bright_green"
+```
+
+## Usage
+
+### Decode a JWT token
+
+```bash
+lla action jwt decode
+```
+
+This will:
+1. Prompt you to choose input method (paste, clipboard, or history)
+2. Display the decoded JWT with formatted header and payload
+3. Show expiration status if applicable
+4. Offer options to copy parts or save to history
+
+### Search within JWT tokens
+
+```bash
+lla action jwt search
+```
+
+Search for specific claims or values within JWT tokens using regex patterns.
+
+### Manage token history
+
+```bash
+lla action jwt history
+```
+
+View, copy, or remove previously decoded JWT tokens from history.
+
+### Configure preferences
+
+```bash
+lla action jwt preferences
+```
+
+Adjust settings:
+- Toggle auto-check expiration
+- Toggle save to history
+- Set max history size
+- Manage highlighted claims
+
+### Display help
+
+```bash
+lla action jwt help
+```
+
+## Display Formats
+
+### Default Format
+When decoding a JWT, the plugin displays:
+
+```
+═══════════════════════════════════════════════════════════════════════════
+  🔐 JWT TOKEN DETAILS
+═══════════════════════════════════════════════════════════════════════════
+
+┌─ HEADER ─────────────────────────────────────────────────────────────┐
+{
+  alg: "HS256",
+  typ: "JWT"
+}
+└──────────────────────────────────────────────────────────────────────┘
+
+┌─ PAYLOAD ────────────────────────────────────────────────────────────┐
+{
+  sub: "1234567890",
+  name: "John Doe",
+  iat: 1516239022,
+  exp: 1516242622
+}
+└──────────────────────────────────────────────────────────────────────┘
+
+✅ Expires in 2 hours
+
+┌─ SIGNATURE ──────────────────────────────────────────────────────────┐
+  SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+└──────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+```
+
+## Actions
+
+- `decode` - Decode and view JWT token details
+- `search` - Search JWT contents with regex
+- `history` - Manage token history
+- `preferences` - Configure plugin settings
+- `help` - Show help information
