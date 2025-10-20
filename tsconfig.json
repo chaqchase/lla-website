@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -11,7 +15,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "target": "es5",
     "downlevelIteration": true,
@@ -21,11 +25,27 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"],
-      "ui": ["./components/ui"],
-      "#site/content": ["./.velite"]
+      "@/*": [
+        "./*"
+      ],
+      "ui": [
+        "./components/ui"
+      ],
+      "#site/content": [
+        "./.velite"
+      ]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "content/docs/express/usage-guide.mdx"],
-  "exclude": ["node_modules", "./content/**/*.mdx"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "content/docs/express/usage-guide.mdx",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "./content/**/*.mdx"
+  ]
 }

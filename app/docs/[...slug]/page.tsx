@@ -10,9 +10,9 @@ import { type Metadata } from 'next'
 import { Separator, Toaster } from 'ui'
 
 export interface DocPageProps {
-  params: {
+  params: Promise<{
     slug: string[]
-  }
+  }>
 }
 
 async function getPostFromParams(params: DocPageProps['params']) {
@@ -22,7 +22,8 @@ async function getPostFromParams(params: DocPageProps['params']) {
   return doc
 }
 
-export async function generateMetadata({ params }: DocPageProps): Promise<Metadata> {
+export async function generateMetadata(props: DocPageProps): Promise<Metadata> {
+  const params = await props.params;
   const doc = await getPostFromParams(params)
 
   if (!doc) {
@@ -42,7 +43,8 @@ export async function generateStaticParams(): Promise<DocPageProps['params'][]> 
   return docs.map((doc) => ({ slug: doc.slugAsParams.split('/') }))
 }
 
-export default async function PostPage({ params }: DocPageProps) {
+export default async function PostPage(props: DocPageProps) {
+  const params = await props.params;
   const doc = await getPostFromParams(params)
 
   if (!doc || !doc.published) {
