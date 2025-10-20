@@ -8,27 +8,26 @@ status: "new"
 ---
 # LLA JWT Plugin
 
-Decode, analyze, and search JWT tokens with beautiful formatting and history management.
+JWT decoder and analyzer for lla with beautiful formatting, search capabilities, and validation.
 
 ## Features
 
-- Decode JWT tokens (header, payload, signature)
-- Auto-check token expiration
-- Search JWT contents with regex support
-- Token history management
-- Copy JWT parts to clipboard
-- Highlighted important claims (sub, iss, aud, exp, iat, nbf)
-- Beautiful colored output
-- Multiple input methods (paste, clipboard, history)
+- Token Decoding: Beautiful formatted display of JWT header, payload, and signature
+- Expiration Checking: Automatic expiration validation with time remaining
+- Smart Search: Regex-powered search through JWT contents
+- History Management: Store and manage decoded JWT tokens
+- Multiple Input Methods: Paste, clipboard, or select from history
+- Flexible Copying: Copy full token, header, payload, or specific claims
+- Claim Highlighting: Automatically highlight important JWT claims
 
 ## Configuration
 
-Configuration file location: `~/.config/lla/jwt/config.toml`
+Configuration file location: `~/.config/lla/plugins/jwt/config.toml`
 
 ```toml
-max_history_size = 50
 auto_check_expiration = true
 save_to_history = true
+max_history_size = 50
 highlight_claims = ["sub", "iss", "aud", "exp", "iat", "nbf"]
 
 [colors]
@@ -48,7 +47,7 @@ valid = "bright_green"
 ### Decode a JWT token
 
 ```bash
-lla action jwt decode
+lla plugin --name jwt --action decode
 ```
 
 This will:
@@ -60,7 +59,7 @@ This will:
 ### Search within JWT tokens
 
 ```bash
-lla action jwt search
+lla plugin --name jwt --action search
 ```
 
 Search for specific claims or values within JWT tokens using regex patterns.
@@ -68,7 +67,7 @@ Search for specific claims or values within JWT tokens using regex patterns.
 ### Manage token history
 
 ```bash
-lla action jwt history
+lla plugin --name jwt --action history
 ```
 
 View, copy, or remove previously decoded JWT tokens from history.
@@ -76,7 +75,7 @@ View, copy, or remove previously decoded JWT tokens from history.
 ### Configure preferences
 
 ```bash
-lla action jwt preferences
+lla plugin --name jwt --action preferences
 ```
 
 Adjust settings:
@@ -88,18 +87,17 @@ Adjust settings:
 ### Display help
 
 ```bash
-lla action jwt help
+lla plugin --name jwt --action help
 ```
 
-## Display Formats
+## Display Examples
 
-### Default Format
-When decoding a JWT, the plugin displays:
+### Token Display
 
 ```
-═══════════════════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════════════
   🔐 JWT TOKEN DETAILS
-═══════════════════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════════════
 
 ┌─ HEADER ─────────────────────────────────────────────────────────────┐
 {
@@ -113,23 +111,38 @@ When decoding a JWT, the plugin displays:
   sub: "1234567890",
   name: "John Doe",
   iat: 1516239022,
-  exp: 1516242622
+  exp: 1735689600
 }
 └──────────────────────────────────────────────────────────────────────┘
 
-✅ Expires in 2 hours
+✅ Expires in 45 days
 
 ┌─ SIGNATURE ──────────────────────────────────────────────────────────┐
   SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
 └──────────────────────────────────────────────────────────────────────┘
+```
 
-═══════════════════════════════════════════════════════════════════════════
+### Search Results
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+🔍 Found 3 matches for 'user'
+═══════════════════════════════════════════════════════════════════════════════
+
+► payload » userId
+  "12345"
+
+► payload » username
+  "john.doe"
+
+► payload » user_role
+  "admin"
 ```
 
 ## Actions
 
 - `decode` - Decode and view JWT token details
-- `search` - Search JWT contents with regex
-- `history` - Manage token history
+- `search` - Search JWT contents with regex support
+- `history` - Manage JWT token history
 - `preferences` - Configure plugin settings
 - `help` - Show help information

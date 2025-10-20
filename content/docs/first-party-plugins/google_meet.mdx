@@ -8,21 +8,18 @@ status: "new"
 ---
 # LLA Google Meet Plugin
 
-Create Google Meet rooms and manage meeting links with browser profile support.
+Google Meet plugin for lla that creates meeting rooms and manages links with browser profile support.
 
 ## Features
 
-- Generate random Google Meet links
-- Auto-copy links to clipboard
-- Browser profile support
-- Meeting history management
-- Open meetings in specific browser profiles
-- Copy meeting links from history
-- Configurable auto-copy behavior
+- Quick Meeting Creation: Instantly create Google Meet rooms
+- Clipboard Integration: Auto-copy meeting links to clipboard
+- Browser Profiles: Create meetings with specific browser profiles
+- History Management: Track and reuse meeting links
 
 ## Configuration
 
-Configuration file location: `~/.config/lla/google_meet/config.toml`
+Configuration file location: `~/.config/lla/plugins/google_meet/config.toml`
 
 ```toml
 auto_copy_link = true
@@ -49,7 +46,7 @@ link = "bright_blue"
 ### Create a new meeting
 
 ```bash
-lla action google_meet create
+lla plugin --name google_meet --action create
 ```
 
 This will:
@@ -62,7 +59,7 @@ This will:
 ### Create with browser profile
 
 ```bash
-lla action google_meet create-with-profile
+lla plugin --name google_meet --action create-with-profile
 ```
 
 Allows you to:
@@ -73,7 +70,7 @@ Allows you to:
 ### Manage meeting history
 
 ```bash
-lla action google_meet history
+lla plugin --name google_meet --action history
 ```
 
 Options:
@@ -84,7 +81,7 @@ Options:
 ### Manage browser profiles
 
 ```bash
-lla action google_meet profiles
+lla plugin --name google_meet --action profiles
 ```
 
 Options:
@@ -95,7 +92,7 @@ Options:
 ### Configure preferences
 
 ```bash
-lla action google_meet preferences
+lla plugin --name google_meet --action preferences
 ```
 
 Adjust settings:
@@ -105,47 +102,39 @@ Adjust settings:
 ### Display help
 
 ```bash
-lla action google_meet help
+lla plugin --name google_meet --action help
 ```
 
-## Display Formats
+## Display Examples
 
-### Creating a Meeting
+### Creating Meeting
+
 ```
-Info: Creating Google Meet room...
-Link: https://meet.google.com/abc-defg-hij
-Success: Link copied to clipboard!
-Info: Opening with profile: Work
-Success: Meeting room created successfully!
+ℹ Info: Creating Google Meet room...
+🔗 Link: https://meet.google.com/abc-defg-hij
+✓ Success: Link copied to clipboard!
+✓ Success: Meeting room created successfully!
 ```
 
-### Meeting History
+### History Management
+
 ```
-⚡ Choose action:
-  📋 Copy selected link
+⚡ Choose action
+> 📋 Copy selected link
   🌐 Open selected link
   🗑️  Clear all history
 
-🔗 https://meet.google.com/abc-defg-hij (2024-01-20 14:30:00)
-🔗 https://meet.google.com/xyz-qrst-uvw (2024-01-20 10:15:00)
-🔗 https://meet.google.com/mno-pqrs-tuv (2024-01-19 16:45:00)
-```
-
-### Browser Profiles
-```
-📋 Browser Profiles:
- 1. Work (Profile 1)
- 2. Personal (Default)
- 3. Development (Profile 2)
+🔗 https://meet.google.com/abc-defg-hij (2025-10-20 15:30:45)
+🔗 https://meet.google.com/xyz-uvwx-stu (2025-10-20 14:20:30)
 ```
 
 ## Actions
 
 - `create` - Create a new meeting room
-- `create-with-profile` - Create meeting with browser profile
+- `create-with-profile` - Create meeting with specified browser profile
 - `history` - Manage meeting history
 - `profiles` - Manage browser profiles
-- `preferences` - Configure plugin settings
+- `preferences` - Configure plugin preferences
 - `help` - Show help information
 
 ## Browser Profile Setup

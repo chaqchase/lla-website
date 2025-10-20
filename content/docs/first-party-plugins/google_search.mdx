@@ -8,22 +8,18 @@ status: "new"
 ---
 # LLA Google Search Plugin
 
-Search Google with live autosuggestions, history management, and clipboard support.
+Google search plugin for lla with live autosuggestions, history management, and clipboard fallback.
 
 ## Features
 
-- Live Google search suggestions
-- Search history management
-- Clipboard fallback support
-- Search from history
-- Copy queries to clipboard
-- Search statistics
-- Top searches tracking
-- Configurable history size
+- Live Autocomplete: Real-time search suggestions from Google API with loading states
+- Smart Search: Multiple input options (live suggestions, history, clipboard)
+- History Management: Persistent search history with statistics and analytics
+- Interactive Interface: Rich TUI with visual feedback
 
 ## Configuration
 
-Configuration file location: `~/.config/lla/google_search/config.toml`
+Configuration file location: `~/.config/lla/plugins/google_search/config.toml`
 
 ```toml
 remember_search_history = true
@@ -43,7 +39,7 @@ prompt = "bright_blue"
 ### Perform a Google search
 
 ```bash
-lla action google_search search
+lla plugin --name google_search --action search
 ```
 
 This will:
@@ -58,7 +54,7 @@ This will:
 ### Manage search history
 
 ```bash
-lla action google_search history
+lla plugin --name google_search --action history
 ```
 
 Options:
@@ -71,7 +67,7 @@ Options:
 ### Configure preferences
 
 ```bash
-lla action google_search preferences
+lla plugin --name google_search --action preferences
 ```
 
 Adjust settings:
@@ -82,54 +78,49 @@ Adjust settings:
 ### Display help
 
 ```bash
-lla action google_search help
+lla plugin --name google_search --action help
 ```
 
-## Display Formats
+## Display Examples
 
-### Search with Suggestions
-When performing a search, the plugin displays live Google suggestions:
+### Live Autocomplete
 
 ```
 💡 Enter a search query to see live Google suggestions
-
 Search query: rust programming
 
-🔄 Fetching suggestions from Google...
+🔄 Fetching suggestions from YouTube...
+⠋ Loading suggestions...
 
 ✨ 10 suggestions found:
-  🔍 rust programming (your input)
-  💡 rust programming language
+Select a search query
+> 🔍 rust programming (your input)
   💡 rust programming tutorial
-  💡 rust programming book
-  💡 rust programming language tutorial
-  💡 rust programming examples
-
-Info: Searching Google for: rust programming
-Success: Search completed and added to history!
+  💡 rust programming language
+  💡 rust programming for beginners
+  💡 rust programming projects
+  ...
 ```
 
-### Search History Statistics
+### History Statistics
+
 ```
 📊 Search History Statistics:
-──────────────────────────────────────────────────────
- • Total searches: 42
- • Unique queries: 35
- • Oldest search: 2024-01-15 10:30:00
- • Most recent: 2024-01-20 14:45:00
+──────────────────────────────────────────────────
+ • Total searches: 25
+ • Unique queries: 18
+ • Oldest search: 2025-10-15 09:30:00
+ • Most recent: 2025-10-20 14:30:45
 
 🔥 Top 5 searches:
- • rust programming (5x)
- • python tutorial (3x)
- • javascript frameworks (3x)
- • docker commands (2x)
- • git workflows (2x)
-──────────────────────────────────────────────────────
+ • rust programming tutorial (5x)
+ • golang best practices (3x)
+ • python async await (2x)
 ```
 
 ## Actions
 
 - `search` - Perform a Google search with suggestions
 - `history` - Manage search history
-- `preferences` - Configure plugin settings
+- `preferences` - Configure plugin preferences
 - `help` - Show help information
