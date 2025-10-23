@@ -13,7 +13,48 @@ Shortcuts turn long plugin commands into short aliases.
 
 ## Creating Shortcuts
 
-Basic pattern:
+### Interactive Builder (Recommended)
+
+The easiest way to create shortcuts is using the interactive builder:
+
+```bash
+lla shortcut create
+```
+
+The interactive builder provides:
+- **Plugin Discovery** - Browse all installed plugins with arrow keys
+- **Action Selection** - See available actions with descriptions
+- **Auto-Fill** - Descriptions automatically populated from plugin metadata
+- **Validation** - Real-time checking for duplicate names and conflicts
+- **Beautiful UI** - Themed prompts with intuitive navigation
+
+**Example Session:**
+
+```bash
+$ lla shortcut create
+
+? Select a plugin:
+  ❯ jwt - JWT token decoder and analyzer
+    google_search - Search Google from command line
+    npm - NPM package search with bundle size info
+    kill_process - Interactive process manager
+    ...
+
+? Select an action:
+  ❯ decode - Decode and analyze JWT tokens
+    search - Search through saved tokens
+    help - Show help information
+
+? Enter shortcut name: decode-jwt
+
+? Description: Decode JWT tokens
+
+✓ Shortcut 'decode-jwt' created successfully!
+```
+
+### Manual Creation
+
+You can also create shortcuts manually:
 
 ```bash
 lla shortcut add NAME PLUGIN ACTION [-d DESCRIPTION]
@@ -69,6 +110,101 @@ lla shortcut list
 
 # Remove unused shortcuts
 lla shortcut remove snip
+```
+
+## Import and Export
+
+Share shortcuts across machines or with your team using import/export.
+
+### Exporting Shortcuts
+
+Export all shortcuts and plugin aliases to a TOML file:
+
+```bash
+# Export to file
+lla shortcut export shortcuts.toml
+
+# Export to stdout (for piping)
+lla shortcut export
+```
+
+The exported file includes:
+- All configured shortcuts
+- Plugin aliases
+- Descriptions and metadata
+- Portable TOML format
+
+**Example export file:**
+
+```toml
+# shortcuts.toml
+[shortcuts]
+decode-jwt = { plugin = "jwt", action = "decode", description = "Decode JWT tokens" }
+snip = { plugin = "code_snippet_extractor", action = "extract", description = "Extract code snippet" }
+kill = { plugin = "kill_process", action = "interactive", description = "Kill processes" }
+
+[plugin_aliases]
+j = "jwt"
+k = "kill_process"
+n = "npm"
+```
+
+### Importing Shortcuts
+
+Import shortcuts from a TOML file:
+
+```bash
+# Replace all existing shortcuts
+lla shortcut import shortcuts.toml
+
+# Merge with existing shortcuts (skip conflicts)
+lla shortcut import shortcuts.toml --merge
+```
+
+**Import modes:**
+
+- **Replace** (default): Replaces all existing shortcuts with imported ones
+- **Merge** (`--merge`): Adds new shortcuts, skips conflicts, keeps existing
+
+### Sharing Workflows
+
+**Team Setup:**
+
+```bash
+# Create team shortcuts
+lla shortcut create  # Build your collection
+
+# Export for team
+lla shortcut export team-shortcuts.toml
+
+# Share file via Git
+git add team-shortcuts.toml
+git commit -m "Add team lla shortcuts"
+git push
+
+# Team members import
+git pull
+lla shortcut import team-shortcuts.toml --merge
+```
+
+**Personal Backup:**
+
+```bash
+# Backup shortcuts
+lla shortcut export ~/dotfiles/lla-shortcuts.toml
+
+# Restore on new machine
+lla shortcut import ~/dotfiles/lla-shortcuts.toml
+```
+
+**Cross-Machine Sync:**
+
+```bash
+# On machine 1
+lla shortcut export ~/Dropbox/lla-shortcuts.toml
+
+# On machine 2
+lla shortcut import ~/Dropbox/lla-shortcuts.toml --merge
 ```
 
 ## Suggested Shortcut Set

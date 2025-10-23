@@ -1,0 +1,493 @@
+---
+title: "NPM"
+description: "Search NPM packages from the command line with bundle size analysis from Bundlephobia. View package details, download stats, and manage favorites directly in your terminal."
+order: 11
+published: true
+references: []
+status: "new"
+---
+
+# NPM Plugin
+
+Search and explore NPM packages directly from your terminal with integrated bundle size analysis.
+
+## Features
+
+- **NPM Package Search** - Find packages from the NPM registry
+- **Bundlephobia Integration** - Real bundle size information (minified & gzipped)
+- **Package Details** - Version, downloads, description, and metadata
+- **Bundle Size Analysis** - See actual package sizes before installing
+- **Favorites Management** - Save frequently used packages
+- **Browser Integration** - Open package pages directly
+- **Search History** - Track your package searches
+- **Interactive Interface** - Beautiful terminal UI
+
+## Installation
+
+The npm plugin is included with lla's first-party plugins:
+
+```bash
+lla install
+```
+
+Or enable it if already installed:
+
+```bash
+lla use  # Interactive plugin manager
+```
+
+## Usage
+
+### Search Packages
+
+Search the NPM registry:
+
+```bash
+lla plugin npm search "react"
+```
+
+Results show:
+- Package name
+- Latest version
+- Weekly downloads
+- Description
+- Bundle size (minified + gzipped)
+
+### View Package Details
+
+Get detailed information about a specific package:
+
+```bash
+lla plugin npm details "lodash"
+```
+
+Displays:
+- Full package metadata
+- All available versions
+- Dependencies
+- Repository information
+- Bundle size breakdown
+- Download statistics
+
+### Manage Favorites
+
+Add packages you use frequently:
+
+```bash
+# Add to favorites
+lla plugin npm add-favorite "express"
+
+# List favorites
+lla plugin npm list-favorites
+
+# Remove from favorites
+lla plugin npm remove-favorite "express"
+```
+
+### Search History
+
+View and manage your search history:
+
+```bash
+# View history
+lla plugin npm history
+
+# Clear history
+lla plugin npm clear-history
+```
+
+### Open in Browser
+
+Open the package page on npmjs.com:
+
+```bash
+lla plugin npm open "typescript"
+```
+
+## Positional Syntax
+
+Use the shorter positional syntax (v0.5.0+):
+
+```bash
+# Search
+lla plugin npm search "axios"
+
+# Package details
+lla plugin npm details "webpack"
+
+# Manage favorites
+lla plugin npm add-favorite "vite"
+lla plugin npm list-favorites
+```
+
+## Plugin Aliases
+
+Create a short alias for faster access:
+
+```toml
+# ~/.config/lla/config.toml
+[plugin_aliases]
+n = "npm"
+```
+
+Then use:
+
+```bash
+lla plugin n search "react"
+lla plugin n details "vue"
+```
+
+## Shortcuts
+
+Create shortcuts for common NPM operations:
+
+```bash
+# Package search
+lla shortcut add npms npm search -d "Search NPM packages"
+
+# Package details
+lla shortcut add npmi npm details -d "NPM package info"
+
+# Favorites
+lla shortcut add npmf npm list-favorites -d "List favorite packages"
+
+# Open package page
+lla shortcut add npmo npm open -d "Open NPM package page"
+```
+
+Usage:
+
+```bash
+lla npms "react-query"        # Search
+lla npmi "next"               # Details
+lla npmf                      # List favorites
+lla npmo "tailwindcss"        # Open in browser
+```
+
+## Actions Reference
+
+| Action | Description | Arguments |
+|--------|-------------|-----------|
+| `search` | Search NPM registry | `<query>` |
+| `details` | Show package details | `<package-name>` |
+| `add-favorite` | Add package to favorites | `<package-name>` |
+| `remove-favorite` | Remove from favorites | `<package-name>` |
+| `list-favorites` | Show all favorites | None |
+| `history` | Show search history | None |
+| `clear-history` | Clear search history | None |
+| `open` | Open package in browser | `<package-name>` |
+| `help` | Show help information | None |
+
+## Bundle Size Information
+
+### What is Bundle Size?
+
+The plugin shows two important metrics:
+
+- **Minified**: Size after removing whitespace and shortening variable names
+- **Gzipped**: Compressed size (actual transfer size over the network)
+
+### Understanding Sizes
+
+```bash
+lla plugin npm details "react"
+
+# Output shows:
+# Bundle Size:
+#   Minified: 130.5 KB
+#   Gzipped:  41.2 KB
+```
+
+**Interpretation:**
+- Small (<50 KB gzipped): ✅ Great
+- Medium (50-200 KB gzipped): ⚠️ Watch out
+- Large (>200 KB gzipped): ❌ Consider alternatives
+
+### Size Comparison
+
+Compare bundle sizes when choosing packages:
+
+```bash
+# Compare date libraries
+lla plugin npm details "moment"      # ~71 KB gzipped
+lla plugin npm details "date-fns"    # ~12 KB gzipped
+lla plugin npm details "dayjs"       # ~2 KB gzipped
+```
+
+## Package Details
+
+Full package information includes:
+
+### Metadata
+- Package name and version
+- Author and maintainers
+- License type
+- Keywords and tags
+
+### Statistics
+- Weekly downloads
+- GitHub stars
+- Open issues
+- Last publish date
+
+### Dependencies
+- Production dependencies
+- Dev dependencies
+- Peer dependencies
+
+### Repository
+- GitHub/GitLab URL
+- Homepage link
+- Documentation
+
+## Search Tips
+
+### Effective Searches
+
+```bash
+# Specific package
+lla plugin npm search "axios"
+
+# By functionality
+lla plugin npm search "http client"
+
+# Scoped packages
+lla plugin npm search "@types/node"
+
+# Framework plugins
+lla plugin npm search "vite-plugin"
+```
+
+### Filter Results
+
+The interactive search shows:
+- Most relevant results first
+- Download count for popularity
+- Recent update activity
+
+## Favorites Workflow
+
+### Organize Your Stack
+
+```bash
+# Add your tech stack
+lla plugin npm add-favorite "react"
+lla plugin npm add-favorite "typescript"
+lla plugin npm add-favorite "vite"
+lla plugin npm add-favorite "tailwindcss"
+
+# Quick reference
+lla plugin npm list-favorites
+
+# Check for updates
+lla plugin npm details "react"  # See latest version
+```
+
+### Team Sharing
+
+Create shortcuts for team-recommended packages:
+
+```bash
+# Standard packages
+lla shortcut add teamstack npm list-favorites -d "Team package stack"
+```
+
+## Examples
+
+### Evaluating a New Package
+
+```bash
+# Search for HTTP clients
+lla plugin npm search "http client"
+
+# Compare top options
+lla plugin npm details "axios"
+lla plugin npm details "got"
+lla plugin npm details "node-fetch"
+
+# Check bundle sizes
+# axios: ~5 KB gzipped
+# got: ~40 KB gzipped
+# node-fetch: ~2 KB gzipped
+
+# Add chosen package to favorites
+lla plugin npm add-favorite "axios"
+```
+
+### Finding TypeScript Definitions
+
+```bash
+lla plugin npm search "@types/react"
+lla plugin npm details "@types/node"
+```
+
+### Discovering Vite Plugins
+
+```bash
+lla plugin npm search "vite-plugin"
+lla plugin npm search "@vitejs"
+```
+
+### Checking Package Freshness
+
+```bash
+# View details to see last publish date
+lla plugin npm details "webpack"
+
+# Compare with alternatives
+lla plugin npm details "vite"
+lla plugin npm details "parcel"
+```
+
+## Integration with Development
+
+### Before Installing
+
+Always check size before adding dependencies:
+
+```bash
+# Check bundle impact
+lla plugin npm details "lodash"        # ~71 KB gzipped
+lla plugin npm details "lodash-es"     # Tree-shakeable alternative
+
+# Then install
+npm install lodash-es
+```
+
+### Package Research
+
+```bash
+# Find the right tool
+lla npms "validation library"
+
+# Evaluate options
+lla npmi "yup"
+lla npmi "zod"
+lla npmi "joi"
+
+# Open docs
+lla npmo "zod"
+```
+
+### Dependency Audit
+
+```bash
+# Review your favorites
+lla plugin npm list-favorites
+
+# Check for size bloat
+lla plugin npm details "moment"      # Consider alternatives
+lla plugin npm details "lodash"       # Use specific imports
+
+# Find lighter alternatives
+lla plugin npm search "date library"
+```
+
+## Browser Integration
+
+### Opening Package Pages
+
+The plugin opens packages on npmjs.com for:
+- Full documentation
+- Dependency tree visualization
+- Version history
+- GitHub repository link
+
+```bash
+# Quick access to docs
+lla plugin npm open "typescript"
+
+# Research dependencies
+lla plugin npm open "@testing-library/react"
+```
+
+## History Management
+
+### Track Your Research
+
+Search history helps you:
+- Remember what you were evaluating
+- Revisit comparison decisions
+- Share research with team
+
+```bash
+# View recent searches
+lla plugin npm history
+
+# Clean up when done
+lla plugin npm clear-history
+```
+
+## Troubleshooting
+
+### No Results Found
+
+If search returns nothing:
+1. Check package name spelling
+2. Try broader search terms
+3. Package may be deprecated
+4. Check NPM registry status
+
+### Size Information Missing
+
+If bundle size doesn't show:
+1. Package may not be on Bundlephobia
+2. Package might not be JavaScript
+3. Too large to analyze
+4. Network connectivity issue
+
+### Favorites Not Saving
+
+If favorites don't persist:
+1. Check config directory permissions
+2. Verify lla config is initialized
+3. Run `lla init` if needed
+
+## Best Practices
+
+### 1. Check Sizes First
+
+Always review bundle size before installing:
+```bash
+lla plugin npm details "package-name"
+```
+
+### 2. Compare Alternatives
+
+Evaluate multiple options:
+```bash
+lla npms "state management"
+# Compare redux, zustand, jotai, etc.
+```
+
+### 3. Use Favorites
+
+Track your standard packages:
+```bash
+lla plugin npm add-favorite "your-go-to-packages"
+```
+
+### 4. Monitor Bundle Impact
+
+Be aware of cumulative size:
+```bash
+# Each package adds up
+lla npmi "package1"  # +50 KB
+lla npmi "package2"  # +30 KB
+lla npmi "package3"  # +40 KB
+# Total: +120 KB to your bundle
+```
+
+### 5. Review History
+
+Learn from past research:
+```bash
+lla plugin npm history
+```
+
+## See Also
+
+- [Plugin Concepts](/docs/plugins/concepts) - Understanding lla plugins
+- [Shortcuts](/docs/plugins/shortcuts) - Create command shortcuts
+- [CLI Reference](/docs/reference/cli-reference) - Complete command reference
+- [Google Search Plugin](/docs/first-party-plugins/google_search) - Web search capabilities

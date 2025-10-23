@@ -267,6 +267,16 @@ lla --disable-plugin file_hash            # Disable hash plugin
 
 ### Plugin Actions
 
+Execute plugin actions using either positional or flag-based syntax.
+
+**Positional Syntax (v0.5.0+, Recommended):**
+
+```bash
+lla plugin <name> <action> [args...]
+```
+
+**Flag-Based Syntax (Legacy):**
+
 ```bash
 lla plugin --name NAME --action ACTION [--args ARG...]
 ```
@@ -274,10 +284,52 @@ lla plugin --name NAME --action ACTION [--args ARG...]
 **Examples:**
 
 ```bash
+# Positional syntax (shorter, cleaner)
+lla plugin file_tagger help
+lla plugin file_tagger add-tag "file.txt" "important"
+lla plugin code_complexity show-report
+
+# Flag-based syntax (still supported)
 lla plugin --name file_tagger --action help
 lla plugin --name file_tagger --action add-tag --args "file.txt" "important"
 lla plugin --name code_complexity --action show-report
 ```
+
+### Plugin Aliases
+
+Create short aliases for frequently used plugins in your configuration file:
+
+```toml
+# ~/.config/lla/config.toml
+[plugin_aliases]
+j = "jwt"
+k = "kill_process"
+n = "npm"
+gs = "google_search"
+yt = "youtube"
+```
+
+**Using Aliases:**
+
+```bash
+# With alias 'j' for 'jwt'
+lla plugin j decode "token123"
+
+# With alias 'k' for 'kill_process'
+lla plugin k interactive
+
+# With alias 'n' for 'npm'
+lla plugin n search "react"
+
+# Without alias (still works)
+lla plugin jwt decode "token123"
+```
+
+**Benefits:**
+- Reduces typing for frequently used plugins
+- Works with both positional and flag-based syntax
+- Automatic alias resolution in shortcuts
+- Configurable per user/machine
 
 ### Plugin Updates
 
@@ -310,14 +362,20 @@ lla shortcut SUBCOMMAND [OPTIONS]
 
 | Command | Description |
 |---------|-------------|
-| `add NAME PLUGIN ACTION [-d DESCRIPTION]` | Create a new shortcut |
+| `create` | Interactive shortcut builder with plugin/action discovery |
+| `add NAME PLUGIN ACTION [-d DESCRIPTION]` | Create a new shortcut manually |
 | `remove NAME` | Delete a shortcut |
 | `list` | Show all shortcuts |
+| `export [FILE]` | Export shortcuts to TOML file or stdout |
+| `import FILE [--merge]` | Import shortcuts from TOML file |
 
 **Examples:**
 
 ```bash
-# Create shortcuts
+# Interactive creation (recommended)
+lla shortcut create
+
+# Manual creation
 lla shortcut add snip code_snippet_extractor extract -d "Extract code"
 lla shortcut add tags code_snippet_extractor add-tags -d "Add tags"
 
@@ -330,6 +388,14 @@ lla shortcut list
 
 # Remove shortcut
 lla shortcut remove snip
+
+# Export shortcuts
+lla shortcut export shortcuts.toml           # To file
+lla shortcut export                          # To stdout
+
+# Import shortcuts
+lla shortcut import shortcuts.toml           # Replace existing
+lla shortcut import shortcuts.toml --merge   # Merge with existing
 ```
 
 ## Configuration Commands

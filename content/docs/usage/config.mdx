@@ -44,6 +44,14 @@ natural = true               # Smart number sorting
 case_sensitive = false        # Case-sensitive search
 no_dotfiles = false          # Hide hidden files
 
+# Plugin Aliases (v0.5.0+)
+[plugin_aliases]
+j = "jwt"                    # lla plugin j decode
+k = "kill_process"           # lla plugin k interactive
+n = "npm"                    # lla plugin n search "react"
+gs = "google_search"         # lla plugin gs "query"
+yt = "youtube"               # lla plugin yt search "video"
+
 # Performance Tuning
 [formatters.tree]
 max_lines = 20000            # Tree view limit
@@ -102,6 +110,90 @@ lla config --set sort.case_sensitive true
 lla config --set filter.case_sensitive true
 lla config --set filter.no_dotfiles true
 ```
+
+## Plugin Aliases
+
+Plugin aliases let you create short names for frequently used plugins (v0.5.0+).
+
+### Configuring Aliases
+
+Add aliases to your config file:
+
+```toml
+[plugin_aliases]
+j = "jwt"
+k = "kill_process"
+n = "npm"
+gs = "google_search"
+yt = "youtube"
+gm = "google_meet"
+```
+
+### Using Aliases
+
+Aliases work with all plugin commands:
+
+```bash
+# Without alias
+lla plugin jwt decode "token123"
+lla plugin kill_process interactive
+lla plugin npm search "react"
+
+# With alias
+lla plugin j decode "token123"
+lla plugin k interactive
+lla plugin n search "react"
+```
+
+### Alias Benefits
+
+- **Less Typing**: `j` instead of `jwt`
+- **Faster Workflow**: Shorter commands for frequent tasks
+- **Works Everywhere**: Shortcuts, manual commands, all syntax styles
+- **Personal Preference**: Customize to your naming conventions
+
+### Recommended Aliases
+
+Common short aliases:
+
+```toml
+[plugin_aliases]
+# Development
+j = "jwt"                     # JWT operations
+n = "npm"                     # Package search
+cc = "code_complexity"        # Code analysis
+sn = "code_snippet_extractor" # Snippets
+
+# System
+k = "kill_process"            # Process management
+fd = "flush_dns"              # DNS flush
+
+# Search & Web
+gs = "google_search"          # Web search
+yt = "youtube"                # YouTube search
+gm = "google_meet"            # Meetings
+
+# File Operations
+fm = "file_mover"             # Move files
+fc = "file_copier"            # Copy files
+fr = "file_remover"           # Remove files
+fo = "file_organizer"         # Organize files
+ft = "file_tagger"            # Tag files
+```
+
+### Aliases in Shortcuts
+
+Aliases automatically work in shortcuts:
+
+```bash
+# Create shortcut using alias
+lla shortcut add decode-jwt j decode -d "Decode JWT"
+
+# Or use full name (equivalent)
+lla shortcut add decode-jwt jwt decode -d "Decode JWT"
+```
+
+Both create the same shortcut. The alias is resolved when you run the command.
 
 ## Performance Considerations
 
