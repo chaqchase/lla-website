@@ -40,33 +40,59 @@ lla use  # Interactive plugin manager
 
 ## Usage
 
-### Interactive Mode
+### Interactive Fuzzy Search
 
-Launch the interactive process manager:
+Launch the interactive process manager with live fuzzy search:
 
 ```bash
-lla plugin kill_process interactive
+lla plugin kill_process kill
 ```
 
 **Controls:**
 - Type to filter processes in real-time
 - `↑/↓` - Navigate through results
 - `Space` - Select/deselect process for termination
-- `Enter` - Confirm and kill selected process(es)
+- `Enter` - Confirm selection and return to action menu
 - `Esc` - Cancel and exit
 
-### Kill by Pattern
+The fuzzy search ranks processes by match score, showing the most relevant results first.
+
+### Force Kill (Interactive)
+
+Same interactive experience but uses force kill (SIGKILL/taskkill /F):
+
+```bash
+lla plugin kill_process force-kill
+```
+
+Use this when processes are frozen and won't respond to normal termination.
+
+### List All Processes
+
+Display all running processes:
+
+```bash
+lla plugin kill_process list
+```
+
+Shows a formatted table with:
+- Process name
+- PID
+- CPU usage
+- Memory usage
+
+### Kill by Name Pattern
 
 Kill processes matching a name pattern:
 
 ```bash
-lla plugin kill_process kill-by-name "chrome"
+lla plugin kill_process kill-by-name chrome
 ```
 
-With force kill (SIGKILL):
+Force kill by name:
 
 ```bash
-lla plugin kill_process kill-by-name "chrome" --force
+lla plugin kill_process force-kill-by-name chrome
 ```
 
 ### Kill by PID
@@ -80,15 +106,7 @@ lla plugin kill_process kill-by-pid 1234
 Force kill specific PID:
 
 ```bash
-lla plugin kill_process kill-by-pid 1234 --force
-```
-
-### List All Processes
-
-Display all running processes:
-
-```bash
-lla plugin kill_process list
+lla plugin kill_process force-kill-by-pid 1234
 ```
 
 ## Positional Syntax
@@ -96,8 +114,11 @@ lla plugin kill_process list
 Use the shorter positional syntax (v0.5.0+):
 
 ```bash
-# Interactive mode
-lla plugin kill_process interactive
+# Interactive kill
+lla plugin kill_process kill
+
+# Interactive force kill
+lla plugin kill_process force-kill
 
 # Kill by name
 lla plugin kill_process kill-by-name "node"
@@ -119,7 +140,8 @@ k = "kill_process"
 Then use:
 
 ```bash
-lla plugin k interactive
+lla plugin k kill
+lla plugin k force-kill
 lla plugin k kill-by-name "firefox"
 ```
 
@@ -129,27 +151,34 @@ Create shortcuts for common process management tasks:
 
 ```bash
 # Interactive process killer
-lla shortcut add kill kill_process interactive -d "Kill processes interactively"
+lla shortcut add kill kill_process kill -d "Kill processes interactively"
 
-# Quick process search
+# Force kill
+lla shortcut add fkill kill_process force-kill -d "Force kill processes"
+
+# Kill by name
 lla shortcut add pkill kill_process kill-by-name -d "Kill process by name"
 ```
 
 Usage:
 
 ```bash
-lla kill              # Launch interactive mode
-lla pkill "chrome"    # Kill all Chrome processes
+lla kill                 # Launch interactive mode
+lla fkill                # Launch force kill mode
+lla pkill "chrome"       # Kill all Chrome processes
 ```
 
 ## Actions Reference
 
 | Action | Description | Arguments |
 |--------|-------------|-----------|
-| `interactive` | Launch full-screen fuzzy search UI | None |
+| `kill` | Interactive fuzzy search to select and kill processes | None |
+| `force-kill` | Interactive fuzzy search with force kill (SIGKILL) | None |
 | `list` | List all running processes | None |
-| `kill-by-name` | Kill processes matching pattern | `<pattern>` `[--force]` |
-| `kill-by-pid` | Kill process by ID | `<pid>` `[--force]` |
+| `kill-by-name` | Kill processes matching pattern | `<pattern>` |
+| `force-kill-by-name` | Force kill processes matching pattern | `<pattern>` |
+| `kill-by-pid` | Kill process by ID | `<pid>` |
+| `force-kill-by-pid` | Force kill process by ID | `<pid>` |
 | `help` | Show help information | None |
 
 ## Process Information
@@ -166,17 +195,17 @@ Each process entry shows:
 ### Confirmation Dialogs
 
 Before terminating processes, you'll see:
-- List of processes to be killed
+- List of selected processes
 - Option to confirm or cancel
-- Clear warning messages
+- Clear warning messages for force kill
 
 ### Protected Processes
 
 Some system-critical processes may be protected by the OS and cannot be killed without elevated permissions.
 
-### Force Kill
+### Force Kill Warning
 
-The `--force` flag sends:
+The force kill actions send:
 - **Unix/macOS**: SIGKILL (signal 9) - immediate termination
 - **Windows**: `/F` flag - forced termination
 
@@ -186,26 +215,29 @@ Use with caution as force-killed processes cannot clean up resources.
 
 ### macOS/Linux
 
-- Uses `/proc` filesystem for process information (Linux)
-- Uses `ps` command for process listing (macOS)
-- Sends SIGTERM by default, SIGKILL with `--force`
+- Uses process info from system APIs
+- Sends SIGTERM (15) by default, SIGKILL (9) for force
+- May require sudo for certain processes
 
 ### Windows
 
 - Uses Windows API for process enumeration
-- Terminates with standard close, uses `/F` with `--force`
+- Terminates with standard close, uses `/F` with force
+- May require Administrator privileges
 
 ## Examples
 
-### Find and Kill Memory-Heavy Processes
+### Interactive Process Management
 
 ```bash
 # Launch interactive mode
-lla plugin kill_process interactive
+lla plugin kill_process kill
 
-# Type "chrome" to filter
-# Select high-memory instances
-# Press Enter to terminate
+# Type "chrome" to filter Chrome processes
+# Use arrow keys to navigate
+# Press Space to select multiple processes
+# Press Enter to confirm
+# Confirm the kill operation
 ```
 
 ### Kill All Node Processes
@@ -221,18 +253,19 @@ lla plugin kill_process kill-by-name "node"
 lla plugin kill_process list | grep "frozen-app"
 
 # Force kill by PID
-lla plugin kill_process kill-by-pid 1234 --force
+lla plugin kill_process force-kill-by-pid 1234
 ```
 
-### Quick Process Cleanup
+### Quick Workflow with Shortcuts
 
 ```bash
-# Create a shortcut
-lla shortcut add cleanup kill_process kill-by-name -d "Clean up processes"
+# Create shortcuts
+lla shortcut add k kill_process kill -d "Kill processes"
+lla shortcut add kn kill_process kill-by-name -d "Kill by name"
 
-# Use it
-lla cleanup "electron"
-lla cleanup "node"
+# Use them
+lla k                    # Interactive
+lla kn "electron"        # Kill all Electron apps
 ```
 
 ## Troubleshooting
@@ -266,24 +299,6 @@ If force kill fails:
 4. **Use Specific Patterns** - Avoid overly broad name matches
 5. **Create Shortcuts** - For frequently managed processes
 
-## Integration Examples
-
-### With File Operations
-
-```bash
-# Kill process using specific file
-lla --files-only -f "app.log"  # Find the log
-lla kill                        # Kill the app
-```
-
-### With Git Workflow
-
-```bash
-# Kill development servers before git operations
-lla pkill "webpack"
-lla pkill "node"
-git checkout main
-```
 
 ## See Also
 
