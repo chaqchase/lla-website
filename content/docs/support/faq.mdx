@@ -34,11 +34,12 @@ Yes! lla is open-source software licensed under the MIT License. It's free to us
 ### What platforms does lla support?
 
 lla works on:
-- **Linux** (x86_64, ARM64)
+- **Linux** (x86_64, ARM64, i686, plus static musl builds)
 - **macOS** (Intel, Apple Silicon)
-- **Windows** (via WSL)
+- **Windows** (native AMD64 and ARM64 executables and plugin bundles)
+- **NetBSD** (amd64, native plugins only)
 
-Native Windows support is planned for future releases.
+See the [Installation Guide](/docs/about/installation) for per-platform notes.
 
 ## Installation & Setup
 
@@ -145,7 +146,7 @@ lla project.tar.gz -l    # Long format of archive contents
 Install all first-party plugins:
 
 ```bash
-lla install
+lla install --prebuilt
 ```
 
 Install from a Git repository:
@@ -162,9 +163,7 @@ lla install --dir /path/to/plugin
 
 ### Do I need Rust to install plugins?
 
-Yes, currently plugins need to be built from source, which requires Rust. Install it from [rustup.rs](https://rustup.rs).
-
-Pre-built plugin binaries are planned for future releases.
+Only for source installs. `lla install --prebuilt` downloads ready-to-run plugin packages and needs no toolchain. Building from a Git repository (`--git`) or local directory (`--dir`) compiles from source and requires Rust — install it from [rustup.rs](https://rustup.rs).
 
 ### How do I enable/disable plugins?
 
@@ -191,7 +190,7 @@ plugins_dir = "~/custom/plugin/path"
 
 ### Can I write plugins in other languages?
 
-Currently, plugins must be written in Rust. However, the Protocol Buffer-based interface is language-agnostic, so support for other languages is theoretically possible in the future.
+Rust is the maintained SDK language: native plugins and Rust WebAssembly components share the same high-level `Plugin` trait. Other languages may generate Component Model bindings from the published WIT world (`sdk/wit/lla-plugin.wit`). See [Developing plugins](/docs/plugins/developing).
 
 ### How do I create a plugin?
 
@@ -277,14 +276,14 @@ directory = "#89AFFF"
 # ... more colors
 ```
 
-See the [Themes Guide](/docs/usage/themes) for complete documentation.
+See [Themes](/docs/usage/configuration#themes) for the `lla theme` commands.
 
 ### How do I change the default view?
 
 Edit your config:
 
 ```toml
-default_format = "long"    # Options: default, long, tree, grid, table
+default_format = "long"    # Options: default, long, tree, table, grid, git, timeline, sizemap
 ```
 
 ### Can I set defaults for flags?
@@ -383,17 +382,16 @@ This usually indicates a terminal compatibility issue:
 1. Ensure your terminal supports Unicode
 2. Check that your font supports special characters
 3. Try disabling icons: `lla --no-icons`
-4. Try disabling colors: `lla --no-colors`
+4. Try disabling colors: `lla --no-color`
 
 ### Fuzzy search isn't working
 
-Fuzzy search is experimental and requires:
+Fuzzy search requires:
 
-1. lla version 0.2.0 or later
-2. Sufficient terminal size
-3. Working terminal input
+1. Sufficient terminal size (min 80x24)
+2. Working terminal input
 
-Try: `lla --fuzzy` in a test directory.
+Try: `lla --fuzzy` in a test directory. See [Fuzzy view](/docs/usage/navigation#fuzzy-view) for key bindings.
 
 ### Plugins fail to load
 
@@ -453,7 +451,7 @@ Most flags are similar or identical!
 
 ### Can I import my exa configuration?
 
-lla uses its own configuration format, but most exa settings have lla equivalents. See the [Configuration Guide](/docs/usage/config) for mapping your preferences.
+lla uses its own configuration format, but most exa settings have lla equivalents. See the [Configuration Guide](/docs/usage/configuration) for mapping your preferences.
 
 ## Getting Help
 

@@ -1,31 +1,50 @@
 ---
 title: "YouTube"
-description: "Search YouTube with autosuggestions and clipboard support"
-order: 19
+description: "YouTube search plugin for `lla` with live autosuggestions, history management, and clipboard support."
+order: 38
 published: true
-references: [https://github.com/chaqchase/lla/blob/main/plugins/youtube]
-status: "new"
+references: [https://github.com/chaqchase/lla/tree/main/plugins/youtube]
 ---
-# LLA YouTube Plugin
 
-YouTube search plugin for lla with live autosuggestions, history management, and clipboard support.
+# lla YouTube Plugin
+
+YouTube search plugin for `lla` with live autosuggestions, history management, and clipboard support.
 
 ## Features
 
-- Live Autocomplete: Real-time search suggestions from YouTube API as you type
-- Loading States: Visual spinner while fetching suggestions
-- Smart Search: Multiple input options (live suggestions, history, clipboard)
-- Search Selected Text: Instantly search using text from clipboard
-- History Management: Persistent search history with statistics
+- **Live Autocomplete**: Real-time search suggestions from YouTube API as you type
+- **Loading States**: Visual spinner while fetching suggestions
+- **Smart Search**: Multiple input options (live suggestions, history, clipboard)
+- **Search Selected Text**: Instantly search using text from clipboard
+- **History Management**: Persistent search history with statistics
+
+## Usage
+
+```bash
+# Perform a YouTube search
+lla plugin run youtube search
+
+# Search with selected/clipboard text
+lla plugin run youtube search-selected
+
+# Manage search history
+lla plugin run youtube history
+
+# Configure preferences
+lla plugin run youtube preferences
+
+# Show help
+lla plugin run youtube help
+```
 
 ## Configuration
 
-Configuration file location: `~/.config/lla/plugins/youtube/config.toml`
+Config location: `~/.config/lla/plugins/youtube/config.toml`
 
 ```toml
-remember_search_history = true
-use_clipboard_fallback = true
-max_history_size = 100
+remember_search_history = true    # Enable/disable history persistence
+use_clipboard_fallback = true     # Enable/disable clipboard fallback
+max_history_size = 100           # Maximum history entries
 
 [colors]
 success = "bright_green"
@@ -36,64 +55,9 @@ prompt = "bright_blue"
 link = "bright_magenta"
 ```
 
-## Usage
-
-### Perform a YouTube search
-
-```bash
-lla plugin --name youtube --action search
-```
-
-This will:
-1. Prompt you to choose input method:
-   - Enter new search query (with live YouTube suggestions)
-   - Search from history
-   - Search clipboard content
-2. Fetch live suggestions as you type
-3. Open the search in your default browser
-4. Save the query to history
-
-### Search with selected text
-
-```bash
-lla plugin --name youtube --action search-selected
-```
-
-Automatically searches YouTube using the text currently in your clipboard.
-
-### Manage search history
-
-```bash
-lla plugin --name youtube --action history
-```
-
-Options:
-- Search selected entry
-- Copy queries to clipboard
-- Delete selected entries
-- Clear all history
-- Show search statistics
-
-### Configure preferences
-
-```bash
-lla plugin --name youtube --action preferences
-```
-
-Adjust settings:
-- Toggle search history
-- Toggle clipboard fallback
-- Set max history size
-
-### Display help
-
-```bash
-lla plugin --name youtube --action help
-```
-
 ## Display Examples
 
-### Live Autocomplete
+Live Autocomplete:
 
 ```
 💡 Enter a search query to see live YouTube suggestions
@@ -112,7 +76,7 @@ Select a search query
   ...
 ```
 
-### History Statistics
+History Statistics:
 
 ```
 📊 Search History Statistics:
@@ -127,11 +91,3 @@ Select a search query
  • golang explained (5x)
  • docker basics (3x)
 ```
-
-## Actions
-
-- `search` - Perform a YouTube search with suggestions
-- `search-selected` - Search YouTube with selected/clipboard text
-- `history` - Manage search history
-- `preferences` - Configure plugin preferences
-- `help` - Show help information

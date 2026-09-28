@@ -62,7 +62,7 @@ Verify installation:
 lla --version
 ```
 
-You should see output like `lla 0.3.9`.
+You should see output like `lla 0.6.5`.
 
 **Can't find lla?** Add it to your PATH:
 ```bash
@@ -350,10 +350,10 @@ Extend lla's functionality with plugins.
 
 ```bash
 # Install all official plugins
-lla install
+lla install --prebuilt
 ```
 
-This will prompt you to install Rust if you haven't already.
+Prebuilt packages need no toolchain. Only `--git` and `--dir` source installs compile from source and require Rust.
 
 ### Enable/Disable Plugins
 
@@ -452,7 +452,7 @@ lla config          # View config
 lla theme           # Choose theme
 
 # Plugins
-lla install         # Install plugins
+lla install --prebuilt  # Install plugins
 lla use             # Manage plugins
 
 # Help
@@ -538,10 +538,10 @@ lla -G | grep "?"
 
 Congratulations! You now know the fundamentals of lla. Here's what to explore next:
 
-- **[View Formats Guide](/docs/usage/view-formats)**: Learn about timeline, sizemap, and table views
-- **[Advanced Filtering](/docs/usage/file-filtering)**: Master regex and logic operators
+- **[Views and Display](/docs/usage/views)**: Learn about timeline, sizemap, and table views
+- **[Filtering and Search](/docs/usage/filtering-search)**: Master regex and logic operators
 - **[Plugin Development](/docs/guides/plugin-development-tutorial)**: Create your own plugins
-- **[Configuration Guide](/docs/usage/config)**: Deep dive into customization
+- **[Configuration Guide](/docs/usage/configuration)**: Deep dive into customization
 
 ## Practice Exercises
 

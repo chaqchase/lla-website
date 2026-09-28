@@ -1,20 +1,23 @@
 ---
 title: "File Tagger"
-description: "Add and manage tags for files"
-order: 8
+description: "A file tagging plugin for `lla` that provides persistent tag management."
+order: 16
 published: true
-references: [https://github.com/chaqchase/lla/blob/main/plugins/file_tagger]
+references: [https://github.com/chaqchase/lla/tree/main/plugins/file_tagger]
 ---
-# LLA File Tagger Plugin
 
-Add, remove, and list tags for files.
+# lla File Tagger Plugin
+
+A file tagging plugin for `lla` that provides persistent tag management.
 
 ## Features
 
-- Add/remove/list tags
-- Persistent storage with fast lookup
-- Color-coded tags
+- Add, remove, and list file tags
+- Persistent storage with efficient lookup
+- Color-coded tag display
 - Interactive commands
+- List all tags across files
+- Query files by tag
 
 ## Configuration
 
@@ -29,20 +32,30 @@ info = "bright_blue"      # Info messages
 name = "bright_yellow"    # Name highlighting
 ```
 
+## Storage
+
+Persistent tag data is stored at: `~/.config/lla/file_tags.txt`
+
 ## Usage
 
 ```bash
 # Add tag
-lla plugin --name file_tagger --action add-tag --args "/path/to/file" "important"
+lla plugin run file_tagger add-tag -- "/path/to/file" "important"
 
 # Remove tag
-lla plugin --name file_tagger --action remove-tag --args "/path/to/file" "important"
+lla plugin run file_tagger remove-tag -- "/path/to/file" "important"
 
 # List tags
-lla plugin --name file_tagger --action list-tags --args "/path/to/file"
+lla plugin run file_tagger list-tags -- "/path/to/file"
+
+# List all tags
+lla plugin run file_tagger all-tags
+
+# List files by tag
+lla plugin run file_tagger files-by-tag -- "important"
 
 # Help
-lla plugin --name file_tagger --action help
+lla plugin run file_tagger help
 ```
 
 ### Display Examples

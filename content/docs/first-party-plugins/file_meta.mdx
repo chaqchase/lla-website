@@ -1,20 +1,21 @@
 ---
-title: "File Meta"
-description: "Displays the file metadata of each file"
-order: 7
+title: "File Metadata"
+description: "A file metadata plugin for `lla` that provides comprehensive file information with rich formatting."
+order: 12
 published: true
-references: [https://github.com/chaqchase/lla/blob/main/plugins/file_meta]
+references: [https://github.com/chaqchase/lla/tree/main/plugins/file_meta]
 ---
-# LLA File Metadata Plugin
 
-Show file metadata with clear formatting.
+# lla File Metadata Plugin
+
+A file metadata plugin for `lla` that provides comprehensive file information with rich formatting.
 
 ## Features
 
-- Access/modify/create timestamps
-- Ownership and permissions
-- Size stats
-- Color-coded output
+- Timestamp tracking (access, modify, create)
+- Ownership and permission details
+- Size statistics
+- Color-coded information display
 
 ## Configuration
 
@@ -37,7 +38,7 @@ name = "bright_yellow"      # Name highlighting
 
 ```bash
 # View help information
-lla plugin --name file_meta --action help
+lla plugin run file_meta help
 ```
 
 ## Display Format

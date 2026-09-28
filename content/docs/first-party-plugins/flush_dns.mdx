@@ -1,30 +1,49 @@
 ---
 title: "Flush DNS"
-description: "Flush DNS cache with history tracking"
-order: 21
+description: "DNS cache flushing plugin for `lla` with history tracking and cross-platform support."
+order: 17
 published: true
-references: [https://github.com/chaqchase/lla/blob/main/plugins/flush_dns]
-status: "new"
+references: [https://github.com/chaqchase/lla/tree/main/plugins/flush_dns]
 ---
-# LLA Flush DNS Plugin
 
-DNS cache flushing plugin for lla with history tracking and cross-platform support.
+# lla Flush DNS Plugin
+
+DNS cache flushing plugin for `lla` with history tracking and cross-platform support.
 
 ## Features
 
-- Cross-Platform: Works on macOS, Linux, and Windows
-- History Tracking: Track all flush operations with timestamps
-- Confirmation Prompts: Optional confirmation before flushing
-- Statistics: View flush history and success rates
+- **Cross-Platform**: Works on macOS, Linux, and Windows
+- **History Tracking**: Track all flush operations with timestamps
+- **Confirmation Prompts**: Optional confirmation before flushing
+- **Statistics**: View flush history and success rates
+
+## Usage
+
+```bash
+# Flush DNS cache
+lla plugin run flush_dns flush
+
+# View flush history
+lla plugin run flush_dns history
+
+# Clear history
+lla plugin run flush_dns clear-history
+
+# Configure preferences
+lla plugin run flush_dns preferences
+
+# Show help
+lla plugin run flush_dns help
+```
 
 ## Configuration
 
-Configuration file location: `~/.config/lla/plugins/flush_dns/config.toml`
+Config location: `~/.config/lla/plugins/flush_dns/config.toml`
 
 ```toml
-confirm_before_flush = true
-show_verbose_output = true
-max_history_size = 50
+confirm_before_flush = true      # Show confirmation prompt
+show_verbose_output = true       # Display command output
+max_history_size = 50           # Maximum history entries
 
 [colors]
 success = "bright_green"
@@ -33,69 +52,16 @@ warning = "bright_yellow"
 error = "bright_red"
 ```
 
-## Usage
-
-### Flush DNS cache
-
-```bash
-lla plugin --name flush_dns --action flush
-```
-
-This will:
-1. Show confirmation prompt (if enabled)
-2. Execute the appropriate flush command for your OS
-3. Display success/failure message
-4. Show verbose output (if enabled)
-5. Save the operation to history
-
-### View flush history
-
-```bash
-lla plugin --name flush_dns --action history
-```
-
-Displays:
-- List of recent flush operations
-- Timestamps
-- Operating system
-- Success/failure status
-- Statistics (total, successful, failed)
-
-### Clear flush history
-
-```bash
-lla plugin --name flush_dns --action clear-history
-```
-
-Prompts for confirmation and clears all flush history.
-
-### Configure preferences
-
-```bash
-lla plugin --name flush_dns --action preferences
-```
-
-Adjust settings:
-- Toggle confirmation before flush
-- Toggle verbose output
-- Set max history size
-
-### Display help
-
-```bash
-lla plugin --name flush_dns --action help
-```
-
 ## Display Examples
 
-### Flushing DNS
+Flushing DNS:
 
 ```
 ℹ Info: Flushing DNS cache on macOS...
 ✓ Success: DNS cache flushed successfully!
 ```
 
-### History View
+History View:
 
 ```
 📜 DNS Flush History:
@@ -113,48 +79,6 @@ lla plugin --name flush_dns --action help
 
 ## Platform Commands
 
-- macOS: `sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder`
-- Linux: `sudo systemd-resolve --flush-caches` or `sudo systemctl restart nscd`
-- Windows: `ipconfig /flushdns`
-
-## Actions
-
-- `flush` - Flush the DNS cache
-- `history` - View flush history
-- `clear-history` - Clear flush history
-- `preferences` - Configure plugin preferences
-- `help` - Show help information
-
-## Troubleshooting
-
-### macOS
-If the flush fails, you may need to run with sudo permissions. The plugin attempts to use sudo automatically.
-
-### Linux
-The plugin tries multiple methods:
-1. `systemd-resolve --flush-caches` (for systemd-based systems)
-2. `systemctl restart nscd` (for systems using nscd)
-
-If both fail, you may need to manually install one of these services.
-
-### Windows
-The command requires administrator privileges. Run your terminal as administrator if the flush fails.
-
-## Common Use Cases
-
-### After Changing DNS Settings
-```bash
-lla plugin --name flush_dns --action flush
-```
-
-### Troubleshooting Network Issues
-When experiencing DNS resolution problems, flushing the cache can help:
-```bash
-lla plugin --name flush_dns --action flush
-```
-
-### After Editing /etc/hosts
-Clear DNS cache to ensure new host entries are recognized:
-```bash
-lla plugin --name flush_dns --action flush
-```
+- **macOS**: `sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder`
+- **Linux**: `sudo systemd-resolve --flush-caches` or `sudo systemctl restart nscd`
+- **Windows**: `ipconfig /flushdns`

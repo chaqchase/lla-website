@@ -1,34 +1,53 @@
 ---
 title: "JWT"
-description: "Decode, analyze, and search JWT tokens with beautiful formatting"
-order: 17
+description: "JWT decoder and analyzer for `lla` with beautiful formatting, search capabilities, and validation."
+order: 23
 published: true
-references: [https://github.com/chaqchase/lla/blob/main/plugins/jwt]
-status: "new"
+references: [https://github.com/chaqchase/lla/tree/main/plugins/jwt]
 ---
-# LLA JWT Plugin
 
-JWT decoder and analyzer for lla with beautiful formatting, search capabilities, and validation.
+# lla JWT Plugin
+
+JWT decoder and analyzer for `lla` with beautiful formatting, search capabilities, and validation.
 
 ## Features
 
-- Token Decoding: Beautiful formatted display of JWT header, payload, and signature
-- Expiration Checking: Automatic expiration validation with time remaining
-- Smart Search: Regex-powered search through JWT contents
-- History Management: Store and manage decoded JWT tokens
-- Multiple Input Methods: Paste, clipboard, or select from history
-- Flexible Copying: Copy full token, header, payload, or specific claims
-- Claim Highlighting: Automatically highlight important JWT claims
+- **Token Decoding**: Beautiful formatted display of JWT header, payload, and signature
+- **Expiration Checking**: Automatic expiration validation with time remaining
+- **Smart Search**: Regex-powered search through JWT contents
+- **History Management**: Store and manage decoded JWT tokens
+- **Multiple Input Methods**: Paste, clipboard, or select from history
+- **Flexible Copying**: Copy full token, header, payload, or specific claims
+- **Claim Highlighting**: Automatically highlight important JWT claims
+
+## Usage
+
+```bash
+# Decode and view JWT token
+lla plugin run jwt decode
+
+# Search through JWT contents
+lla plugin run jwt search
+
+# Manage JWT history
+lla plugin run jwt history
+
+# Configure preferences
+lla plugin run jwt preferences
+
+# Show help
+lla plugin run jwt help
+```
 
 ## Configuration
 
-Configuration file location: `~/.config/lla/plugins/jwt/config.toml`
+Config location: `~/.config/lla/plugins/jwt/config.toml`
 
 ```toml
-auto_check_expiration = true
-save_to_history = true
-max_history_size = 50
-highlight_claims = ["sub", "iss", "aud", "exp", "iat", "nbf"]
+auto_check_expiration = true           # Automatically check token expiration
+save_to_history = true                 # Save decoded tokens to history
+max_history_size = 50                  # Maximum number of tokens in history
+highlight_claims = ["sub", "iss", "aud", "exp", "iat", "nbf"]  # Claims to highlight
 
 [colors]
 success = "bright_green"
@@ -42,57 +61,9 @@ expired = "bright_red"
 valid = "bright_green"
 ```
 
-## Usage
-
-### Decode a JWT token
-
-```bash
-lla plugin --name jwt --action decode
-```
-
-This will:
-1. Prompt you to choose input method (paste, clipboard, or history)
-2. Display the decoded JWT with formatted header and payload
-3. Show expiration status if applicable
-4. Offer options to copy parts or save to history
-
-### Search within JWT tokens
-
-```bash
-lla plugin --name jwt --action search
-```
-
-Search for specific claims or values within JWT tokens using regex patterns.
-
-### Manage token history
-
-```bash
-lla plugin --name jwt --action history
-```
-
-View, copy, or remove previously decoded JWT tokens from history.
-
-### Configure preferences
-
-```bash
-lla plugin --name jwt --action preferences
-```
-
-Adjust settings:
-- Toggle auto-check expiration
-- Toggle save to history
-- Set max history size
-- Manage highlighted claims
-
-### Display help
-
-```bash
-lla plugin --name jwt --action help
-```
-
 ## Display Examples
 
-### Token Display
+Token Display:
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
@@ -122,7 +93,7 @@ lla plugin --name jwt --action help
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Search Results
+Search Results:
 
 ```
 ═══════════════════════════════════════════════════════════════════════════════
@@ -138,11 +109,3 @@ lla plugin --name jwt --action help
 ► payload » user_role
   "admin"
 ```
-
-## Actions
-
-- `decode` - Decode and view JWT token details
-- `search` - Search JWT contents with regex support
-- `history` - Manage JWT token history
-- `preferences` - Configure plugin settings
-- `help` - Show help information

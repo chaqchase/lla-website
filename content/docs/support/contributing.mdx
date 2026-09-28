@@ -62,24 +62,25 @@ cargo run -- -l
 
 ```
 lla/
-├── lla/                          # Main application
-│   ├── src/
-│   │   ├── commands/             # Command implementations
-│   │   ├── formatter/            # Output formatters
-│   │   ├── lister/               # Directory listers
-│   │   ├── plugin/               # Plugin system
-│   │   ├── sorter/               # Sorting algorithms
-│   │   ├── filter/               # File filtering
-│   │   └── theme/                # Theme engine
-│   └── Cargo.toml
-├── lla_plugin_interface/         # Plugin FFI interface
-├── lla_plugin_utils/             # Plugin helper utilities
-├── plugins/                      # First-party plugins
+├── lla/                          # Main application (CLI, host, formatters)
+│   └── src/
+│       ├── formatter/            # Output formatters
+│       ├── lister/               # Directory listers
+│       └── ...
+├── interface/                    # lla_plugin_interface: manifests, protobuf, ABI
+├── macros/                       # lla_plugin_sdk_macros: native/component exports
+├── sdk/                          # lla_plugin_sdk: authoring API + WIT world
+├── utils/                        # lla_plugin_utils: shared helpers
+├── plugins/                      # First-party plugins (37 bundled crates)
 │   ├── file_meta/
 │   ├── git_status/
 │   └── ...
-└── themes/                       # Built-in themes
+├── themes/                       # Theme assets
+├── docs/                         # User, author, and architecture guides
+└── scripts/                      # Plugin build and verification scripts
 ```
+
+All crates share one product version. See the [Workspace map](/docs/about/architecture#workspace-map) in the handbook.
 
 ### 3. Find Something to Work On
 
@@ -407,12 +408,13 @@ Good documentation is crucial! You can help by:
 **Documentation structure:**
 ```
 lla-website/content/docs/
-├── about/           # Introduction, installation, architecture
-├── usage/           # User guides
-├── plugins/         # Plugin system docs
-├── guides/          # Tutorials and walkthroughs
-├── reference/       # API and configuration reference
-└── support/         # FAQ, troubleshooting, contributing
+├── about/               # Introduction, installation, architecture handbook
+├── usage/               # Views, filtering, navigation, configuration, output
+├── plugins/             # Plugin platform: overview, developing, manifest
+├── first-party-plugins/ # Overview plus one page per bundled plugin
+├── guides/              # Tutorials and walkthroughs
+├── reference/           # CLI reference
+└── support/             # FAQ, troubleshooting, contributing, releasing
 ```
 
 **Documentation style:**

@@ -1,15 +1,14 @@
 ---
 title: "Shortcuts"
 description: "Learn how to create and manage shortcuts for lla plugins to simplify common operations. Shortcuts allow you to create intuitive aliases for frequently used plugin actions, reducing typing and improving workflow efficiency."
-order: 3
+order: 6
 published: true
-references: []
-status: "new"
+references: [https://github.com/chaqchase/lla/blob/main/docs/configuration.md]
 ---
 
 # Shortcuts for Faster Commands
 
-Shortcuts turn long plugin commands into short aliases.
+Shortcuts turn long plugin commands into short aliases. For the configuration behind them, see [Shortcuts](/docs/usage/configuration#shortcuts).
 
 ## Creating Shortcuts
 
@@ -82,19 +81,19 @@ Replace long commands with short ones:
 
 ```bash
 # Instead of this lengthy command:
-lla plugin --name code_snippet_extractor --action extract --args "file.rs" "function_name" 10 20 3
+lla plugin run code_snippet_extractor extract -- "file.rs" "function_name" 10 20 3
 
 # Simply use:
 lla snip "file.rs" "function_name" 10 20 3
 
 # Replace this:
-lla plugin --name code_snippet_extractor --action list
+lla plugin run code_snippet_extractor list
 
 # With this:
 lla snippets
 
 # Instead of:
-lla plugin --name code_snippet_extractor --action search --args "query"
+lla plugin run code_snippet_extractor search -- "query"
 
 # Just type:
 lla search "query"

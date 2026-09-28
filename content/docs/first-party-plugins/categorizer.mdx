@@ -1,21 +1,21 @@
 ---
 title: "Categorizer"
-description: "Categorizes files based on their extensions and metadata"
-order: 1
+description: "File categorization plugin for `lla` that organizes files based on extensions, with hierarchical categorization support."
+order: 4
 published: true
-references: [https://github.com/chaqchase/lla/blob/main/plugins/categorizer]
+references: [https://github.com/chaqchase/lla/tree/main/plugins/categorizer]
 ---
 
-# LLA Categorizer Plugin
+# lla Categorizer Plugin
 
-Categorize files by extension with optional hierarchy.
+File categorization plugin for `lla` that organizes files based on extensions, with hierarchical categorization support.
 
 ## Features
 
-- Categorization by extension with colors
-- Categories and subcategories
-- Size rules and stats
-- Configurable categories, colors, rules
+- Automatic file categorization by extension with colored labels
+- Hierarchical categories and subcategories
+- Size-based rules and statistics tracking
+- Configurable categories, colors, and rules
 
 ## Default Categories
 
@@ -40,13 +40,13 @@ Categorize files by extension with optional hierarchy.
 
 ```bash
 # Add category
-lla plugin --name categorizer --action add-category --args "Images" "yellow" "jpg,png,gif"
+lla plugin run categorizer add-category -- "Images" "yellow" "jpg,png,gif"
 
 # Add subcategory
-lla plugin --name categorizer --action add-subcategory --args "Images" "Raster" "jpg,png,gif"
+lla plugin run categorizer add-subcategory -- "Images" "Raster" "jpg,png,gif"
 
 # List categories
-lla plugin --name categorizer --action list-categories
+lla plugin run categorizer list-categories
 ```
 
 ## Configuration

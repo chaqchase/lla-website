@@ -1,317 +1,128 @@
 ---
 title: "Installation"
-description: "Complete installation guide for lla across different platforms and package managers with verification and troubleshooting steps."
+description: "Install lla with the install script, a package manager, or a manual download, then initialize configuration and upgrade."
 order: 2
 published: true
-references: []
+references: [https://github.com/chaqchase/lla/blob/main/docs/getting-started.md]
 ---
-# Installation
 
-Getting lla up and running is quick and straightforward. Choose the installation method that best fits your workflow.
+# Installation and first run
 
-## Quick Install (Recommended)
+This guide covers supported installation methods, upgrading, and the first-run
+configuration flow. For everyday commands, continue with
+[Views and display](/docs/usage/views) or the [command reference](/docs/reference/cli-reference).
 
-The easiest way to install lla is using our automated installation script, which handles platform detection and verification:
+## Install with the script
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
 ```
 
-**What this script does:**
+The script detects the operating system and architecture, downloads the matching
+release binary, verifies it against the release checksum, and installs it in
+`/usr/local/bin`.
 
-- Automatically detects your operating system and CPU architecture
-- Downloads the appropriate pre-compiled binary for your platform
-- Verifies the integrity of the download using checksums
-- Installs lla to `/usr/local/bin` (requires sudo on some systems)
-- Sets proper executable permissions
+On Windows PowerShell, use the native installer:
 
-**Supported platforms:**
-
-- Linux (x86_64, ARM64)
-- macOS (Intel, Apple Silicon)
-- Windows (via WSL)
-
-## Install from Cargo
-
-If you have Rust's package manager `cargo` installed, you can build and install lla from source:
-
-```bash
-cargo install lla
+```powershell
+irm https://raw.githubusercontent.com/chaqchase/lla/main/install.ps1 | iex
 ```
 
-This method:
-- Compiles lla specifically for your system
-- Always gives you the latest stable release from crates.io
-- Installs to `~/.cargo/bin` (ensure it's in your PATH)
+It detects AMD64 or ARM64, verifies `SHA256SUMS`, installs to
+`%LOCALAPPDATA%\Programs\lla`, and adds that directory to the user `PATH`.
+Download `install.ps1` first to use its `-Version`, `-InstallDir`, or
+`-NoPathUpdate` options.
 
-**Note:** Building from source requires a Rust toolchain. Install Rust from [rustup.rs](https://rustup.rs) if needed.
+## Install with a package manager
 
-## Package Managers
+| Platform | Command |
+| --- | --- |
+| Cargo | `cargo install lla` |
+| macOS with Homebrew | `brew install lla` |
+| Arch Linux with paru | `paru -S lla` |
+| NetBSD with pkgin | `pkgin install lla` |
+| X-CMD | `x install lla` |
 
-lla is available through several package managers for convenient installation and automatic updates:
+## Install a release manually
 
-<Default items={[`lla`]} />
+Download the release asset that matches the operating system and architecture
+from [GitHub Releases](https://github.com/chaqchase/lla/releases), then make it
+executable and place it on `PATH`:
 
-**Platform-specific commands:**
-
-| Platform | Package Manager | Command |
-|----------|----------------|---------|
-| macOS | Homebrew | `brew install lla` |
-| Arch Linux | paru | `paru -S lla` |
-| NetBSD | pkgin | `pkgin install lla` |
-| Cross-platform | X-CMD | `x install lla` |
-| Any with Cargo | cargo | `cargo install lla` |
-
-## Manual Installation
-
-Download pre-built binaries from our [releases page](https://github.com/chaqchase/lla/releases):
-
-> **Note:** Replace `<version>` with the latest version tag from the [releases page](https://github.com/chaqchase/lla/releases). e.g. `v0.3.8`
-
-### Linux (x86_64)
 ```bash
-wget -c https://github.com/chaqchase/lla/releases/download/<version>/lla-linux-amd64 -O lla
-sudo chmod +x lla
+wget -c https://github.com/chaqchase/lla/releases/download/<version>/<asset> -O lla
+chmod +x lla
 sudo chown root:root lla
 sudo mv lla /usr/local/bin/lla
 ```
 
-### Linux (ARM64)
-```bash
-wget -c https://github.com/chaqchase/lla/releases/download/<version>/lla-linux-arm64 -O lla
-sudo chmod +x lla
-sudo chown root:root lla
-sudo mv lla /usr/local/bin/lla
-```
+Linux releases include GNU binaries for amd64, arm64, and i686. Static musl
+binaries are available as `lla-linux-amd64-musl` and
+`lla-linux-arm64-musl`; the install script selects them on musl systems. Static
+musl builds support core listing, formatting, search, archives, themes,
+configuration, and upgrades, but not dynamically loaded plugins. The 32-bit x86
+`.apk` is a GNU-based legacy package.
 
-### macOS (x86_64)
-```bash
-curl -L https://github.com/chaqchase/lla/releases/download/<version>/lla-darwin-amd64 -o lla
-sudo chmod +x lla
-sudo chown root:wheel lla
-sudo mv lla /usr/local/bin/lla
-```
+NetBSD releases include `lla-netbsd-amd64`, which the install script selects on
+NetBSD amd64. It is built natively with the default feature set: native dynamic
+plugins are enabled, but the embedded WASM runtime is omitted because Wasmtime
+does not support NetBSD. Official prebuilt plugin archives are not currently
+published for NetBSD; native plugins can still be built and installed locally.
 
-### macOS (ARM64)
-```bash
-curl -L https://github.com/chaqchase/lla/releases/download/<version>/lla-darwin-arm64 -o lla
-sudo chmod +x lla
-sudo chown root:wheel lla
-sudo mv lla /usr/local/bin/lla
-```
+Windows releases include `lla-windows-amd64.exe` and
+`lla-windows-arm64.exe`, built natively with `wasm-plugins`. Matching
+`plugins-windows-amd64.zip` and `plugins-windows-arm64.zip` archives contain
+native DLLs and WASM components. Windows reports file size and timestamps
+normally, synthesizes Unix-style permission columns from file type and the
+read-only attribute, and returns null or `-` for Unix-only ownership, inode,
+hard-link, xattr, security-context, and mount metadata. Supported systems are
+Windows 10 or Windows Server 2016 and newer on AMD64 or ARM64; 32-bit x86 is
+rejected by the installer.
 
-# Post-Installation Setup
+Creating symlinks may require Windows Developer Mode or an elevated terminal.
+Existing directory and file symlinks can still be listed normally when the
+current account can access them.
 
-After installing lla, follow these steps to complete your setup and verify everything works correctly.
+## Initialize lla
 
-## 1. Verify Installation
-
-Confirm lla is installed and accessible:
-
-```bash
-lla --version
-```
-
-You should see output similar to:
-```
-lla 0.3.9
-```
-
-If you see "command not found", ensure the installation directory is in your PATH:
-
-```bash
-# For manual installations
-export PATH="/usr/local/bin:$PATH"
-
-# For cargo installations
-export PATH="$HOME/.cargo/bin:$PATH"
-```
-
-## 2. Shell Completion (Highly Recommended)
-
-Enable tab completion for your shell to dramatically improve your lla workflow:
-
-### Bash
-
-```bash
-# Generate completion script
-lla completion bash > ~/.lla-completion.bash
-
-# Add to your ~/.bashrc
-echo 'source ~/.lla-completion.bash' >> ~/.bashrc
-source ~/.bashrc
-```
-
-### Zsh
-
-```bash
-# Generate completion script
-lla completion zsh > ~/.zsh/completions/_lla
-
-# Add to your ~/.zshrc (if not already present)
-echo 'fpath=(~/.zsh/completions $fpath)' >> ~/.zshrc
-echo 'autoload -Uz compinit && compinit' >> ~/.zshrc
-source ~/.zshrc
-```
-
-### Fish
-
-```bash
-# Generate and install completion
-lla completion fish > ~/.config/fish/completions/lla.fish
-```
-
-### Elvish
-
-```bash
-# Generate completion
-lla completion elvish > ~/.elvish/lib/lla-completion.elv
-
-# Add to your ~/.elvish/rc.elv
-echo 'use lla-completion' >> ~/.elvish/rc.elv
-```
-
-## 3. Initialize Configuration
-
-Create your configuration file with sensible defaults:
+Run the guided setup after installation:
 
 ```bash
 lla init
 ```
 
-This creates `~/.config/lla/config.toml` with default settings. You can view it anytime:
+The wizard configures appearance, the default view, permission formatting,
+listing and sorting defaults, dotfile and `.gitignore` behavior, long-view
+columns, plugin directories and enablement, and recursion safety limits.
+
+To write the built-in defaults without prompts, or inspect the active config:
 
 ```bash
-lla config              # View your configuration
+lla init --default
+lla config
 ```
 
-To customize settings, either edit the file directly or use the config command:
+The configuration file is stored at `~/.config/lla/config.toml`. See
+[Configuration](/docs/usage/configuration) for profiles, themes, shortcuts, and the
+supported settings.
+
+## Upgrade
 
 ```bash
-# View current theme
-lla config --get theme
-
-# Change theme
-lla config --set theme dark
-
-# Enable icons by default
-lla config --set show_icons true
+lla upgrade
+lla upgrade --version v0.5.1
+lla upgrade --path /usr/local/bin/lla
 ```
 
-## 4. Install Plugins (Optional)
+`lla upgrade` uses the official installation logic to detect the platform,
+verify `SHA256SUMS`, and atomically replace the executable. It targets the
+currently running executable unless `--path` is provided. NetBSD amd64 upgrades
+select the `lla-netbsd-amd64` release asset. Windows upgrades select the matching
+`.exe` asset and use a Windows-safe self-replacement path.
 
-Enhance lla with plugins for additional functionality:
+## Next steps
 
-```bash
-# Install all first-party plugins
-lla install
-
-# Or install specific plugins from Git
-lla install --git https://github.com/chaqchase/lla-plugin-name
-```
-
-Learn more about plugins in the [Plugin System](/docs/plugins/concepts) documentation.
-
-## Quick Test
-
-Try these commands to see lla in action:
-
-```bash
-lla                    # List current directory
-lla -l                 # Long format with details
-lla -t                 # Tree view
-lla --fuzzy            # Interactive fuzzy search
-```
-
-## Troubleshooting
-
-### "command not found" Error
-
-**Problem:** Shell cannot find lla after installation.
-
-**Solution:** Add the installation directory to your PATH:
-
-```bash
-# Check where lla is installed
-which lla
-
-# If in /usr/local/bin, add to PATH
-export PATH="/usr/local/bin:$PATH"
-
-# Make it permanent (add to ~/.bashrc or ~/.zshrc)
-echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-### Permission Denied
-
-**Problem:** Cannot execute lla after manual installation.
-
-**Solution:** Ensure the binary has execute permissions:
-
-```bash
-sudo chmod +x /usr/local/bin/lla
-```
-
-### Checksum Verification Failed
-
-**Problem:** Installation script reports checksum mismatch.
-
-**Solution:** This usually indicates a corrupted download. Try again:
-
-```bash
-# Clear any partial downloads
-rm -f /tmp/lla-*
-
-# Run installation script again
-curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
-```
-
-### Icons Not Displaying
-
-**Problem:** File icons appear as squares or question marks.
-
-**Solution:** Install a Nerd Font and configure your terminal to use it:
-
-1. Download a Nerd Font from [nerdfonts.com](https://www.nerdfonts.com/)
-2. Install the font on your system
-3. Configure your terminal emulator to use the Nerd Font
-4. Restart your terminal
-
-Popular choices: FiraCode Nerd Font, JetBrainsMono Nerd Font, Hack Nerd Font
-
-### Slow Performance on Large Directories
-
-**Problem:** lla is slow when listing directories with many files.
-
-**Solution:** Adjust performance settings in your config:
-
-```toml
-# In ~/.config/lla/config.toml
-[formatters.tree]
-max_lines = 10000     # Reduce from default 20000
-
-[listers.recursive]
-max_entries = 10000   # Reduce from default 20000
-
-# Disable directory size calculation
-include_dirs = false
-```
-
-## Getting Help
-
-If you encounter issues not covered here:
-
-- Check our [FAQ](/docs/support/faq)
-- Visit the [Troubleshooting Guide](/docs/support/troubleshooting)
-- Open an issue on [GitHub](https://github.com/chaqchase/lla/issues)
-- Join our community discussions
-
-## Next Steps
-
-Now that lla is installed and configured:
-
-- Read the [Basic Usage](/docs/usage/basic-usage) guide to learn the fundamentals
-- Explore [View Formats](/docs/usage/view-formats) to see different ways to visualize your files
-- Check out [Configuration](/docs/usage/config) for customization options
-- Browse [First-Party Plugins](/docs/first-party-plugins/file_meta) to extend functionality
+- Choose a layout in [Views and display](/docs/usage/views).
+- Learn selection tools in [Filtering and search](/docs/usage/filtering-search).
+- Set up bookmarks and the interactive finder in [Navigation](/docs/usage/navigation).
+- Add capabilities from the [bundled plugin catalog](/docs/first-party-plugins/overview).

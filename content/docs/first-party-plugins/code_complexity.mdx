@@ -1,20 +1,25 @@
 ---
 title: "Code Complexity"
-description: "Analyzes code complexity and provides metrics"
-order: 2
+description: "A code analysis plugin for `lla` that performs real-time complexity analysis of source code."
+order: 6
 published: true
-references: [https://github.com/chaqchase/lla/blob/main/plugins/code_complexity]
+references: [https://github.com/chaqchase/lla/tree/main/plugins/code_complexity]
 ---
-# LLA Code Complexity Plugin
 
-Analyze code complexity with live metrics.
+# lla Code Complexity Plugin
+
+A code analysis plugin for `lla` that performs real-time complexity analysis of source code.
 
 ## Features
 
-- Multiple metrics: cyclomatic, cognitive, maintainability index
-- Function/class summaries
-- Thresholds with colors
-- Live stats and detailed reports
+- **Multi-Metric Analysis**
+  - Cyclomatic & Cognitive Complexity
+  - Maintainability Index (0-100)
+  - Function/Class Analysis
+  - Control Flow & Volume Metrics
+- **Smart Thresholds**: Configurable with color-coding
+- **Real-Time Statistics**: Continuous metric tracking
+- **Detailed Reports**: File and language-level insights
 
 ## Default Configuration
 
@@ -39,10 +44,10 @@ Analyze code complexity with live metrics.
 
 ```bash
 # Set complexity thresholds
-lla plugin --name code_complexity --action set-thresholds --args 10 20 30 40
+lla plugin run code_complexity set-thresholds -- 10 20 30 40
 
 # Show report
-lla plugin --name code_complexity --action show-report
+lla plugin run code_complexity show-report
 ```
 
 ## Display Formats

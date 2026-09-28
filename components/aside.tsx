@@ -45,25 +45,25 @@ export const createHierarchy = (docs: Array<Docs>): HierarchyNode => {
 }
 
 const renderHierarchy = (node: HierarchyNode, level: number = 0) => {
-  const filteredNodeEntries = Object.entries(node)
-    .sort(([a], [b]) => {
-      const order: string[] = []
+  const filteredNodeEntries = Object.entries(node).sort(([a], [b]) => {
+      const order = [
+        'about',
+        'usage',
+        'plugins',
+        'first-party-plugins',
+        'guides',
+        'reference',
+        'support'
+      ]
       return order.indexOf(a) - order.indexOf(b)
-    })
-    .sort(([a], [b]) => {
-      if (a === 'about') return -1
-      if (b === 'about') return 1
-      if (a === 'usage') return -1
-      if (b === 'usage') return 1
-      if (a === 'plugins') return -1
-      if (b === 'plugins') return 1
-      if (a === 'first-party-plugins') return -1
-      if (b === 'first-party-plugins') return 1
-      return 0
     })
   return (
     <>
-      <Accordion type="multiple" defaultValue={['about', 'usage', 'plugins', 'first-party-plugins']} className="w-full">
+      <Accordion
+        type="multiple"
+        defaultValue={['about', 'usage', 'plugins', 'first-party-plugins', 'guides', 'reference', 'support']}
+        className="w-full"
+      >
         {filteredNodeEntries.map(([key, value]) => (
           <AccordionItem key={key} value={key}>
             <Trigger className="[&_.jr131]:size-4 [&_.jr131]:text-zinc-500 [&_.jr131]:fill-zinc-500/10 dark:[&_.jr131]:fill-zinc-500/30">

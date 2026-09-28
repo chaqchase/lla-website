@@ -190,7 +190,7 @@ ls -l /usr/local/bin/lla
 
 3. **Disable colors temporarily**:
    ```bash
-   lla --no-colors
+   lla --no-color
    ```
 
 4. **Check theme conflicts**:
@@ -230,7 +230,7 @@ ls -l /usr/local/bin/lla
 3. **Terminal compatibility**:
    ```bash
    # Try with basic output
-   lla --no-icons --no-colors
+   lla --no-icons --no-color
    
    # Some terminal emulators have better Unicode support:
    # - Alacritty
@@ -371,8 +371,12 @@ ls -l ~/.config/lla/plugins/
 # 3. Try loading plugins explicitly
 lla --enable-plugin plugin_name
 
-# 4. Check for errors
-lla clean                # Remove invalid plugins
+# 4. Verify contracts, checksums, and handlers
+lla plugin doctor
+lla plugin info plugin_name
+
+# 5. Remove invalid plugins
+lla clean
 ```
 
 **Common issues**:
@@ -381,8 +385,13 @@ lla clean                # Remove invalid plugins
    - Linux: must be `.so`
    - macOS: must be `.dylib`
    - Windows: must be `.dll`
+   - WebAssembly: must be a `.wasm` component, and the host must be built with `wasm-plugins` (official Linux, macOS, and Windows binaries include it; NetBSD does not)
 
-2. **Wrong location**:
+2. **Old plugin API version**:
+   - lla 0.6 loads API v3 plugins only; v1/v2 libraries are detected and reported as disabled without executing
+   - Migrate official plugins with `lla plugin migrate --prebuilt`, and rebuild third-party plugins against `lla_plugin_sdk` 0.6 — see [Migrating to v3](/docs/plugins/migration-v3)
+
+3. **Wrong location**:
    ```bash
    # Check configured plugin directory
    lla config | grep plugins_dir
@@ -390,7 +399,7 @@ lla clean                # Remove invalid plugins
    # Default is ~/.config/lla/plugins/
    ```
 
-3. **Missing dependencies**:
+4. **Missing dependencies**:
    ```bash
    # Rebuild plugin
    cd plugin-directory
@@ -437,7 +446,7 @@ lla clean                # Remove invalid plugins
 
 **Common causes**:
 
-1. **Rust not installed**:
+1. **Rust not installed** (source installs only — `--prebuilt` needs no toolchain):
    ```bash
    # Install Rust
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -542,18 +551,14 @@ lla clean                # Remove invalid plugins
 
 **Requirements**:
 
-- lla version 0.2.0 or later
 - Terminal with sufficient size (min 80x24)
 - Working terminal input
 
+See [Fuzzy view](/docs/usage/navigation#fuzzy-view) for key bindings and editor selection.
+
 **Solutions**:
 
-1. **Check version**:
-   ```bash
-   lla --version    # Must be 0.2.0+
-   ```
-
-2. **Check terminal size**:
+1. **Check terminal size**:
    ```bash
    echo $COLUMNS x $LINES    # Should be large enough
    ```

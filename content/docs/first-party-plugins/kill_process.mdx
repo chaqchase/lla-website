@@ -1,307 +1,175 @@
 ---
 title: "Kill Process"
-description: "Interactive process management plugin inspired by Raycast. Search and kill running processes with live fuzzy search, multi-select support, and cross-platform compatibility."
-order: 10
+description: "A plugin for lla that provides an interactive interface for managing and terminating system processes, inspired by Raycast's Kill Process command."
+order: 25
 published: true
-references: []
-status: "new"
+references: [https://github.com/chaqchase/lla/tree/main/plugins/kill_process]
 ---
 
 # Kill Process Plugin
 
-Interactive process manager that lets you search and terminate processes with a powerful fuzzy search interface.
+A plugin for lla that provides an interactive interface for managing and terminating system processes, inspired by Raycast's Kill Process command.
 
 ## Features
 
-- **Live Fuzzy Search** - Real-time filtering that updates as you type
-- **Full-Screen Terminal UI** - Instant process filtering with interactive display
-- **Arrow Key Navigation** - Navigate through filtered results easily
-- **Multi-Select Support** - Select multiple processes to terminate
-- **Smart Ranking** - Results ordered by fuzzy match score
-- **Process Details** - View PID, name, CPU usage, and memory
-- **Force Kill Support** - SIGKILL on Unix, `/F` on Windows
-- **Cross-Platform** - Works on macOS, Linux, and Windows
-- **High Performance** - Handles 1000+ processes efficiently
-- **Safety Confirmations** - Confirmation dialogs before terminating
+- **Live Fuzzy Search**: Real-time search that updates as you type - instantly filter 1000+ processes
+- **Interactive Terminal UI**: Full-screen interface with arrow key navigation
+- **List Running Processes**: Display all running processes with detailed information (PID, name, CPU%, memory usage)
+- **Smart Ranking**: Fuzzy matcher ranks results by relevance score
+- **Multi-Select**: Choose multiple processes to kill at once
+- **Force Kill**: Option to forcefully terminate unresponsive processes
+- **Cross-Platform**: Works on macOS, Linux, and Windows
+- **Safety Confirmations**: Asks for confirmation before terminating any process
+- **Fast & Responsive**: Handles large process lists efficiently
 
-## Installation
+## Available Actions
 
-The kill_process plugin is included with lla's first-party plugins:
+### `list`
 
-```bash
-lla install
-```
-
-Or enable it if already installed:
+List all running processes with detailed information.
 
 ```bash
-lla use  # Interactive plugin manager
+lla plugin run kill_process list
 ```
 
-## Usage
+### `kill`
 
-### Interactive Fuzzy Search
-
-Launch the interactive process manager with live fuzzy search:
+Interactively select and kill a process with **live fuzzy search**.
 
 ```bash
-lla plugin kill_process kill
+lla plugin run kill_process kill
 ```
 
-**Controls:**
-- Type to filter processes in real-time
-- `↑/↓` - Navigate through results
-- `Space` - Select/deselect process for termination
-- `Enter` - Confirm selection and return to action menu
-- `Esc` - Cancel and exit
+Features:
 
-The fuzzy search ranks processes by match score, showing the most relevant results first.
+- **Real-time fuzzy search** - Results update as you type!
+- Type to filter processes instantly (e.g., "chr" matches "Chrome")
+- Navigate with ↑↓ arrow keys
+- Shows up to 20 matching processes with PID, CPU%, and memory usage
+- Press Enter to proceed with filtered results
+- Press Escape to cancel
+- After filtering, interactive multi-select interface to choose processes
+- Confirmation dialog before killing
 
-### Force Kill (Interactive)
+Example workflow:
 
-Same interactive experience but uses force kill (SIGKILL/taskkill /F):
+1. Start typing to filter processes in real-time (e.g., "firefox")
+2. Use arrow keys to browse filtered results
+3. Press Enter to select from filtered processes
+4. Choose which processes to kill using multi-select
+5. Confirm before killing
+
+### `force-kill`
+
+Forcefully terminate a process with **live fuzzy search** (SIGKILL on Unix, /F flag on Windows).
 
 ```bash
-lla plugin kill_process force-kill
+lla plugin run kill_process force-kill
 ```
 
-Use this when processes are frozen and won't respond to normal termination.
+This is useful for unresponsive processes that don't respond to normal termination signals. Includes the same real-time fuzzy search filtering as the regular `kill` action.
 
-### List All Processes
+### `kill-by-name`
 
-Display all running processes:
+Kill processes matching a specific name pattern.
 
 ```bash
-lla plugin kill_process list
+lla plugin run kill_process kill-by-name -- "chrome"
 ```
 
-Shows a formatted table with:
-- Process name
-- PID
-- CPU usage
-- Memory usage
+### `kill-by-pid`
 
-### Kill by Name Pattern
-
-Kill processes matching a name pattern:
+Kill a specific process by its PID.
 
 ```bash
-lla plugin kill_process kill-by-name chrome
+lla plugin run kill_process kill-by-pid -- "1234"
 ```
 
-Force kill by name:
+### `help`
+
+Display help information about the plugin.
 
 ```bash
-lla plugin kill_process force-kill-by-name chrome
+lla plugin run kill_process help
 ```
-
-### Kill by PID
-
-Terminate a specific process ID:
-
-```bash
-lla plugin kill_process kill-by-pid 1234
-```
-
-Force kill specific PID:
-
-```bash
-lla plugin kill_process force-kill-by-pid 1234
-```
-
-## Positional Syntax
-
-Use the shorter positional syntax (v0.5.0+):
-
-```bash
-# Interactive kill
-lla plugin kill_process kill
-
-# Interactive force kill
-lla plugin kill_process force-kill
-
-# Kill by name
-lla plugin kill_process kill-by-name "node"
-
-# Kill by PID
-lla plugin kill_process kill-by-pid 5678
-```
-
-## Plugin Aliases
-
-Create a short alias in your config for even faster access:
-
-```toml
-# ~/.config/lla/config.toml
-[plugin_aliases]
-k = "kill_process"
-```
-
-Then use:
-
-```bash
-lla plugin k kill
-lla plugin k force-kill
-lla plugin k kill-by-name "firefox"
-```
-
-## Shortcuts
-
-Create shortcuts for common process management tasks:
-
-```bash
-# Interactive process killer
-lla shortcut add kill kill_process kill -d "Kill processes interactively"
-
-# Force kill
-lla shortcut add fkill kill_process force-kill -d "Force kill processes"
-
-# Kill by name
-lla shortcut add pkill kill_process kill-by-name -d "Kill process by name"
-```
-
-Usage:
-
-```bash
-lla kill                 # Launch interactive mode
-lla fkill                # Launch force kill mode
-lla pkill "chrome"       # Kill all Chrome processes
-```
-
-## Actions Reference
-
-| Action | Description | Arguments |
-|--------|-------------|-----------|
-| `kill` | Interactive fuzzy search to select and kill processes | None |
-| `force-kill` | Interactive fuzzy search with force kill (SIGKILL) | None |
-| `list` | List all running processes | None |
-| `kill-by-name` | Kill processes matching pattern | `<pattern>` |
-| `force-kill-by-name` | Force kill processes matching pattern | `<pattern>` |
-| `kill-by-pid` | Kill process by ID | `<pid>` |
-| `force-kill-by-pid` | Force kill process by ID | `<pid>` |
-| `help` | Show help information | None |
-
-## Process Information
-
-Each process entry shows:
-
-- **PID** - Process identifier
-- **Name** - Process name/command
-- **CPU Usage** - Current CPU consumption (%)
-- **Memory** - Memory usage (MB/GB)
-
-## Safety Features
-
-### Confirmation Dialogs
-
-Before terminating processes, you'll see:
-- List of selected processes
-- Option to confirm or cancel
-- Clear warning messages for force kill
-
-### Protected Processes
-
-Some system-critical processes may be protected by the OS and cannot be killed without elevated permissions.
-
-### Force Kill Warning
-
-The force kill actions send:
-- **Unix/macOS**: SIGKILL (signal 9) - immediate termination
-- **Windows**: `/F` flag - forced termination
-
-Use with caution as force-killed processes cannot clean up resources.
 
 ## Platform-Specific Behavior
 
-### macOS/Linux
+### macOS
 
-- Uses process info from system APIs
-- Sends SIGTERM (15) by default, SIGKILL (9) for force
-- May require sudo for certain processes
+- Uses `kill -15` (SIGTERM) for normal termination
+- Uses `kill -9` (SIGKILL) for force termination
+- May require `sudo` for system processes or force kill
+
+### Linux
+
+- Uses `kill -15` (SIGTERM) for normal termination
+- Uses `kill -9` (SIGKILL) for force termination
+- May require elevated privileges for processes owned by other users
 
 ### Windows
 
-- Uses Windows API for process enumeration
-- Terminates with standard close, uses `/F` with force
-- May require Administrator privileges
+- Uses `taskkill /PID` for normal termination
+- Uses `taskkill /F /PID` for force termination
+- May require administrator privileges
+
+## Configuration
+
+The plugin uses a configuration file located at `~/.config/lla/plugins/kill_process.toml`.
+
+### Default Configuration
+
+```toml
+[colors]
+success = "bright_green"
+info = "bright_blue"
+error = "bright_red"
+warning = "bright_yellow"
+process_name = "bright_cyan"
+pid = "bright_magenta"
+```
+
+## Safety Notes
+
+- Always double-check before killing processes, especially system processes
+- Force kill should be used as a last resort as it doesn't allow processes to clean up
+- Killing critical system processes may cause system instability
+- Some processes may require elevated privileges (sudo/admin) to terminate
 
 ## Examples
 
-### Interactive Process Management
+### Kill a specific application
 
 ```bash
-# Launch interactive mode
-lla plugin kill_process kill
-
-# Type "chrome" to filter Chrome processes
-# Use arrow keys to navigate
-# Press Space to select multiple processes
-# Press Enter to confirm
-# Confirm the kill operation
+lla plugin run kill_process kill-by-name -- "Firefox"
 ```
 
-### Kill All Node Processes
+### Force kill an unresponsive process
 
 ```bash
-lla plugin kill_process kill-by-name "node"
+lla plugin run kill_process force-kill
+# Then select the process from the interactive list
 ```
 
-### Force Kill Frozen Application
+### List all processes
 
 ```bash
-# Find the PID first
-lla plugin kill_process list | grep "frozen-app"
-
-# Force kill by PID
-lla plugin kill_process force-kill-by-pid 1234
-```
-
-### Quick Workflow with Shortcuts
-
-```bash
-# Create shortcuts
-lla shortcut add k kill_process kill -d "Kill processes"
-lla shortcut add kn kill_process kill-by-name -d "Kill by name"
-
-# Use them
-lla k                    # Interactive
-lla kn "electron"        # Kill all Electron apps
+lla plugin run kill_process list
 ```
 
 ## Troubleshooting
 
-### Permission Denied
+### "Permission denied" errors
 
-If you can't kill a process:
-1. Check if it's owned by another user
-2. Try with sudo/admin privileges
-3. Verify process ID is correct
+- On macOS/Linux: Try running with `sudo` or ensure you have permission to kill the process
+- On Windows: Run your terminal as Administrator
 
-### Process Not Found
+### Process still running after kill
 
-If a process doesn't appear:
-1. It may have already terminated
-2. Check if running under different user
-3. Verify process name spelling
+- Some processes may take time to terminate
+- Try using `force-kill` for stubborn processes
+- Check if the process is a system-protected process
 
-### Force Kill Not Working
+## License
 
-If force kill fails:
-1. Process may be protected by OS
-2. Requires elevated permissions
-3. May be a system-critical process
-
-## Best Practices
-
-1. **Use Interactive Mode** - Safer than pattern matching
-2. **Verify Before Killing** - Check process details before termination
-3. **Avoid Force Kill** - Unless process is truly frozen
-4. **Use Specific Patterns** - Avoid overly broad name matches
-5. **Create Shortcuts** - For frequently managed processes
-
-
-## See Also
-
-- [Plugin Concepts](/docs/plugins/concepts) - Understanding lla plugins
-- [Shortcuts](/docs/plugins/shortcuts) - Create command shortcuts
-- [CLI Reference](/docs/reference/cli-reference) - Complete command reference
+This plugin is part of the lla project and follows the same license.

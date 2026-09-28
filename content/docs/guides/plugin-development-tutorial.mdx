@@ -1,879 +1,423 @@
 ---
 title: "Plugin Development Tutorial"
-description: "Complete step-by-step guide to creating your first lla plugin, from setup to publication. Learn the plugin architecture, Protocol Buffers interface, and best practices."
+description: "A hands-on tutorial for building your first lla plugin with the Rust SDK: project setup, manifest, decoration, typed actions, local testing, and WebAssembly conversion."
 order: 1
 published: true
-references: [https://github.com/chaqchase/lla/tree/main/lla_plugin_interface, https://github.com/chaqchase/lla/tree/main/lla_plugin_utils, https://github.com/chaqchase/lla/tree/main/plugins]
+references: [https://github.com/chaqchase/lla/blob/main/docs/plugins/developing.md, https://github.com/chaqchase/lla/blob/main/docs/handbook.md]
 ---
 
 # Plugin Development Tutorial
 
-Welcome to the complete guide for creating lla plugins! This tutorial will take you from zero to a fully functional plugin, explaining every concept along the way.
+In this tutorial you will build `file_score`, a complete Plugin Platform v3 plugin that decorates files with a score, formats it for humans, and exposes a typed `inspect` action. For the condensed authoring guide, see [Developing plugins](/docs/plugins/developing); for the full system design, see the [Architecture Handbook](/docs/about/architecture).
 
 ## What You'll Build
 
-In this tutorial, you'll create a **File Age Indicator** plugin that shows how long ago files were modified using friendly time descriptions like "2 hours ago" or "3 days ago". This plugin demonstrates:
+A plugin that:
 
-- Plugin architecture fundamentals
-- Protocol Buffer communication
-- File metadata processing
-- Custom field injection
-- Configuration management
-- Action handling
-- Testing strategies
+- Decorates regular files with an integer `score` and string `size_class`
+- Prints compact and long human fields
+- Exposes a typed `inspect` action returning structured output
 
 ## Prerequisites
 
-Before you begin, ensure you have:
+- Rust toolchain ([rustup.rs](https://rustup.rs))
+- lla 0.6 installed ([Installation](/docs/about/installation))
 
-- **Rust toolchain** (1.70 or later): Install from [rustup.rs](https://rustup.rs)
-- **lla installed**: Follow the [installation guide](/docs/about/installation)
-- **Basic Rust knowledge**: Understanding of structs, traits, and cargo
-- **Text editor**: Any editor with Rust support (VS Code, RustRover, Vim, etc.)
-
-### Verify Your Setup
+Verify your setup:
 
 ```bash
-# Check Rust installation
-rustc --version
 cargo --version
-
-# Check lla installation
 lla --version
+```
 
-# Create a workspace
-mkdir lla-file-age-plugin
-cd lla-file-age-plugin
+## Learning Path
+
+```mermaid
+graph LR
+    A[Understand Architecture] --> B[Project Setup]
+    B --> C[Write Manifest]
+    C --> D[Implement Plugin]
+    D --> E[Build & Test]
+    E --> F[Run Actions]
+    F --> G[Convert to WASM]
+    G --> H[Share It! 🎉]
 ```
 
 ## Understanding Plugin Architecture
-
-Before writing code, let's understand how lla plugins work.
 
 ### The Big Picture
 
 ```mermaid
 graph TB
-    subgraph "lla Core"
-        Core[lla Core Application]
-        Loader[Plugin Loader]
-        Disc[Plugin Discovery]
-        Lifecycle[Lifecycle Manager]
-        
-        Core --> Loader
-        Loader --> Disc
-        Loader --> Lifecycle
+    subgraph "Your Code"
+        SRC[Plugin Source]
+        TOML[plugin.toml]
     end
-    
-    subgraph "Communication Layer"
-        FFI[FFI Boundary<br/>C-Compatible]
-        PB[Protocol Buffers<br/>Message Format]
+    subgraph "Build"
+        LIB[Native .so/.dylib/.dll<br/>or .wasm Component]
     end
-    
-    subgraph "Plugins"
-        PA[Plugin A<br/>.so/.dylib/.dll]
-        PB2[Plugin B<br/>.so/.dylib/.dll]
+    subgraph "lla Host"
+        MGR[PluginManager]
+        FMT[Host Rendering]
     end
-    
-    Loader -.->|Load & Call| FFI
-    FFI -.->|Serialize| PB
-    PB -.->|Request| PA
-    PB -.->|Request| PB2
-    
-    PA -.->|Response| PB
-    PB2 -.->|Response| PB
-    PB -.->|Deserialize| FFI
-    FFI -.->|Result| Loader
+    SRC --> LIB
+    TOML --> LIB
+    LIB --> MGR
+    MGR --> FMT
 ```
 
 ### Key Concepts
 
-1. **FFI Boundary**: Plugins communicate with lla through a C-compatible Foreign Function Interface (FFI)
-2. **Protocol Buffers**: All messages use Protocol Buffer serialization for version independence
-3. **Isolation**: Each plugin runs in its own memory space; crashes won't affect lla
-4. **Decoration Pattern**: Plugins "decorate" file entries with additional data
-5. **Actions**: Plugins can expose custom commands for user interaction
-
-### Why This Architecture?
-
-- **ABI Stability**: Protocol Buffers eliminate Rust's ABI instability issues
-- **Version Independence**: Plugins work across lla versions without recompilation
-- **Language Agnostic**: Could theoretically write plugins in other languages
-- **Safety**: Plugins can't corrupt lla's memory or crash the application
+- **Manifest is the contract**: `plugin.toml` declares identity, capabilities, fields, actions, arguments, and permissions. The export macro embeds its exact bytes, and the host compares the embedded manifest with the packaged file before enabling the plugin.
+- **Decoration**: The host sends batches of entries (at most 512); the plugin adds display strings and typed values.
+- **Typed actions**: The host parses and validates arguments before calling the plugin, then renders the declared output (`none`, `text`, `value`, or `table`).
+- **Two runtimes**: Native libraries are trusted in-process code; WebAssembly components run sandboxed with persisted grants.
 
 ## Project Setup
 
 ### 1. Create the Project
 
 ```bash
-cargo new --lib lla-file-age-plugin
-cd lla-file-age-plugin
+cargo new --lib file-score
+cd file-score
 ```
 
 ### 2. Configure Cargo.toml
 
-Edit `Cargo.toml` to add dependencies and configure the library:
-
 ```toml
 [package]
-name = "lla_file_age"
-version = "0.1.0"
+name = "file-score"
+version = "1.0.0"
 edition = "2021"
+license = "MIT"
 
 [lib]
-crate-type = ["cdylib"]  # Dynamic library for lla
+name = "file_score"
+crate-type = ["cdylib"]
 
 [dependencies]
-# Core plugin interfaces
-lla_plugin_interface = "0.1"
-lla_plugin_utils = "0.1"
-
-# Protocol Buffer support
-prost = "0.12"
-bytes = "1.5"
-
-# Time handling
-chrono = "0.4"
-
-# Serialization
-serde = { version = "1.0", features = ["derive"] }
-toml = "0.8"
-
-[dev-dependencies]
-tempfile = "3.8"
+lla_plugin_sdk = "0.6"
 ```
 
-**Understanding the dependencies:**
+While developing inside the lla repository, use the workspace dependency instead:
 
-- `lla_plugin_interface`: Core trait definitions and Protocol Buffer messages
-- `lla_plugin_utils`: Helper utilities for common plugin tasks
-- `prost`/`bytes`: Protocol Buffer handling
-- `chrono`: Time calculations
-- `serde`/`toml`: Configuration file handling
-
-### 3. Create Project Structure
-
-```bash
-mkdir -p src/{config,actions}
-touch src/config/mod.rs
-touch src/actions/mod.rs
+```toml
+[dependencies]
+lla_plugin_sdk.workspace = true
 ```
 
-Your structure should look like:
+## Write the Manifest
+
+Place `plugin.toml` beside `Cargo.toml`:
+
+```toml
+schema_version = 3
+
+[plugin]
+id = "dev.example.file-score"
+name = "file_score"
+version = "1.0.0"
+api_min = 3
+api_max = 3
+runtime = "native"
+entrypoint = "file_score"
+description = "Score files from their filesystem metadata"
+license = "MIT"
+repository = "https://github.com/example/file-score"
+
+[capabilities]
+decorates_entries = true
+formats = ["default", "long"]
+machine_output = true
+
+[permissions]
+filesystem = ["metadata:selection", "read:user-path"]
+network = []
+process = false
+clipboard = false
+open_url = false
+
+[[fields]]
+name = "score"
+type = "integer"
+sortable = true
+filterable = true
+description = "A score derived from file size"
+
+[[fields]]
+name = "size_class"
+type = "string"
+sortable = true
+filterable = true
+description = "small, medium, or large"
+
+[[actions]]
+id = "inspect"
+description = "Calculate a score for one path"
+examples = [
+  "lla plugin run file_score inspect -- README.md",
+  "lla plugin run file_score inspect -- README.md --multiplier 2",
+]
+interactive = false
+arguments = [
+  { name = "path", type = "path", description = "File to inspect", position = 0, required = true },
+  { name = "multiplier", type = "integer", description = "Score multiplier", option = "--multiplier", default = 1, min = 1, max = 10 },
+]
+output = { type = "value", schema = { path = "path", score = "integer", size_class = "string" } }
 ```
-lla-file-age-plugin/
-├── Cargo.toml
-├── src/
-│   ├── lib.rs           # Main plugin code
-│   ├── config/
-│   │   └── mod.rs       # Configuration handling
-│   └── actions/
-│       └── mod.rs       # Custom actions
-```
 
-## Implementing the Plugin
+The native entrypoint is a logical library name. Packaging resolves it to the platform filename (`libfile_score.so`, `libfile_score.dylib`, or `file_score.dll`). See the [Manifest Reference](/docs/plugins/manifest) for every field.
 
-### Step 1: Define Configuration
+## Implement the Plugin
 
-Create `src/config/mod.rs`:
+Replace `src/lib.rs` with:
 
 ```rust
-use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use lla_plugin_sdk::{
+    interface::proto,
+    response,
+    value,
+    ActionArguments,
+    ActionArgumentsExt,
+    DecoratedEntryExt,
+    Plugin,
+};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
-    /// Enable/disable the plugin
-    pub enabled: bool,
-    
-    /// Color for recent files (< 1 hour)
-    pub color_recent: String,
-    
-    /// Color for moderate files (< 1 day)
-    pub color_moderate: String,
-    
-    /// Color for old files (< 1 week)
-    pub color_old: String,
-    
-    /// Color for very old files
-    pub color_very_old: String,
-    
-    /// Use relative time format
-    pub use_relative_time: bool,
-}
+#[derive(Default)]
+struct FileScore;
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            color_recent: "bright_green".to_string(),
-            color_moderate: "bright_yellow".to_string(),
-            color_old: "bright_red".to_string(),
-            color_very_old: "red".to_string(),
-            use_relative_time: true,
-        }
-    }
-}
-
-impl Config {
-    /// Load config from file or create default
-    pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
-        let config_dir = dirs::config_dir()
-            .ok_or("Could not find config directory")?
-            .join("lla")
-            .join("file_age");
-            
-        let config_path = config_dir.join("config.toml");
-        
-        if config_path.exists() {
-            let content = std::fs::read_to_string(&config_path)?;
-            Ok(toml::from_str(&content)?)
-        } else {
-            // Create default config
-            let config = Self::default();
-            std::fs::create_dir_all(&config_dir)?;
-            let toml_string = toml::to_string_pretty(&config)?;
-            std::fs::write(&config_path, toml_string)?;
-            Ok(config)
-        }
-    }
-    
-    /// Get color based on age
-    pub fn color_for_age(&self, seconds: i64) -> &str {
-        const HOUR: i64 = 3600;
-        const DAY: i64 = 86400;
-        const WEEK: i64 = 604800;
-        
-        if seconds < HOUR {
-            &self.color_recent
-        } else if seconds < DAY {
-            &self.color_moderate
-        } else if seconds < WEEK {
-            &self.color_old
-        } else {
-            &self.color_very_old
-        }
-    }
-}
-```
-
-### Step 2: Implement Time Formatting
-
-Add to `src/lib.rs`:
-
-```rust
-mod config;
-mod actions;
-
-use chrono::{DateTime, Utc, Duration};
-use lla_plugin_interface::{DecoratedEntry, Plugin};
-use prost::Message as ProstMessage;
-use std::sync::Mutex;
-
-/// Formats a duration into human-readable text
-fn format_relative_time(seconds: i64) -> String {
-    const MINUTE: i64 = 60;
-    const HOUR: i64 = 3600;
-    const DAY: i64 = 86400;
-    const WEEK: i64 = 604800;
-    const MONTH: i64 = 2592000; // 30 days
-    const YEAR: i64 = 31536000; // 365 days
-    
-    let abs_seconds = seconds.abs();
-    
-    let (value, unit) = if abs_seconds < MINUTE {
-        (abs_seconds, "second")
-    } else if abs_seconds < HOUR {
-        (abs_seconds / MINUTE, "minute")
-    } else if abs_seconds < DAY {
-        (abs_seconds / HOUR, "hour")
-    } else if abs_seconds < WEEK {
-        (abs_seconds / DAY, "day")
-    } else if abs_seconds < MONTH {
-        (abs_seconds / WEEK, "week")
-    } else if abs_seconds < YEAR {
-        (abs_seconds / MONTH, "month")
+fn score(size: u64) -> i64 {
+    if size == 0 {
+        0
     } else {
-        (abs_seconds / YEAR, "year")
-    };
-    
-    let plural = if value != 1 { "s" } else { "" };
-    format!("{} {}{} ago", value, unit, plural)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_time_formatting() {
-        assert_eq!(format_relative_time(30), "30 seconds ago");
-        assert_eq!(format_relative_time(60), "1 minute ago");
-        assert_eq!(format_relative_time(3600), "1 hour ago");
-        assert_eq!(format_relative_time(7200), "2 hours ago");
-        assert_eq!(format_relative_time(86400), "1 day ago");
+        size.ilog2().min(100) as i64
     }
 }
+
+fn size_class(size: u64) -> &'static str {
+    match size {
+        0..=1023 => "small",
+        1024..=1_048_575 => "medium",
+        _ => "large",
+    }
+}
+
+impl Plugin for FileScore {
+    fn decorate_entry(
+        &mut self,
+        mut entry: proto::DecoratedEntry,
+    ) -> proto::DecoratedEntry {
+        let Some(metadata) = entry.metadata.as_ref() else {
+            return entry;
+        };
+        if !metadata.is_file {
+            return entry;
+        }
+
+        let size = metadata.size;
+        entry.insert_field(
+            "score",
+            value::integer(score(size)),
+            score(size).to_string(),
+        );
+        entry.insert_field(
+            "size_class",
+            value::string(size_class(size)),
+            size_class(size),
+        );
+        entry
+    }
+
+    fn format_field(&mut self, entry: proto::DecoratedEntry, format: String) -> Option<String> {
+        let score = entry.custom_fields.get("score")?;
+        let class = entry.custom_fields.get("size_class")?;
+        match format.as_str() {
+            "default" => Some(format!("[score:{score}]")),
+            "long" => Some(format!("score={score} class={class}")),
+            _ => None,
+        }
+    }
+
+    fn registered_actions(&mut self) -> Vec<proto::ActionInfo> {
+        lla_plugin_sdk::manifest_action_infos(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/plugin.toml"
+        )))
+    }
+
+    fn run_action(&mut self, action: String, arguments: ActionArguments) -> proto::ActionResponse {
+        if action != "inspect" {
+            return response::error(format!("unknown action '{action}'"));
+        }
+
+        let path = match arguments.path("path") {
+            Ok(Some(path)) => path,
+            Ok(None) => return response::error("path is required"),
+            Err(error) => return response::error(error),
+        };
+        let multiplier = match arguments.integer("multiplier") {
+            Ok(Some(value)) => value,
+            Ok(None) => 1,
+            Err(error) => return response::error(error),
+        };
+        let metadata = match std::fs::metadata(&path) {
+            Ok(metadata) => metadata,
+            Err(error) => return response::error(format!("{}: {error}", path.display())),
+        };
+        let final_score = score(metadata.len()) * multiplier;
+
+        response::value(value::object([
+            ("path".to_string(), value::path(path.to_string_lossy())),
+            ("score".to_string(), value::integer(final_score)),
+            (
+                "size_class".to_string(),
+                value::string(size_class(metadata.len())),
+            ),
+        ]))
+    }
+}
+
+lla_plugin_sdk::export_plugin!(FileScore);
 ```
 
-### Step 3: Implement the Plugin Trait
+Important details:
 
-Continue in `src/lib.rs`:
+- `insert_field` writes both a display string and a typed value — preferred over keeping the two maps synchronized manually.
+- The default `decorate_batch` calls `decorate_entry` per entry. Override it only to share expensive I/O across a batch, and always preserve entry count and order.
+- `registered_actions` must return exactly the action IDs declared in the manifest. Building the inventory from the embedded manifest prevents drift.
+- The export macro requires `Default + Send + 'static`, validates `plugin.toml` at compile time, and embeds the exact manifest.
 
-```rust
-pub struct FileAgePlugin {
-    config: Mutex<config::Config>,
-}
+## Build and Test
 
-impl FileAgePlugin {
-    pub fn new() -> Self {
-        Self {
-            config: Mutex::new(config::Config::load().unwrap_or_default()),
-        }
-    }
-    
-    fn process_entry(&self, entry: &DecoratedEntry) -> Option<String> {
-        let config = self.config.lock().ok()?;
-        
-        if !config.enabled {
-            return None;
-        }
-        
-        // Get modification time from metadata
-        let modified_timestamp = entry.metadata.as_ref()?.modified?;
-        let modified = DateTime::<Utc>::from_timestamp(modified_timestamp as i64, 0)?;
-        let now = Utc::now();
-        let duration = now.signed_duration_since(modified);
-        
-        if config.use_relative_time {
-            Some(format_relative_time(duration.num_seconds()))
-        } else {
-            Some(modified.format("%Y-%m-%d %H:%M:%S").to_string())
-        }
-    }
-}
+### 1. Build and Install
 
-impl Plugin for FileAgePlugin {
-    fn handle_raw_request(&mut self, request: &[u8]) -> Vec<u8> {
-        use lla_plugin_interface::proto::{self, plugin_message};
-        
-        // Decode incoming protobuf message
-        let proto_msg = match proto::PluginMessage::decode(request) {
-            Ok(msg) => msg,
-            Err(e) => return self.encode_error(&format!("Failed to decode request: {}", e)),
-        };
-        
-        // Handle different message types
-        let response_msg = match proto_msg.message {
-            // Metadata requests
-            Some(plugin_message::Message::GetName(_)) => {
-                plugin_message::Message::NameResponse("file_age".to_string())
-            }
-            Some(plugin_message::Message::GetVersion(_)) => {
-                plugin_message::Message::VersionResponse(env!("CARGO_PKG_VERSION").to_string())
-            }
-            Some(plugin_message::Message::GetDescription(_)) => {
-                plugin_message::Message::DescriptionResponse(
-                    "Shows how long ago files were modified".to_string(),
-                )
-            }
-            
-            // File decoration request
-            Some(plugin_message::Message::Decorate(entry)) => {
-                let mut decorated_entry = match DecoratedEntry::try_from(entry.clone()) {
-                    Ok(e) => e,
-                    Err(e) => return self.encode_error(&format!("Failed to convert entry: {}", e)),
-                };
-                
-                // Add age information to custom fields
-                if let Some(age_str) = self.process_entry(&decorated_entry) {
-                    decorated_entry.custom_fields.insert("age".to_string(), age_str);
-                    
-                    // Optionally add color hint
-                    if let Some(metadata) = &decorated_entry.metadata {
-                        if let Some(modified) = metadata.modified {
-                            let now = Utc::now().timestamp();
-                            let age_seconds = now - (modified as i64);
-                            let config = self.config.lock().unwrap();
-                            let color = config.color_for_age(age_seconds);
-                            decorated_entry.custom_fields.insert(
-                                "age_color".to_string(),
-                                color.to_string()
-                            );
-                        }
-                    }
-                }
-                
-                plugin_message::Message::DecoratedResponse(decorated_entry.into())
-            }
-            
-            // Handle custom actions
-            Some(plugin_message::Message::Action(action)) => {
-                return self.handle_action(&action.name, &action.args);
-            }
-            
-            _ => plugin_message::Message::ErrorResponse("Invalid request type".to_string()),
-        };
-        
-        // Encode and return response
-        let response = proto::PluginMessage {
-            message: Some(response_msg),
-        };
-        let mut buf = bytes::BytesMut::with_capacity(response.encoded_len());
-        response.encode(&mut buf).unwrap();
-        buf.to_vec()
-    }
-}
-
-// Utility method for encoding errors
-impl FileAgePlugin {
-    fn encode_error(&self, error: &str) -> Vec<u8> {
-        use lla_plugin_interface::proto::{self, plugin_message};
-        
-        let response = proto::PluginMessage {
-            message: Some(plugin_message::Message::ErrorResponse(error.to_string())),
-        };
-        let mut buf = bytes::BytesMut::with_capacity(response.encoded_len());
-        response.encode(&mut buf).unwrap();
-        buf.to_vec()
-    }
-    
-    fn handle_action(&self, action_name: &str, args: &[String]) -> Vec<u8> {
-        match action_name {
-            "help" => self.action_help(),
-            "toggle" => self.action_toggle(),
-            "set-format" => self.action_set_format(args),
-            _ => self.encode_error(&format!("Unknown action: {}", action_name)),
-        }
-    }
-    
-    fn action_help(&self) -> Vec<u8> {
-        let help_text = r#"File Age Plugin Actions:
-        
-    toggle          - Toggle plugin on/off
-    set-format      - Set time format (relative|absolute)
-    help            - Show this help message
-    
-Examples:
-    lla plugin --name file_age --action toggle
-    lla plugin --name file_age --action set-format --args "relative"
-"#;
-        use lla_plugin_interface::proto::{self, plugin_message};
-        
-        let response = proto::PluginMessage {
-            message: Some(plugin_message::Message::ActionResponse(help_text.to_string())),
-        };
-        let mut buf = bytes::BytesMut::with_capacity(response.encoded_len());
-        response.encode(&mut buf).unwrap();
-        buf.to_vec()
-    }
-    
-    fn action_toggle(&self) -> Vec<u8> {
-        use lla_plugin_interface::proto::{self, plugin_message};
-        
-        let mut config = self.config.lock().unwrap();
-        config.enabled = !config.enabled;
-        let status = if config.enabled { "enabled" } else { "disabled" };
-        
-        let response = proto::PluginMessage {
-            message: Some(plugin_message::Message::ActionResponse(
-                format!("File age plugin {}", status)
-            )),
-        };
-        let mut buf = bytes::BytesMut::with_capacity(response.encoded_len());
-        response.encode(&mut buf).unwrap();
-        buf.to_vec()
-    }
-    
-    fn action_set_format(&self, args: &[String]) -> Vec<u8> {
-        use lla_plugin_interface::proto::{self, plugin_message};
-        
-        if args.is_empty() {
-            return self.encode_error("Missing format argument (relative|absolute)");
-        }
-        
-        let mut config = self.config.lock().unwrap();
-        let message = match args[0].as_str() {
-            "relative" => {
-                config.use_relative_time = true;
-                "Set to relative time format"
-            }
-            "absolute" => {
-                config.use_relative_time = false;
-                "Set to absolute time format"
-            }
-            _ => return self.encode_error("Invalid format. Use 'relative' or 'absolute'"),
-        };
-        
-        let response = proto::PluginMessage {
-            message: Some(plugin_message::Message::ActionResponse(message.to_string())),
-        };
-        let mut buf = bytes::BytesMut::with_capacity(response.encoded_len());
-        response.encode(&mut buf).unwrap();
-        buf.to_vec()
-    }
-}
-
-// Register the plugin with lla
-lla_plugin_interface::declare_plugin!(FileAgePlugin);
+```bash
+cargo fmt --check
+cargo test
+cargo build --release
+lla install --dir "$PWD"
+lla plugin doctor
+lla plugin info file_score
 ```
 
-### Step 4: Add Missing Dependencies
+The source installer creates the final package and checksum inventory. Do not copy only the `.so`, `.dylib`, or `.dll` into the plugin directory — v3 expects a complete package.
 
-Update your `Cargo.toml` to include the `dirs` crate:
+### 2. Enable and Use
+
+```bash
+lla use                                    # interactive manager
+lla --enable-plugin file_score             # one invocation
+lla -l --enable-plugin file_score
+lla --json --pretty --enable-plugin file_score
+```
+
+### 3. Run the Typed Action
+
+```bash
+lla plugin run file_score inspect -- README.md
+lla plugin run file_score inspect --output json -- README.md --multiplier 2
+```
+
+The first `--` ends host option parsing. Tokens after it are plugin-action arguments. Supported output formats are `human`, `json`, `ndjson`, and `csv`.
+
+### 4. Add Fields to Columns
+
+After persistently enabling the plugin:
+
+```toml
+[formatters.long]
+columns = ["permissions", "size", "modified", "name", "field:score", "field:size_class"]
+```
+
+### Try This Exercise
+
+1. Add a `large_file` boolean field that is true above 1 MiB
+2. Declare it in `plugin.toml`, set it in `decorate_entry`, reinstall, and verify with `lla plugin doctor`
+3. Render it in `format_field` for the `long` format
+
+## Convert to WebAssembly
+
+Use a Component Model plugin when portability and enforced permissions matter more than direct native integration.
+
+### 1. Change the SDK Dependency
 
 ```toml
 [dependencies]
-# ... existing dependencies ...
-dirs = "5.0"
+lla_plugin_sdk = { version = "0.6", features = ["component"] }
 ```
 
-## Building and Testing
-
-### 1. Build the Plugin
-
-```bash
-cargo build --release
-```
-
-This creates a dynamic library in `target/release/`:
-- Linux: `liblla_file_age.so`
-- macOS: `liblla_file_age.dylib`
-- Windows: `lla_file_age.dll`
-
-### 2. Install the Plugin
-
-```bash
-# Create plugin directory if it doesn't exist
-mkdir -p ~/.config/lla/plugins
-
-# Copy the plugin (adjust extension for your OS)
-cp target/release/liblla_file_age.so ~/.config/lla/plugins/
-
-# Or use lla's install command
-lla install --dir .
-```
-
-### 3. Test the Plugin
-
-```bash
-# Enable the plugin
-lla use  # Interactive selection
-
-# Or enable via command line
-lla --enable-plugin file_age
-
-# List files to see the plugin in action
-lla -l
-
-# Test custom actions
-lla plugin --name file_age --action help
-lla plugin --name file_age --action toggle
-```
-
-## Adding Configuration UI
-
-Create `~/.config/lla/file_age/config.toml`:
+### 2. Change the Manifest Runtime and Entrypoint
 
 ```toml
-enabled = true
-color_recent = "bright_green"
-color_moderate = "bright_yellow"
-color_old = "bright_red"
-color_very_old = "red"
-use_relative_time = true
+[plugin]
+runtime = "wasm-component"
+entrypoint = "file_score.wasm"
 ```
+
+Everything else can stay the same, provided the implementation works within WASM host capabilities. A WASM manifest cannot request `process = true`.
+
+### 3. Change the Export
+
+```rust
+lla_plugin_sdk::export_component!(FileScore);
+```
+
+### 4. Build the Component
+
+```bash
+rustup target add wasm32-wasip2
+cargo build --release --target wasm32-wasip2
+lla install --dir "$PWD"
+lla plugin doctor
+```
+
+The output lands under `target/wasm32-wasip2/release/file_score.wasm`, and the source installer copies the declared entrypoint into the package. Loading it requires a host built with `wasm-plugins` (official Linux, macOS, and Windows binaries include it; NetBSD omits it).
+
+WASM host capabilities: scoped filesystem preopens, exact-domain HTTP, gated clipboard and URL calls. Raw sockets and subprocesses are unavailable, and memory, responses, batches, and timeouts are bounded by the host.
 
 ## Testing Strategies
 
-### Unit Tests
+- `cargo test` for pure logic such as scoring functions
+- `lla plugin doctor` after every manifest or handler change — it compares packaged and embedded manifests, validates checksums, and exercises the contract
+- `lla plugin run ... --output json` to verify machine output before scripting against it
+- Test with `--enable-plugin` on small directories first, then on archives and symlinks, since plugins must handle virtual or inaccessible paths safely
 
-Add to `src/lib.rs`:
+## Share Your Plugin
 
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_plugin_creation() {
-        let plugin = FileAgePlugin::new();
-        assert!(plugin.config.lock().is_ok());
-    }
-    
-    #[test]
-    fn test_config_defaults() {
-        let config = config::Config::default();
-        assert_eq!(config.enabled, true);
-        assert_eq!(config.use_relative_time, true);
-    }
-    
-    #[test]
-    fn test_color_selection() {
-        let config = config::Config::default();
-        assert_eq!(config.color_for_age(1800), "bright_green");  // 30 min
-        assert_eq!(config.color_for_age(43200), "bright_yellow"); // 12 hours
-        assert_eq!(config.color_for_age(259200), "bright_red");  // 3 days
-    }
-}
-```
+1. Give it a stable reverse-domain `id`, a version, a license, and a repository URL
+2. Write a README with features, configuration, and `lla plugin run` examples
+3. Verify a clean install: `lla install --dir /path/to/plugin && lla plugin doctor`
+4. Publish the source so users can `lla install --git <url>`
 
-Run tests:
-```bash
-cargo test
-```
+To contribute it as a bundled plugin, follow [Contributing a bundled plugin](/docs/about/architecture#contributing-a-bundled-plugin) in the handbook.
 
-### Integration Testing
-
-Create a test directory:
-```bash
-mkdir test_files
-cd test_files
-touch old_file.txt
-touch -t 202301010000 very_old_file.txt
-cd ..
-
-# Test with your plugin
-lla test_files/
-```
-
-## Best Practices
-
-### 1. Error Handling
-
-Always handle errors gracefully:
-
-```rust
-// ✅ Good: Return error message
-Err(e) => return self.encode_error(&format!("Failed: {}", e)),
-
-// ❌ Bad: Panic
-Err(e) => panic!("This crashes lla!")
-```
-
-### 2. Performance
-
-Be mindful of performance:
-
-```rust
-// ✅ Good: Cache expensive computations
-if let Some(cached) = self.cache.get(&entry.path) {
-    return cached.clone();
-}
-
-// ❌ Bad: Expensive operation on every file
-let result = expensive_api_call(&entry.path);
-```
-
-### 3. Configuration
-
-Provide sensible defaults:
-
-```rust
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            enabled: true,  // Enable by default
-            // ... more defaults
-        }
-    }
-}
-```
-
-### 4. Documentation
-
-Document your plugin's behavior:
-
-```rust
-/// Formats a timestamp into a human-readable relative time string.
-/// 
-/// # Examples
-/// ```
-/// assert_eq!(format_relative_time(3600), "1 hour ago");
-/// ```
-fn format_relative_time(seconds: i64) -> String {
-    // implementation
-}
-```
-
-## Publishing Your Plugin
-
-### 1. Prepare for Release
-
-Create a `README.md`:
-
-```markdown
-# lla File Age Plugin
-
-Shows how long ago files were modified with friendly time descriptions.
-
-## Features
-
-- Relative time format ("2 hours ago")
-- Color-coded by age
-- Configurable time ranges
-- Toggle on/off
-
-## Installation
-
-\`\`\`bash
-lla install --git https://github.com/yourusername/lla-file-age-plugin
-\`\`\`
-
-## Configuration
-
-Edit `~/.config/lla/file_age/config.toml`
-
-## Usage
-
-\`\`\`bash
-lla --enable-plugin file_age
-lla -l  # See file ages
-\`\`\`
-```
-
-### 2. Add a License
+## Quick Reference
 
 ```bash
-# MIT License example
-cp LICENSE.md .
-```
+# Scaffold
+cargo new --lib my-plugin
 
-### 3. Create a Git Repository
+# Manifest (plugin.toml beside Cargo.toml)
+schema_version = 3
 
-```bash
-git init
-git add .
-git commit -m "Initial commit: File Age plugin"
-git remote add origin https://github.com/yourusername/lla-file-age-plugin
-git push -u origin main
-```
+# Implement lla_plugin_sdk::Plugin, then export
+lla_plugin_sdk::export_plugin!(MyPlugin);       # native
+lla_plugin_sdk::export_component!(MyPlugin);    # WASM component
 
-### 4. Tag a Release
+# Build, install, verify
+cargo build --release
+lla install --dir "$PWD"
+lla plugin doctor
 
-```bash
-git tag -a v0.1.0 -m "First release"
-git push origin v0.1.0
-```
-
-## Advanced Topics
-
-### Async Operations
-
-For I/O-heavy plugins:
-
-```rust
-use tokio::runtime::Runtime;
-
-impl FileAgePlugin {
-    fn process_async(&self, entry: &DecoratedEntry) -> Option<String> {
-        let rt = Runtime::new().ok()?;
-        rt.block_on(async {
-            // Async operations here
-            fetch_remote_data(&entry.path).await
-        })
-    }
-}
-```
-
-### Caching
-
-For expensive operations:
-
-```rust
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-
-struct Cache {
-    data: HashMap<String, (String, Instant)>,
-    ttl: Duration,
-}
-
-impl Cache {
-    fn get(&mut self, key: &str) -> Option<String> {
-        if let Some((value, timestamp)) = self.data.get(key) {
-            if timestamp.elapsed() < self.ttl {
-                return Some(value.clone());
-            }
-        }
-        None
-    }
-    
-    fn set(&mut self, key: String, value: String) {
-        self.data.insert(key, (value, Instant::now()));
-    }
-}
-```
-
-### Multiple Format Support
-
-Support both default and long formats:
-
-```rust
-fn format_for_display(&self, entry: &DecoratedEntry, format: &str) -> String {
-    match format {
-        "default" => format!("[{}]", self.get_age(entry)),
-        "long" => format!("Modified: {} ago", self.get_age(entry)),
-        _ => String::new(),
-    }
-}
-```
-
-## Troubleshooting
-
-### Plugin Not Loading
-
-**Check plugin directory:**
-```bash
-ls ~/.config/lla/plugins/
-```
-
-**Verify permissions:**
-```bash
-chmod +x ~/.config/lla/plugins/liblla_file_age.so
-```
-
-**Check lla output:**
-```bash
-lla --version  # Should list loaded plugins
-```
-
-### Debugging
-
-Add debug logging:
-
-```rust
-eprintln!("DEBUG: Processing entry: {:?}", entry.path);
-```
-
-Use `RUST_LOG` environment variable:
-```bash
-RUST_LOG=debug lla
+# Use
+lla --enable-plugin my_plugin
+lla plugin run my_plugin my_action -- args...
 ```
 
 ## Next Steps
 
-Now that you've built your first plugin:
-
-- **Explore existing plugins**: Check out [first-party plugins](https://github.com/chaqchase/lla/tree/main/plugins) for inspiration
-- **Read the API reference**: See [Plugin API Reference](/docs/reference/api-reference) for complete documentation
-- **Join the community**: Share your plugin and get feedback
-- **Contribute**: Consider submitting your plugin as a first-party plugin
-
-## Additional Resources
-
-- [lla Plugin Interface](https://github.com/chaqchase/lla/tree/main/lla_plugin_interface)
-- [Plugin Utils Library](https://github.com/chaqchase/lla/tree/main/lla_plugin_utils)
-- [Existing Plugins](https://github.com/chaqchase/lla/tree/main/plugins)
-- [Protocol Buffers Guide](https://protobuf.dev)
-
-## Getting Help
-
-If you run into issues:
-
-- Check the [FAQ](/docs/support/faq)
-- Visit the [Troubleshooting Guide](/docs/support/troubleshooting)
-- Open an issue on [GitHub](https://github.com/chaqchase/lla/issues)
-- Ask in community discussions
-
-Happy plugin development! 🚀
+- **[Developing Plugins](/docs/plugins/developing)**: Runtime choice, batching, and SDK fixtures
+- **[Manifest Reference](/docs/plugins/manifest)**: Every manifest field and constraint
+- **[Platform Architecture](/docs/plugins/architecture)**: ABI, Component Model runtime, and verification
+- **[Architecture Handbook](/docs/about/architecture)**: Complete lifecycle, permissions, packaging, and troubleshooting
+- **[Plugin Catalog](/docs/first-party-plugins/overview)**: Study the 37 bundled plugins as examples
