@@ -1,93 +1,107 @@
 ---
-title: "Overview"
-description: "Install, inspect, run, and permission-manage Plugin Platform v3 packages: native libraries and WebAssembly components."
+title: "Plugins"
+description: "Install plugins, turn them on, inspect what they can access, and run their actions."
 order: 1
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/plugins/README.md]
 ---
 
-# Plugins
+Plugins add data to your listings and new commands to lla. Most users start with the [official set of 37](/docs/first-party-plugins/overview).
 
-For the complete system design and end-to-end authoring tutorial, read the
-[lla architecture and Plugin Platform handbook](/docs/about/architecture). This page is a
-concise user guide.
+<Diagram caption="lla loads each package through one of two runtimes."><PluginPlatform /></Diagram>
 
-Plugin Platform v3 packages are self-contained directories containing a
-schema-3 manifest, a native dynamic library or WebAssembly component, and a
-SHA-256 inventory.
-
-```text
-my-plugin/
-├── plugin.toml
-├── libmy_plugin.so        # .dylib on macOS, .dll on Windows
-├── checksums.toml
-└── README.md              # optional
-```
-
-For a WebAssembly package, the native library is replaced by the `.wasm`
-component named by `plugin.entrypoint`. Loading it requires an lla host built
-with `--features wasm-plugins`; official Linux, macOS, and Windows release
-binaries include that feature, while the NetBSD release binary intentionally
-does not.
-
-## Install plugins
-
-Install the official bundle from the latest release:
+## Install
 
 ```bash
-lla install --prebuilt
+lla install --prebuilt         # the official set
+lla install --git <repo-url>   # build from a GitHub repository
+lla install --dir ./my-plugin  # build from a local directory
+lla update                     # update installed plugins
+lla clean                      # remove invalid plugins
 ```
 
-Windows AMD64 and ARM64 releases provide matching `.zip` bundles containing
-native DLLs and the portable WASM components.
+The official prebuilt set is available for Linux, macOS and Windows. Static musl builds can't load native plugins, and NetBSD has no prebuilt set. See [Platform notes](/docs/about/installation#platform-notes).
 
-Build and install plugins from a Git repository or a local source directory:
+Prebuilt packages must include a `checksums.toml`, and installation fails if any covered file has changed. Source installs build the plugin and create that file for you.
+
+## Turn plugins on
+
+Installing a plugin doesn't turn it on. `lla use` opens a checklist:
+
+<Shot name="plugin-manager" alt="The interactive plugin manager, a checklist of installed plugins with their versions." caption="`lla use`" />
+
+You can also list plugins in your config, or use the flags. `--enable-plugin` and `--disable-plugin` update `enabled_plugins` in your config, so the change lasts beyond the current run.
+
+```toml
+enabled_plugins = ["file_hash", "project_context"]
+```
 
 ```bash
-lla install --git https://github.com/chaqchase/lla
-lla install --dir /path/to/plugin
+lla --enable-plugin file_hash
+lla --disable-plugin file_hash
+lla list-plugins
 ```
 
-Source installs build the entrypoint and create the checksum inventory. A
-prebuilt package must already contain a complete `checksums.toml`; installation
-fails if any covered file has changed.
+An enabled plugin adds its output to the views it supports:
 
-## Inspect an installation
+<Shot name="plugin-file-hash" alt="A long listing in which each file also shows its SHA-1 and SHA-256 hashes." caption="`lla -l --hide-group sdk` with `file_hash` on." />
 
-```bash
-lla plugin doctor
-lla plugin info file_hash
-lla plugin permissions file_hash
-```
-
-`plugin doctor` compares the packaged and compiled manifests, checks registered
-handlers and output schemas, validates checksums, and exercises the plugin
-contract without using the normal plugin data directory.
+Its typed fields also appear under `plugin` in [JSON output](/docs/usage/machine-output), and you can show them as [`field:<name>` columns](/docs/usage/views#choose-the-columns).
 
 ## Run an action
+
+Actions are commands provided by a plugin. They work whether or not the plugin decorates your listings.
 
 ```bash
 lla plugin run <plugin> <action> -- <arguments>
 lla plugin run <plugin> <action> --output json -- <arguments>
 ```
 
-Supported output formats are `human`, `json`, `ndjson`, and `csv`. The older
-`lla plugin <plugin> <action>` form is deprecated during the 0.6.x series.
+`--output` accepts `human`, `json`, `ndjson` or `csv`. Interactive actions need a terminal and only support `human`.
 
-Interactive actions require a terminal and cannot be requested with a machine
-output format.
+<Shot name="plugin-project-inspect" alt="The project_context plugin's inspect action, summarizing a repository's type, toolchain and health." caption="`lla plugin run project_context inspect -- .`" />
 
-## Permissions
+The older `lla plugin <plugin> <action>` form is deprecated during the 0.6.x series. To give a frequent action a shorter name, create a [shortcut](/docs/plugins/shortcuts).
 
-Native plugins are trusted code. Their permissions are declarations presented
-to the user but are not an operating-system sandbox.
+## Inspect what's installed
 
-WebAssembly plugins are default-denied. Approved grants are persisted in
-`plugin-grants.toml`, and an update that requests broader access prompts again.
-WebAssembly packages can receive scoped filesystem preopens, exact-domain WASI
-HTTP access, and gated clipboard or URL-opening host calls. Raw sockets and
-subprocess execution are unavailable.
+```bash
+lla plugin info project_context
+lla plugin permissions file_hash
+lla plugin doctor
+```
 
-See the [catalog](/docs/first-party-plugins/overview) for bundled plugins, the [development guide](/docs/plugins/developing)
-to create one, or the [migration guide](/docs/plugins/migration-v3) when upgrading from an
-older lla release.
+<Shot name="plugin-info" alt="Details of one plugin, with its version, runtime, capabilities, fields and actions." caption="`lla plugin info project_context`" />
+
+`lla plugin doctor` checks that each package's manifest matches its compiled plugin, validates the checksums and exercises the plugin contract, without touching the plugin's normal data directory. Run it after installing something new.
+
+<Shot name="plugin-doctor" alt="The plugin doctor report, listing each plugin with its check results." caption="`lla plugin doctor`" />
+
+## Trust and permissions
+
+The two runtimes offer very different guarantees.
+
+| | Native | WebAssembly |
+| --- | --- | --- |
+| Package contains | A shared library (`.so`, `.dylib`, `.dll`) | A `.wasm` component |
+| Runs | Inside the lla process | In a sandbox |
+| Declared permissions | Shown to you, but not enforced | Enforced, and denied by default |
+| Trust it as much as | Any program you install | The access you grant it |
+
+Install native plugins only from sources you trust.
+
+WebAssembly plugins can receive scoped filesystem access, HTTP access to specific domains, and gated access to the clipboard and opening URLs. They can't use raw sockets or run subprocesses. Your grants are saved in `plugin-grants.toml`, and an update that asks for more access prompts you again.
+
+WebAssembly support needs a build with the `wasm-plugins` feature. Official Linux, macOS and Windows releases have it, and the NetBSD release doesn't.
+
+## What a package contains
+
+```text
+my-plugin/
+├── plugin.toml        # the manifest
+├── libmy_plugin.so    # .dylib on macOS, .dll on Windows, or a .wasm component
+├── checksums.toml     # SHA-256 of every file
+└── README.md          # optional
+```
+
+To write your own, follow the [plugin tutorial](/docs/guides/plugin-development-tutorial). The [manifest reference](/docs/plugins/manifest) lists every field, and [migrating to v3](/docs/plugins/migration-v3) covers plugins written for older versions.

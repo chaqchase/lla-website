@@ -4,7 +4,7 @@ import { fontFamily } from 'tailwindcss/defaultTheme'
 
 const config = {
   darkMode: ['class'],
-  content: ['./components/**/*.{ts,tsx}', './app/**/*.{ts,tsx,.md,.mdx}', './src/**/*.{ts,tsx,.md,.mdx}'],
+  content: ['./components/**/*.{ts,tsx}', './app/**/*.{ts,tsx,md,mdx}', './content/**/*.{md,mdx}'],
   theme: {
     container: {
       center: true,
@@ -16,7 +16,14 @@ const config = {
     extend: {
       fontFamily: {
         sans: ['var(--font-sans)', ...fontFamily.sans],
-        mono: ['var(--font-mono)', ...fontFamily.sans]
+        mono: ['var(--font-mono)', ...fontFamily.mono]
+      },
+      maxWidth: {
+        '8xl': '90rem'
+      },
+      transitionTimingFunction: {
+        out: 'cubic-bezier(0.23, 1, 0.32, 1)',
+        'in-out': 'cubic-bezier(0.77, 0, 0.175, 1)'
       },
       colors: {
         border: 'hsl(var(--border))',
@@ -26,6 +33,8 @@ const config = {
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
         fg: 'hsl(var(--fg))',
+        surface: 'hsl(var(--surface))',
+        terminal: '#101010',
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           fg: 'hsl(var(--primary-fg))',
@@ -107,16 +116,12 @@ const config = {
         }
       },
       animation: {
-        'accordion-down': 'accordion-down 0.2s ease-out',
-        'accordion-up': 'accordion-up 0.2s ease-out'
+        'accordion-down': 'accordion-down 0.18s cubic-bezier(0.23, 1, 0.32, 1)',
+        'accordion-up': 'accordion-up 0.14s cubic-bezier(0.23, 1, 0.32, 1)'
       }
     }
   },
-  plugins: [
-    require('tailwindcss-animate'),
-    require('@tailwindcss/typography'),
-    require('tailwindcss-react-aria-components')
-  ]
+  plugins: [require('tailwindcss-animate'), require('tailwindcss-react-aria-components')]
 } satisfies Config
 
 export default withTV(config)

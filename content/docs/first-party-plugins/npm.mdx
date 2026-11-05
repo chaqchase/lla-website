@@ -1,81 +1,44 @@
 ---
-title: "NPM"
-description: "NPM package search plugin for `lla` with bundlephobia integration and favorites management."
+title: "npm"
+description: "Looks up an npm package by exact name, shows its details and bundle size, and copies the install command."
 order: 28
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/npm]
 ---
 
-# lla NPM Plugin
+`npm` looks up a package on the npm registry and shows its details and bundle size. Reach for it when you're deciding whether to add a dependency. It never runs a package manager, so nothing gets installed.
 
-NPM package search plugin for `lla` with bundlephobia integration and favorites management.
+## Actions
 
-## Features
+Run an action with `lla plugin run npm <action>`.
 
-- **Package Search**: Search npm registry for package information
-- **Bundle Size**: View bundlephobia.com size metrics (minified & gzipped)
-- **Favorites**: Manage favorite packages
-- **Clipboard Integration**: Copy install commands
+| Action | What it does |
+| --- | --- |
+| `search` | Look up a package by its exact name |
+| `favorites` | View details for saved packages, copy their install commands or remove them |
+| `preferences` | Choose your package manager: `npm`, `yarn`, `pnpm` or `bun` |
+| `help` | Show help |
 
-## Usage
+All of them are interactive, so they need a TTY.
+
+## Example
 
 ```bash
-# Search for npm packages
 lla plugin run npm search
-
-# View favorite packages
-lla plugin run npm favorites
-
-# Configure preferences (package manager)
-lla plugin run npm preferences
-
-# Show help
-lla plugin run npm help
 ```
 
-## Configuration
+Type a package name such as `react`. `search` matches exact names only, and anything else reports `Package not found`. It shows the package's version, description, author, license, homepage, repository, and minified and gzipped size from Bundlephobia. A menu then lets you copy the install command, add the package to favorites or open its npm page.
 
-Config location: `~/.config/lla/plugins/npm/config.toml`
+## Settings
+
+Edit `~/.config/lla/plugins/npm/config.toml`, or run the `preferences` action.
 
 ```toml
-favorites = []                          # List of favorite packages
-registry = "https://registry.npmjs.org" # NPM registry URL
-package_manager = "npm"                 # Package manager (npm, yarn, pnpm, bun)
-
-[colors]
-success = "bright_green"
-info = "bright_cyan"
-warning = "bright_yellow"
-error = "bright_red"
-package = "bright_blue"
-version = "bright_magenta"
+registry = "https://registry.npmjs.org"
+package_manager = "npm"
+favorites = []
 ```
 
-## Display Examples
+## Permissions
 
-Package Details:
-
-```
-────────────────────────────────────────────────────────────
-📦 react v18.2.0
-────────────────────────────────────────────────────────────
-Description: React is a JavaScript library for building UIs
-Author: Meta
-License: MIT
-Homepage: https://reactjs.org/
-
-Bundle Size:
-  Minified: 42.5 KB
-  Gzipped: 13.2 KB
-────────────────────────────────────────────────────────────
-```
-
-Favorites List:
-
-```
-⚡ Choose action
-> 📦 View package details
-  📋 Copy install commands
-  🗑️  Remove from favorites
-  ← Back
-```
+The plugin can reach `registry.npmjs.org` and `bundlephobia.com`, and use the clipboard and open URLs. It caches package details for 6 hours and bundle sizes for 24 hours.

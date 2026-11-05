@@ -1,19 +1,86 @@
 ---
-title: "Activity History"
-description: "Enriches timeline entries with their latest Git commit, author, age, and total commit count."
+title: "activity_history"
+description: "Adds the latest commit, commit count, age and author of each tracked entry to the timeline view."
 order: 2
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/activity_history]
 ---
 
-# Activity History Plugin
+`activity_history` adds the latest commit, commit count, age in days and author to each tracked entry in the timeline view. Turn it on when you read `lla --timeline` in a Git repository and want to see who last touched a file and how often it changes.
 
-Enriches timeline entries with their latest Git commit, author, age, and total commit
-count.
+<Shot name="plugin-activity" alt="A timeline listing in which each tracked file shows its latest commit, commit count, age in days and author." caption="`lla --timeline lla/src/plugin` with only `activity_history` enabled." />
+
+## Turn it on
+
+```toml
+# ~/.config/lla/config.toml
+enabled_plugins = ["activity_history"]
+```
+
+Or run this once. It saves the same setting, so the plugin stays on until you run `lla --disable-plugin activity_history`.
 
 ```bash
-lla --timeline --enable-plugin activity_history
+lla --enable-plugin activity_history
+```
+
+Output appears only in the [timeline view](/docs/usage/views#timeline-view) (`formats = ["timeline"]`). Tracked files and directories get data. Untracked files and `.git/` stay bare.
+
+| Field | Type | Holds |
+| --- | --- | --- |
+| `activity_commits` | integer | Commits that touched the path |
+| `activity_last_commit` | timestamp | Time of the latest commit |
+| `activity_author` | string | Author of the latest commit |
+| `activity_commit` | string | Full hash of the latest commit |
+| `activity_days_since` | integer | Days since the latest commit |
+
+The fields exist only when the listing uses the timeline format, so add `--timeline` to read them as JSON. Plain `lla --json` leaves `plugin` empty, and `field:` columns in long and table views print `-`.
+
+```bash
+lla --timeline --json | jq '.[] | select(.name=="mod.rs") | .plugin'
+```
+
+## Actions
+
+| Action | Arguments | What it does |
+| --- | --- | --- |
+| `inspect` | `<path>` | Prints the commit data for one file or directory. |
+
+```bash
 lla plugin run activity_history inspect -- ./src/main.rs
 ```
 
-Untracked paths remain undecorated so the timeline stays compact.
+`inspect` isn't interactive, so it works in scripts and pipes. An untracked path returns `tracked: false` with empty values. Running the action also enables the plugin and saves that setting.
+
+## Example
+
+```bash
+lla --timeline lla/src/plugin
+```
+
+```text
+Older
+────────────────────────────────────────
+grants.rs • Aug 16 [commit:cd9e014 · 1 commits · 80d · you]
+mod.rs • Aug 21 [commit:751ae21 · 29 commits · 75d · you]
+package.rs • Aug 16 [commit:cd9e014 · 2 commits · 80d · you]
+```
+
+```bash
+lla plugin run activity_history inspect -- ./mod.rs
+```
+
+```text
+{
+  "author": "you",
+  "commit": "751ae218fb5bace8b96b027d355fa2f27eb44e0d",
+  "commits": 29,
+  "days_since": 75,
+  "last_commit": 1787278382,
+  "path": "./mod.rs",
+  "tracked": true
+}
+```
+
+## Permissions
+
+`process = true`, because it runs `git rev-parse` and `git log --follow` for every listed entry. `filesystem = ["metadata:selection"]` covers the listed paths.

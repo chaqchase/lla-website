@@ -1,138 +1,408 @@
 ---
-title: "CLI Reference"
-description: "Compact map of flags, options, and subcommands. lla --help remains authoritative for the installed version."
+title: "CLI reference"
+description: "Every lla 0.6.6 option and subcommand, grouped by purpose, with the value names lla --help uses."
 order: 1
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/command-reference.md]
 ---
 
-# Command reference
-
-This page is a compact map of the public CLI. `lla --help` and
-`lla <subcommand> --help` are authoritative for the installed version.
+This page lists every option and subcommand in lla 0.6.6. `lla --help` and `lla <subcommand> --help` print the same names for the version you have installed.
 
 ```text
 lla [OPTIONS] [directory] [SUBCOMMAND]
 ```
 
-The directory defaults to `.` and may also be a supported archive or one file.
+`<directory>` defaults to `.`. It can also be one file, or a `.zip`, `.tar`, `.tar.gz` or `.tgz` archive.
+
+If the first argument is the name of a [shortcut](/docs/plugins/shortcuts), lla runs the shortcut and passes it the remaining arguments.
+
+An option shown with `...` takes several values and keeps consuming the arguments after it. `lla --enable-plugin file_hash .` treats `.` as a plugin name, so put the directory first: `lla . --enable-plugin file_hash`.
 
 ## Views
 
-| Option | Short | Purpose |
+A view flag overrides `default_format` from your config.
+
+| Option | Short | What it does |
 | --- | --- | --- |
-| `--long` | `-l` | Detailed metadata. |
-| `--tree` | `-t` | Hierarchical tree. |
-| `--table` | `-T` | Column-oriented table. |
-| `--grid` | `-g` | Terminal-width grid. |
-| `--grid-ignore` | | Ignore terminal width in grid view. |
-| `--sizemap` | `-S` | Visual size map. |
+| `--long` | `-l` | Long listing with permissions, size, date, owner and group. |
+| `--tree` | `-t` | Tree listing. Leaves out dot-named files. |
+| `--table` | `-T` | Table with bordered columns. |
+| `--grid` | `-g` | Grid that fits the terminal width. |
+| `--grid-ignore` | | With `-g`, ignore the terminal width. Lines may run past the screen. Has no effect without `-g`. |
+| `--sizemap` | `-S` | Bars showing each entry's share of the total size. |
 | `--timeline` | | Group entries by time period. |
-| `--git` | `-G` | Git status and repository information. |
-| `--fuzzy` | `-F` | Interactive fuzzy finder. |
-| `--recursive` | `-R` | Recursive listing. |
-| `--depth <n>` | `-d` | Tree or recursive depth. |
+| `--git` | `-G` | Git status, last commit, time and author for each entry. |
+| `--fuzzy` | `-F` | Interactive fuzzy finder. Add `--respect-gitignore`, or it stays at "Indexing files" in 0.6.6. |
+| `--recursive` | `-R` | One section per directory. Leaves out dot-named files. |
+| `--depth <depth>` | `-d` | Depth for tree and recursive listings. Defaults to `default_depth` from your config, which starts at 3. |
 
-See [Views and display](/docs/usage/views) for screenshots and examples.
+See [Views](/docs/usage/views) for examples of each.
 
-## Sorting and selection
+## Sorting
 
-| Option | Short | Purpose |
+| Option | Short | What it does |
 | --- | --- | --- |
-| `--sort name\|size\|date` | `-s` | Select the sort key. |
-| `--sort-reverse` | `-r` | Reverse ordering. |
-| `--sort-dirs-first` | | Put directories first. |
-| `--sort-case-sensitive` | | Use case-sensitive sorting. |
-| `--sort-natural` | | Sort embedded numbers naturally. |
-| `--filter <pattern>` | `-f` | Filter names or extensions. |
-| `--preset <name>` | | Apply a configured preset; repeatable. |
-| `--size <range>` | | Filter by file size. |
-| `--modified <range>` | | Filter by modification time. |
-| `--created <range>` | | Filter by creation time. |
-| `--case-sensitive` | `-c` | Use case-sensitive filtering. |
-| `--refine <pattern>` | | Apply sequential name/path refinements; repeatable. |
-| `--respect-gitignore` | | Apply Git ignore rules. |
-| `--no-gitignore` | | Override configured Git-ignore behavior. |
+| `--sort <sort>` | `-s` | Sort by `name` (default), `size` (largest first) or `date` (oldest first). |
+| `--sort-reverse` | `-r` | Reverse the sort order. |
+| `--sort-dirs-first` | | List directories before files. |
+| `--sort-case-sensitive` | | Sort with case sensitivity. Natural sort, which is on by default, already puts uppercase names first. |
+| `--sort-natural` | | Sort numbers in names by value, so `file2` comes before `file10`. |
 
-## Entry types and symlinks
+## Filtering
 
-| Option | Purpose |
-| --- | --- |
-| `--dirs-only`, `--files-only`, `--symlinks-only` | Show only one entry type. |
-| `--no-dirs`, `--no-files`, `--no-symlinks` | Hide one entry type. |
-| `--show-symlinks` | Include links whose targets match file/directory-only filters. |
-| `--dereference` (`-X`) | Use symlink-target metadata. |
-| `--no-symlink-target` | Hide the rendered target suffix. |
-| `--all` (`-a`) | Show dotfiles. |
-| `--almost-all` (`-A`) | Show dotfiles except `.` and `..`. |
-| `--no-dotfiles` | Hide dotfiles. |
-| `--dotfiles-only` | Show only dotfiles. |
-
-See [Filtering and search](/docs/usage/filtering-search) for pattern and range syntax.
-
-## Metadata and presentation
-
-| Option | Short | Purpose |
+| Option | Short | What it does |
 | --- | --- | --- |
-| `--icons`, `--no-icons` | | Override icon display. |
-| `--hyperlink [always\|auto\|never]` | | Control OSC 8 links. |
-| `--no-color` | | Disable colors. |
-| `--include-dirs` | | Calculate recursive directory sizes. |
-| `--permission-format <format>` | | Choose symbolic, octal, binary, verbose, or compact. |
-| `--hide-group` | | Hide the long-view group column. |
-| `--relative-dates` | | Use relative long-view timestamps. |
-| `--date-format <format>` | | Set the Chrono date format. |
-| `--inode` | `-i` | Show inode numbers. |
-| `--links` | `-H` | Show hard-link counts. |
-| `--allocated-size` | | Show allocated bytes. |
-| `--extended` | `-@` | Show extended attributes. |
-| `--context` | `-Z` | Show ACL or SELinux context. |
-| `--mounts` | `-M` | Show mount information. |
+| `--filter <filter>` | `-f` | Filter by name or extension. Write patterns in lowercase unless you add `-c`. Use `".a OR .b"` for alternatives. |
+| `--case-sensitive` | `-c` | Match filters and `--search` with exact case. |
+| `--preset <preset>...` | | Apply named filter presets from `[filter.presets.<name>]` in your config. |
+| `--refine <refine>...` | | Filter a previous listing from its cache without walking the filesystem again. Repeat it to narrow further. |
+| `--size <size>` | | Filter by size: `">10M"`, `"5K..2G"`, `"..100K"`. |
+| `--modified <modified>` | | Filter by modified time. `">7d"` selects entries changed within the last 7 days, `"<7d"` selects older ones, and `"2023-01-01..2023-12-31"` selects a date range. |
+| `--created <created>` | | Filter by creation time, with the same syntax as `--modified`. |
+| `--respect-gitignore` | | Hide files that match `.gitignore` and Git exclude rules. |
+| `--no-gitignore` | | Turn off `.gitignore` filtering when your config enables it. Can't be combined with `--respect-gitignore`. |
 
-## Search and machine output
+See [Filtering and search](/docs/usage/filtering-search) for the pattern syntax.
 
-| Option | Purpose |
+## Entry types and dotfiles
+
+| Option | Short | What it does |
+| --- | --- | --- |
+| `--dirs-only` | | Show only directories. |
+| `--files-only` | | Show only regular files. |
+| `--symlinks-only` | | Show only symbolic links. |
+| `--show-symlinks` | | With `--dirs-only` or `--files-only`, also include symlinks whose targets match. |
+| `--no-dirs` | | Hide directories. |
+| `--no-files` | | Hide regular files. |
+| `--no-symlinks` | | Hide symbolic links. |
+| `--all` | `-a` | Show dotfiles, overriding `no_dotfiles` in your config. |
+| `--almost-all` | `-A` | Show dotfiles, overriding `no_dotfiles`. lla never lists `.` and `..`, so this matches `-a`. |
+| `--no-dotfiles` | | Hide entries starting with a dot. |
+| `--dotfiles-only` | | Show only entries starting with a dot. |
+
+## Display
+
+| Option | Short | What it does |
+| --- | --- | --- |
+| `--icons` | | Show icons. Needs a Nerd Font. |
+| `--no-icons` | | Hide icons. |
+| `--no-color` | | Turn off lla's colors. Search matches and plugin output can still contain color codes in 0.6.6. |
+| `--hyperlink [<WHEN>...]` | | Emit OSC 8 file links: `always`, `auto`, `automatic` or `never`. With no value it means `auto`, which emits links only when stdout is a terminal. |
+| `--permission-format <permission-format>` | | Show permissions as `symbolic` (default), `octal`, `binary`, `verbose` or `compact`. |
+| `--include-dirs` | | Show the total size of each directory's contents. It walks every directory, so it can take a while. |
+| `--no-symlink-target` | | Don't print the target after a symlink's name. |
+| `--dereference` | `-X` | Show metadata from a symlink's target. |
+
+## Long view metadata
+
+The options in the first table switch to long view on their own. The options in the second only change a long view you've already selected with `-l` or your config.
+
+| Option | Short | What it adds |
+| --- | --- | --- |
+| `--inode` | `-i` | Inode numbers. |
+| `--links` | `-H` | Hard-link counts. |
+| `--allocated-size` | | Allocated filesystem size. |
+| `--extended` | `-@` | Extended attribute names and sizes. |
+| `--context` | `-Z` | ACL or SELinux security context. |
+| `--mounts` | `-M` | Source, mount point and filesystem. |
+
+| Option | What it does |
 | --- | --- |
-| `--search <pattern>` | Search file contents with ripgrep. |
-| `--search-context <n>` | Set surrounding context lines. |
-| `--search-pipe <plugin:action[:arg...]>` | Send matching paths to a plugin; repeatable. |
-| `--json` | Emit one JSON array. |
-| `--ndjson` | Emit one object per line. |
-| `--csv` | Emit a CSV header and rows. |
+| `--hide-group` | Hide the group column. |
+| `--relative-dates` | Show dates such as `4 weeks ago`. |
+| `--date-format <date-format>` | Format dates with chrono strftime syntax, such as `'%Y-%m-%d %H:%M'`. |
+
+## Search
+
+| Option | What it does |
+| --- | --- |
+| `--search <search>` | Search file contents with ripgrep, which must be on your `PATH`. The pattern is literal text unless it starts with `regex:`. Case is ignored unless you add `-c`. Run it from the directory you want to search, or pass an absolute path. |
+| `--search-context <search-context>` | Lines of context around each match. Defaults to 2. |
+| `--search-pipe <search-pipe>...` | After the search, run plugin actions on the matching files. The syntax is `plugin:action[:arg...]`. |
+
+See [Search file contents](/docs/usage/filtering-search#search-file-contents).
+
+## Machine output
+
+| Option | What it does |
+| --- | --- |
+| `--json` | Print one JSON array. With `--search`, print ripgrep's JSON events. |
+| `--ndjson` | Print one JSON object per line. |
+| `--csv` | Print CSV with a header row. |
 | `--pretty` | Pretty-print `--json`. |
 
-See [Machine output](/docs/usage/machine-output) for schemas.
+See [Machine output](/docs/usage/machine-output) for the fields.
 
-## Plugin overrides
+## Plugins
 
-| Option | Purpose |
+| Option | What it does |
 | --- | --- |
-| `--enable-plugin <name>` | Enable a plugin for the invocation; repeatable. |
-| `--disable-plugin <name>` | Disable a plugin for the invocation; repeatable. |
-| `--plugins-dir <path>` | Override the writable plugin directory. |
+| `--enable-plugin <enable-plugin>...` | Turn plugins on and save them to `enabled_plugins`, so they stay on for later runs. |
+| `--disable-plugin <disable-plugin>...` | Turn plugins off and remove them from `enabled_plugins`. |
+| `--plugins-dir <plugins-dir>` | Use this plugin directory for the current run. |
 
-## Subcommands
+## General
 
-| Command | Purpose | Detailed guide |
-| --- | --- | --- |
-| `clean` | Remove invalid plugins. | [Plugins](/docs/plugins/overview) |
-| `completion` | Generate shell completion scripts. | [Configuration](/docs/usage/configuration#shell-completion) |
-| `config` | View or modify configuration. | [Configuration](/docs/usage/configuration) |
-| `diff` | Compare paths or a path against Git. | [Views](/docs/usage/views#compare-files-and-directories) |
-| `init` | Create configuration interactively or from defaults. | [Getting started](/docs/about/installation#initialize-lla) |
-| `install` | Install prebuilt, Git, or local plugins. | [Plugins](/docs/plugins/overview#install-plugins) |
-| `jump` | Manage bookmarks/history and select a directory. | [Navigation](/docs/usage/navigation#directory-jumping) |
-| `list-plugins` | List discovered plugins. | [Plugins](/docs/plugins/overview#inspect-an-installation) |
-| `plugin` | Run actions or inspect, validate, and migrate packages. | [Plugins](/docs/plugins/overview) |
-| `shortcut` | Manage plugin-action shortcuts. | [Configuration](/docs/usage/configuration#shortcuts) |
-| `theme` | Manage, install, and preview themes. | [Configuration](/docs/usage/configuration#themes) |
-| `update` | Update all plugins or a named plugin. | [Plugins](/docs/plugins/overview) |
-| `upgrade` | Upgrade the lla executable. | [Getting started](/docs/about/installation#upgrade) |
-| `use` | Open the interactive plugin manager. | [Plugins](/docs/plugins/overview) |
-
-## General options
-
-| Option | Short | Purpose |
+| Option | Short | What it does |
 | --- | --- | --- |
 | `--help` | `-h` | Print help. |
 | `--version` | `-V` | Print the version. |
+| `--license` | | Print the MIT license. |
+
+## Subcommands
+
+| Command | What it does |
+| --- | --- |
+| [`clean`](#clean) | Move invalid plugins into quarantine. |
+| [`completion`](#completion) | Generate shell completion scripts. |
+| [`config`](#config) | View or change configuration. |
+| [`diff`](#diff) | Compare two paths, or a path against a Git reference. |
+| [`help`](#help) | Print help for lla or a subcommand. |
+| [`init`](#init) | Create the configuration file. |
+| [`install`](#install) | Install plugins. |
+| [`jump`](#jump) | Pick a bookmarked or recent directory. |
+| [`list-plugins`](#list-plugins) | List installed plugins. |
+| [`plugin`](#plugin) | Run plugin actions and inspect plugin packages. |
+| [`shortcut`](#shortcut) | Manage shortcuts. |
+| [`theme`](#theme) | Pick, install and preview themes. |
+| [`update`](#update) | Update installed plugins. |
+| [`upgrade`](#upgrade) | Upgrade the lla binary. |
+| [`use`](#use) | Turn plugins on and off interactively. |
+
+### clean
+
+```text
+lla clean
+```
+
+Checks every plugin in the plugins directory and moves invalid ones to `.quarantine/<timestamp>/` inside it. It takes no options other than `--help`.
+
+### completion
+
+```text
+lla completion [OPTIONS] <shell>
+```
+
+`<shell>` is `bash`, `fish`, `zsh`, `powershell` or `elvish`. With neither option, the script goes to stdout.
+
+| Option | Short | What it does |
+| --- | --- | --- |
+| `--output <output>` | `-o` | Write the script to this path. |
+| `--path <path>` | `-p` | Install the script at this path and print a reminder to restart your shell. |
+
+### config
+
+```text
+lla config [OPTIONS] [SUBCOMMAND]
+```
+
+With no arguments, prints a summary of your configuration and the path of the file.
+
+| Option or subcommand | What it does |
+| --- | --- |
+| `--set <KEY> <VALUE>` | Set a value, such as `lla config --set sort.dirs_first true`. Unknown keys and invalid values are rejected. |
+| `diff --default` | Show each setting that differs from the built-in defaults, and where it comes from. `--default` is required. |
+| `show-effective` | Print the merged config: your global file plus the nearest `.lla.toml`. |
+| `help` | Print help for a `config` subcommand. |
+
+### diff
+
+```text
+lla diff [OPTIONS] <left> [right]
+```
+
+Compares two directories or two files, or compares `<left>` against Git when you add `--git`.
+
+| Option | What it does |
+| --- | --- |
+| `--git` | Compare `<left>` against a Git reference instead of `[right]`. |
+| `--git-ref <git-ref>` | The reference to compare against. Defaults to `HEAD`. |
+
+See [Compare files and directories](/docs/usage/views#compare-files-and-directories).
+
+### help
+
+```text
+lla help [SUBCOMMAND]
+```
+
+Prints the same text as `--help`. Subcommands with their own subcommands have it too, such as `lla shortcut help add` and `lla config help diff`.
+
+### init
+
+```text
+lla init [OPTIONS]
+```
+
+Opens a setup wizard that edits `~/.config/lla/config.toml`.
+
+| Option | What it does |
+| --- | --- |
+| `--default` | Skip the wizard and write the default config and default theme. An existing config file is left as it is. |
+
+### install
+
+```text
+lla install [OPTIONS]
+```
+
+With no option, installs from the latest prebuilt release. In a terminal, each form asks which plugins to install. Installed plugins stay off until you enable them.
+
+| Option | What it does |
+| --- | --- |
+| `--prebuilt` | Install from the latest prebuilt release. This is the default. |
+| `--git <git>` | Build and install from a GitHub repository URL. Needs Git and Rust. |
+| `--dir <dir>` | Build and install from a local directory. Needs Rust. |
+
+### jump
+
+```text
+lla jump [OPTIONS]
+```
+
+With no options, opens a selector of bookmarks and recent directories and prints the path you pick. Run `lla jump --setup` to get a `j` function that changes into that directory.
+
+| Option | What it does |
+| --- | --- |
+| `--add <add>` | Add a directory to your bookmarks. |
+| `--remove <remove>` | Remove a directory from your bookmarks. |
+| `--list` | Print bookmarks, marked with `★`, then history. |
+| `--clear-history` | Clear directory history. Bookmarks stay. |
+| `--setup` | Add the `j` function to your shell's startup file. |
+| `--shell <shell>` | With `--setup`, use `bash`, `zsh` or `fish` instead of the detected shell. |
+
+### list-plugins
+
+```text
+lla list-plugins
+```
+
+Prints installed plugins grouped by state, with versions and descriptions. It takes no options other than `--help`.
+
+```text
+╭─ Installed Plugins ──────────────────────────────────────────────────────────╮
+│   ○ Disabled (37)                                                            │
+│                                                                              │
+│       file_meta                v0.6.6  │  Expose detailed filesystem metada… │
+│       file_organizer           v0.6.6  │  Organize files using configurable… │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+  ∑  0 enabled · 37 disabled · 37 total
+```
+
+### plugin
+
+```text
+lla plugin [OPTIONS] [ARGS] [SUBCOMMAND]
+```
+
+`[ARGS]` are `<plugin_name>`, `<plugin_action>` and `<plugin_args>...`. `<plugin_name>` can also be `doctor`, `info` or `permissions`.
+
+| Form | What it does |
+| --- | --- |
+| `lla plugin run <plugin> <action> -- <action_arguments>...` | Run an action. Use this form in new scripts. |
+| `lla plugin doctor` | Check each plugin's checksums and contract, and list every search path. Exits non-zero if it finds a problem. |
+| `lla plugin info <plugin_name>` | Print a plugin's ID, runtime, API range, formats, fields and permissions. |
+| `lla plugin permissions <plugin_name>` | Print the permissions a plugin declares. |
+| `lla plugin migrate --prebuilt` | Replace official v1 and v2 plugins with API v3 builds. |
+| `lla plugin <plugin_name> <plugin_action> <plugin_args>...` | Deprecated way to run an action. Prints a warning. |
+| `lla plugin <plugin_name>` | Open the plugin's `menu` action in a terminal, or `help` otherwise. Prints the same warning. |
+| `lla plugin help` | Print help for a `plugin` subcommand. |
+
+The deprecated form also has flags:
+
+| Option | Short | What it does |
+| --- | --- | --- |
+| `--name <name>` | `-n` | Name of the plugin. |
+| `--action <action>` | `-a` | Action to perform. |
+| `--args <args>...` | `-r` | Arguments for the action. |
+
+Running an action on a disabled plugin turns it on and saves it to `enabled_plugins`.
+
+#### plugin run
+
+```text
+lla plugin run [OPTIONS] <plugin> <action> [-- <action_arguments>...]
+```
+
+| Option | What it does |
+| --- | --- |
+| `--output <output>` | Output format: `human` (default), `json`, `ndjson` or `csv`. Interactive actions need a terminal and `human`. |
+
+#### plugin migrate
+
+```text
+lla plugin migrate --prebuilt
+```
+
+Replaces matching official plugins and keeps the old files in `.legacy/<timestamp>/` inside the plugins directory. Third-party plugins are left alone.
+
+| Option | What it does |
+| --- | --- |
+| `--prebuilt` | Required. Use the official prebuilt plugin bundle. |
+
+See [Migrating to v3](/docs/plugins/migration-v3).
+
+### shortcut
+
+```text
+lla shortcut [SUBCOMMAND]
+```
+
+| Subcommand | What it does |
+| --- | --- |
+| `add [OPTIONS] <name> <plugin> <action>` | Add a shortcut. `-d, --description <description>` sets an optional description. |
+| `create` | Build a shortcut from interactive menus. |
+| `list` | List all shortcuts. |
+| `remove <name>` | Remove a shortcut. |
+| `export [output]` | Write shortcuts as TOML to a file, or to stdout with no path. |
+| `import [OPTIONS] <file>` | Replace your shortcuts with those in a file. `--merge` keeps existing ones and skips conflicts. |
+| `help` | Print help for a `shortcut` subcommand. |
+
+See [Shortcuts](/docs/plugins/shortcuts) for the file format.
+
+### theme
+
+```text
+lla theme [SUBCOMMAND]
+```
+
+With no subcommand, opens the theme picker in a terminal, or prints the available themes when there's no terminal.
+
+| Subcommand | What it does |
+| --- | --- |
+| `install <path>` | Install one theme file, or every theme in a directory. |
+| `preview <name>` | Preview an installed theme using sample output. |
+| `pull` | Clone the official repository with `git` and install its themes. |
+| `help` | Print help for a `theme` subcommand. |
+
+See [Themes](/docs/usage/configuration#themes).
+
+### update
+
+```text
+lla update [name]
+```
+
+Updates the plugin called `[name]`, or all installed plugins when you leave it off.
+
+### upgrade
+
+```text
+lla upgrade [OPTIONS]
+```
+
+Replaces the lla binary with the latest release.
+
+| Option | Short | What it does |
+| --- | --- | --- |
+| `--version <version>` | `-v` | Upgrade to a specific release tag. |
+| `--path <path>` | | Install to this location instead of the current executable's path. |
+
+### use
+
+```text
+lla use
+```
+
+Opens the plugin manager. Space toggles a plugin, Enter saves your choices to `enabled_plugins`, and Esc cancels. It takes no options other than `--help`.

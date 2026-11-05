@@ -1,81 +1,89 @@
 ---
-title: "Keyword Search"
-description: "High-performance keyword search plugin for `lla` with interactive search and rich display features."
+title: "keyword_search"
+description: "Searches files in the current directory for keywords, then lets you view, copy, save or analyze the matches."
 order: 24
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/keyword_search]
 ---
 
-# lla Keyword Search Plugin
+`keyword_search` searches the files in the current directory for keywords and lets you pick which matches to view, copy or save. Reach for it when you want to go through matches by hand. To search a whole tree, use [`lla --search`](/docs/usage/filtering-search#search-file-contents).
 
-High-performance keyword search plugin for `lla` with interactive search and rich display features.
+## Turn it on
 
-## Features
-
-- **Smart Search**: Multi-keyword, case-sensitive, regex support
-- **Interactive**: File selection, filtering, action menu
-- **Rich Display**: Syntax highlighting, context visualization
-- **Analysis**: Match statistics and pattern detection
-
-## Usage
-
-```bash
-# Search in current directory
-lla plugin run keyword_search search
-
-# Available actions after finding matches:
-1. View detailed matches
-2. Copy to clipboard
-3. Save to file
-4. Show statistics
-5. Filter matches
-6. Advanced analysis
-```
-
-## Configuration
-
-Config location: `~/.config/lla/keyword_search/config.toml`
+The `search` action works whether or not the plugin is on. Turn it on to mark files in listings that contain your configured keywords:
 
 ```toml
-keywords = []               # Keywords to search for
-case_sensitive = false      # Case sensitivity
-use_regex = false          # Regular expression support
-context_lines = 2          # Number of context lines
-max_matches = 5            # Maximum matches per file
-
-[colors]
-keyword = "bright_red"
-line_number = "bright_yellow"
-context = "bright_black"
-file = "bright_blue"
-success = "bright_green"
-info = "bright_cyan"
+# ~/.config/lla/config.toml
+enabled_plugins = ["keyword_search"]
 ```
 
-## Display Examples
+Or run `lla --enable-plugin keyword_search`, which writes the same setting, so it stays on. `lla --disable-plugin keyword_search` removes it.
 
-Match View:
+<Callout type="warning" title="Listings print nothing in lla 0.6.6">
+Enabling the plugin adds no text to the default, long or table views. A matching file gets a `keyword_matches` field with an empty value, so the field's presence is all you can use.
+</Callout>
 
-```
-─────────────────────────────────
- 📂 src/main.rs
-─────────────────────────────────
- 123 │ function process() {
- 124 │ let data = analyze();
-►125 │ // TODO: Implement error handling
- 126 │ return data;
- 127 │ }
-─────────────────────────────────
+To list the files that match, read the field from JSON. Set `keywords` in [settings](#settings) first:
+
+```bash
+lla --json | jq -r '.[] | select(.plugin.keyword_matches != null) | .name'
 ```
 
-Statistics View:
+```text
+Makefile
+main.rs
+```
 
+## Actions
+
+Run an action with `lla plugin run keyword_search <action>`.
+
+| Action | What it does |
+| --- | --- |
+| `search` | Search files in the current directory, then pick files and matches to work with |
+| `help` | Show help |
+
+Both are interactive, so they need a TTY.
+
+`search` uses `keywords` from your settings. With none set, it asks for space-separated keywords and doesn't save them. It doesn't look in subdirectories, and it skips files without a listed extension.
+
+## Example
+
+```bash
+lla plugin run keyword_search search
 ```
-📊 Match Statistics:
-─────────────────────────────────
- • Total matches: 5
- • Unique keywords: 2
- • Average context: 2.5 lines
- • File: src/main.rs
-─────────────────────────────────
+
+Select files with space and press Enter, then do the same for matches. A menu then offers: View detailed matches, Copy to clipboard, Save to file, Show statistics, Filter matches and Advanced analysis.
+
+With `keywords = ["TODO"]`, View detailed matches on `main.rs` shows the match in context:
+
+```text
+    1 │ fn main() {
+    2 │     let data = load();
+    3 │     // TODO: handle errors
+    4 │     run(data);
+    5 │ }
 ```
+
+## Settings
+
+Edit `~/.config/lla/plugins/keyword_search/config.toml`:
+
+```toml
+keywords = ["TODO", "FIXME"]
+case_sensitive = false
+use_regex = false
+context_lines = 2
+max_matches = 5
+file_extensions = ["txt", "md", "rs", "py", "js", "java", "c", "cpp", "h", "hpp", "go", "rb", "php", "html", "css", "json", "yaml", "yml", "toml", "ini", "conf"]
+```
+
+`keywords` is empty by default. `max_matches` applies per file. The listing check also searches files with no extension.
+
+<Callout type="warning" title="Keep every key">
+If you remove a key, the plugin reports a `missing field` error and rewrites the file with defaults, which loses your keywords.
+</Callout>
+
+## Permissions
+
+`write:user-path` for Save to file, `read:selection` to read the files you list, and `clipboard` for Copy to clipboard.

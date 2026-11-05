@@ -2,13 +2,12 @@
 export default {
   // Empty turbopack config to acknowledge Turbopack usage
   turbopack: {},
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    qualities: [75, 90, 92]
+  },
   async redirects() {
     return [
-      {
-        source: '/',
-        destination: '/docs/about/introduction',
-        permanent: true
-      },
       // Restructured usage pages (matched to lla/docs layout)
       { source: '/docs/usage/basic-usage', destination: '/docs/usage/views', permanent: true },
       { source: '/docs/usage/view-formats', destination: '/docs/usage/views', permanent: true },

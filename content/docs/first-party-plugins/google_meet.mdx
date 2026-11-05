@@ -1,87 +1,55 @@
 ---
-title: "Google Meet"
-description: "Google Meet plugin for `lla` that creates meeting rooms and manages links with browser profile support."
+title: "google_meet"
+description: "Creates a Google Meet link from your terminal, copies it and keeps a history of your links."
 order: 20
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/google_meet]
 ---
 
-# lla Google Meet Plugin
+`google_meet` creates a Google Meet link from your terminal, copies it and keeps a history of the links you've made. Reach for it when you need a meeting link to paste into a chat.
 
-Google Meet plugin for `lla` that creates meeting rooms and manages links with browser profile support.
+<Callout type="warning" title="Capturing the link needs macOS">
+On Linux and Windows, `create` opens the Meet page and then fails with `Browser detection is only supported on macOS`, so you copy the link from the browser yourself.
+</Callout>
 
-## Features
+## Actions
 
-- **Quick Meeting Creation**: Instantly create Google Meet rooms
-- **Clipboard Integration**: Auto-copy meeting links to clipboard
-- **Browser Profiles**: Create meetings with specific browser profiles
-- **History Management**: Track and reuse meeting links
+Run an action with `lla plugin run google_meet <action>`.
 
-## Usage
+| Action | What it does |
+| --- | --- |
+| `create` | Open a new meeting in your browser, read its link, copy it and save it to history |
+| `create-with-profile` | Pick a saved Google account first. With none saved, it uses your default account |
+| `history` | Copy or open past links, or clear the list |
+| `profiles` | Add, list or remove Google accounts |
+| `preferences` | Change settings |
+| `help` | Show help |
+
+All of them are interactive, so they need a TTY.
+
+## Example
 
 ```bash
-# Create a new meeting room
 lla plugin run google_meet create
-
-# Create meeting with browser profile
-lla plugin run google_meet create-with-profile
-
-# Manage meeting history
-lla plugin run google_meet history
-
-# Manage browser profiles
-lla plugin run google_meet profiles
-
-# Configure preferences
-lla plugin run google_meet preferences
-
-# Show help
-lla plugin run google_meet help
 ```
 
-## Configuration
+This opens `https://meet.google.com/new` in your default browser. On macOS, it then reads the URL of the browser in front for up to 10 seconds, prints the link and copies it. It recognizes Google Chrome, Safari, Brave Browser, Arc, Firefox, Microsoft Edge, Chromium and Opera.
 
-Config location: `~/.config/lla/plugins/google_meet/config.toml`
+## Settings
+
+Edit `~/.config/lla/plugins/google_meet/config.toml`, or run the `preferences` and `profiles` actions.
 
 ```toml
-auto_copy_link = true           # Auto-copy links to clipboard
-max_history_size = 50          # Maximum history entries
+auto_copy_link = true
+max_history_size = 50
 
 [[browser_profiles]]
 name = "Work"
-profile_path = "Profile 1"
-
-[[browser_profiles]]
-name = "Personal"
-profile_path = "Default"
-
-[colors]
-success = "bright_green"
-info = "bright_cyan"
-warning = "bright_yellow"
-error = "bright_red"
-link = "bright_blue"
+profile_path = "you@example.com"
 ```
 
-## Display Examples
+`profile_path` is an email address or account number, and it's sent as `?authuser=` in the Meet URL. Past links are stored in the same file under `meet_history`.
 
-Creating Meeting:
+## Permissions
 
-```
-ℹ Info: Creating Google Meet room...
-🔗 Link: https://meet.google.com/abc-defg-hij
-✓ Success: Link copied to clipboard!
-✓ Success: Meeting room created successfully!
-```
-
-History Management:
-
-```
-⚡ Choose action
-> 📋 Copy selected link
-  🌐 Open selected link
-  🗑️  Clear all history
-
-🔗 https://meet.google.com/abc-defg-hij (2025-10-20 15:30:45)
-🔗 https://meet.google.com/xyz-uvwx-stu (2025-10-20 14:20:30)
-```
+The manifest lists `meet.google.com` under `network`, plus `clipboard` and `open_url`. The plugin sends no HTTP requests itself. It runs `open`, `xdg-open` or `cmd /C start` to open your browser, and `osascript` to read its URL.

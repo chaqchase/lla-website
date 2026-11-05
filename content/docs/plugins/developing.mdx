@@ -1,190 +1,428 @@
 ---
-title: "Developing Plugins"
-description: "Build native and WebAssembly plugins with the Rust SDK: runtimes, decoration, batching, typed actions, and local testing."
+title: "Developing plugins"
+description: "Task reference for plugin authors: decorate entries, write actions, store data, build components and fix doctor failures."
 order: 2
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/plugins/developing.md]
 ---
 
-# Developing plugins
-
-This is the short development guide. The canonical
-[architecture and Plugin Platform handbook](/docs/about/architecture) contains a complete
-native plugin implementation, WebAssembly conversion, SDK reference, package
-lifecycle, testing matrix, performance guidance, and troubleshooting.
-
-Rust is the maintained SDK language for lla 0.6.0. Native plugins and Rust
-WebAssembly components use the same high-level `Plugin` trait. Other languages
-may generate Component Model bindings from the published WIT world.
+This page is the reference to return to while you write a plugin. Each section answers one task. If you haven't built a plugin yet, start with the [tutorial](/docs/guides/plugin-development-tutorial), and look up exact manifest keys in the [manifest reference](/docs/plugins/manifest).
 
 ## Choose a runtime
 
-Use a native plugin when you need an existing native dependency, unrestricted
-platform integration, or the smallest possible host overhead. Native libraries
-are trusted code and must be built for every supported operating system and
-architecture.
+Use a native library when you need native dependencies, subprocesses or the terminal. Use a WebAssembly component when you want one artifact for every platform and enforced permissions.
 
-Use a WebAssembly component when portability and enforced permissions matter.
-The host must be compiled with `--features wasm-plugins`; official Linux,
-macOS, and Windows release binaries enable it. The embedded runtime is
-available on supported x86_64 and ARM64 Linux/macOS/Windows builds. i686 builds
-report WebAssembly packages as unsupported, while the official NetBSD amd64
-build omits Wasmtime entirely.
+| | Native | WebAssembly component |
+| --- | --- | --- |
+| `runtime` | `native` | `wasm-component` |
+| Export macro | `export_plugin!` | `export_component!` |
+| Build output | One library per OS and architecture | One `.wasm` file |
+| Permissions | Declared, not enforced | Approved at install, enforced at run time |
+| Subprocesses | Yes | No. `process = true` fails validation |
+| Network | Anything | WASI HTTP to hosts listed in `network` |
+| Time limits | None | 5 seconds for decorate and format, 60 seconds for actions |
+| State in `self` | Lasts for the `lla` process | Reset on every request |
+| Host support | The default build | Builds with `wasm-plugins` on x86_64 and ARM64. Official Linux, macOS and Windows binaries qualify. i686 and NetBSD binaries don't. |
 
-## Create a native plugin
+All 37 bundled plugins are native.
 
-Create a library crate and configure it as a dynamic library:
+## Add the SDK
 
-```toml
-[package]
-name = "my-plugin"
-version = "1.0.0"
-edition = "2021"
+Every plugin crate has `crate-type = ["cdylib"]`. Only the dependency line differs.
 
-[lib]
-name = "my_plugin"
-crate-type = ["cdylib"]
+| Plugin | `[dependencies]` |
+| --- | --- |
+| Native | `lla_plugin_sdk = "0.6"` |
+| WebAssembly component | `lla_plugin_sdk = { version = "0.6", features = ["component"] }` |
+| Bundled, inside the lla repository | `lla_plugin_sdk = { path = "../../sdk" }` |
 
-[dependencies]
-lla_plugin_sdk = "0.6"
-```
+Add `lla_plugin_utils = "0.6"` for configuration, caching and terminal UI helpers.
 
-While developing inside this repository, use the workspace dependency instead:
+## Add a field to listings
 
-```toml
-[dependencies]
-lla_plugin_sdk.workspace = true
-```
-
-Implement only the capabilities the plugin needs:
+Implement `decorate_entry` and declare the field in `[[fields]]`. `insert_field` sets both the typed value and the display string.
 
 ```rust
-use lla_plugin_sdk::{interface::proto, Plugin};
+fn decorate_entry(&mut self, mut entry: proto::DecoratedEntry) -> proto::DecoratedEntry {
+    let Some(size) = entry.metadata.as_ref().map(|metadata| metadata.size) else {
+        return entry;
+    };
+    entry.insert_field("kib", value::integer((size / 1024) as i64), format!("{}K", size / 1024));
+    entry
+}
+```
 
-#[derive(Default)]
-struct MyPlugin;
+`insert_field` is the usual choice. When you already have a display string in `custom_fields`, the `promote_string_field`, `promote_integer_field`, `promote_boolean_field` and `promote_path_field` methods parse it into `typed_fields`.
+
+`entry.path` is a string and `entry.metadata` is optional. It carries `size`, `modified`, `accessed`, `created`, `is_dir`, `is_file`, `is_symlink`, `permissions`, `uid`, `gid`, `inode`, `hard_links`, `allocated_size`, `xattrs`, `has_acl`, `security_context`, `mount_point`, `mount_source` and `filesystem`.
+
+Handle a path you can't open. Listings of archives pass entries whose paths don't exist on disk.
+
+## Share work across a batch
+
+Override `decorate_batch` when many entries can share one expensive step, such as reading a single index file. The default implementation calls `decorate_entry` once per entry.
+
+```rust
+fn load_index() -> HashMap<String, String> {
+    // Read the shared file once.
+    HashMap::new()
+}
+
+fn annotate(entry: &mut proto::DecoratedEntry, index: &HashMap<String, String>) {
+    if let Some(owner) = index.get(&entry.path) {
+        entry.insert_field("owner", value::string(owner.as_str()), owner.as_str());
+    }
+}
 
 impl Plugin for MyPlugin {
-    fn decorate_entry(
-        &mut self,
-        mut entry: proto::DecoratedEntry,
-    ) -> proto::DecoratedEntry {
-        entry.custom_fields.insert("owner".into(), "example".into());
+    fn decorate_entry(&mut self, mut entry: proto::DecoratedEntry) -> proto::DecoratedEntry {
+        annotate(&mut entry, &load_index());
         entry
     }
-}
 
-lla_plugin_sdk::export_plugin!(MyPlugin);
+    fn decorate_batch(
+        &mut self,
+        mut entries: Vec<proto::DecoratedEntry>,
+        _format: &str,
+    ) -> Vec<proto::DecoratedEntry> {
+        let index = load_index();
+        for entry in &mut entries {
+            annotate(entry, &index);
+        }
+        entries
+    }
+}
 ```
 
-The exported plugin type must implement `Default + Send + 'static`. The export
-macro validates and embeds the crate-root `plugin.toml`, generates the API v3
-entrypoint, contains panics, and ensures plugin-allocated responses are freed by
-the plugin.
+Three rules apply. Return the same number of entries in the same order. Return the same result the single-entry path would, because `lla plugin doctor` compares them. Expect at most 512 entries per call, since the host splits longer listings into chunks and the SDK rejects anything larger with `batch-limit-exceeded`.
 
-## Decoration and batching
+Implement both methods. Directory listings call `decorate_batch`, while a single-file target and archive members call `decorate_entry`.
 
-`decorate_entry` handles one entry. The default `decorate_batch` implementation
-calls it once for each entry. Override `decorate_batch` when the plugin can
-share I/O or computation across a batch:
+`format_batch` works the same way for `format_field`. The doctor only calls `format_field`, so keep the two in step yourself.
+
+## Show a field in a view
+
+Add the view's format to `capabilities.formats` and return text from `format_field`. The [format table](/docs/plugins/manifest#capabilities) maps each view to its format name.
 
 ```rust
-fn decorate_batch(
-    &mut self,
-    mut entries: Vec<proto::DecoratedEntry>,
-    _format: &str,
-) -> Vec<proto::DecoratedEntry> {
-    let shared_state = load_shared_state_once();
-    for entry in &mut entries {
-        decorate_with_state(entry, &shared_state);
+fn format_field(&mut self, entry: proto::DecoratedEntry, format: String) -> Option<String> {
+    let kib = entry.custom_fields.get("kib")?;
+    match format.as_str() {
+        "default" => Some(format!("[{kib}]")),
+        "long" => Some(format!("size={kib}")),
+        _ => None,
     }
-    entries
 }
 ```
 
-The host sends at most 512 entries per batch.
+The doctor requires text for every declared format when an entry has a declared field. Returning `None` there is a contract failure.
 
-## Typed actions
+Users can also place a field in its own column of the long or table view. `field:<name>` reads the display string, and an entry without the field shows `-`. Put this in `.lla.toml` or `~/.config/lla/config.toml`:
 
-Declare each action in `plugin.toml`; the manifest is the public contract. The
-host parses and validates arguments before calling the plugin.
+```toml
+[formatters.table]
+columns = ["name", "size", "field:score", "plugins"]
+```
+
+```bash
+lla -T
+```
+
+```text
+┌─────────────┬───────┬───────┬───────────────────────┐
+│ Name        │ Size  │ score │ Plugins               │
+├─────────────┼───────┼───────┼───────────────────────┤
+│ .git/       │  288B │ -     │                       │
+│ .gitignore  │    8B │ 3     │ score=3 class=small   │
+```
+
+The `plugins` column holds the text from `format_field`.
+
+## Add an action
+
+Declare the action in `plugin.toml`, return the declared IDs from `registered_actions`, and handle them in `run_action`. This action returns a table:
 
 ```toml
 [[actions]]
-id = "inspect"
-description = "Inspect a path"
-examples = ["lla plugin run my_plugin inspect -- README.md --limit 10"]
-interactive = false
+id = "sizes"
+description = "List file sizes"
+examples = ["lla plugin run my_plugin sizes -- src/lib.rs Cargo.toml"]
 arguments = [
-  { name = "path", type = "path", position = 0, required = true },
-  { name = "limit", type = "integer", option = "--limit", default = 10, min = 1, max = 100 },
+  { name = "paths", type = "path", description = "Files to measure", position = 0, required = true, repeatable = true },
 ]
-output = { type = "value" }
+output = { type = "table", columns = [
+  { name = "path", type = "path", description = "File" },
+  { name = "bytes", type = "bytes", description = "Size" },
+] }
 ```
 
-Implement `registered_actions` with matching IDs and `run_action` to receive a
-`HashMap<String, TypedValue>`. Return an `ActionResponse` containing `none`,
-`text`, `value`, or typed `table` output. Do not print machine-readable output
-directly; the host renders the declared output format.
+```rust
+fn sizes(arguments: &ActionArguments) -> Result<proto::ActionResponse, ActionError> {
+    let mut rows = Vec::new();
+    for path in arguments.paths("paths")? {
+        let size = std::fs::metadata(&path)
+            .map_err(|error| format!("{}: {error}", path.display()))?
+            .len();
+        rows.push(vec![value::path(path.to_string_lossy()), value::bytes(size)]);
+    }
+    Ok(response::table(["path", "bytes"], rows))
+}
 
-Installation and `plugin doctor` reject missing handlers and manifest/output
-contract mismatches.
+impl Plugin for MyPlugin {
+    fn registered_actions(&mut self) -> Vec<proto::ActionInfo> {
+        lla_plugin_sdk::manifest_action_infos(include_str!("../plugin.toml"))
+    }
 
-## Create a Rust WebAssembly component
+    fn run_action(&mut self, action: String, arguments: ActionArguments) -> proto::ActionResponse {
+        let result = match action.as_str() {
+            "sizes" => sizes(&arguments),
+            _ => Err(ActionError::new(
+                "unknown-action",
+                format!("unknown action '{action}'"),
+            )),
+        };
+        result.unwrap_or_else(response::error)
+    }
+}
+```
 
-Enable the component feature and export with the component macro:
+Unknown actions must return an error. The doctor sends a made-up action name and fails the plugin if it succeeds.
+
+```bash
+lla plugin run my_plugin sizes --output csv -- plugin.toml
+```
+
+```text
+path,bytes
+plugin.toml,895
+```
+
+Read arguments through `ActionArgumentsExt`:
+
+| Argument | Method | Returns |
+| --- | --- | --- |
+| `string` | `arguments.string("name")` | `Result<Option<String>, ActionError>` |
+| repeatable `string` | `arguments.strings("name")` | `Result<Vec<String>, ActionError>` |
+| `integer` | `arguments.integer("name")` | `Result<Option<i64>, ActionError>` |
+| `float` | `arguments.float("name")` | `Result<Option<f64>, ActionError>` |
+| `boolean` | `arguments.boolean("name")` | `Result<Option<bool>, ActionError>` |
+| `path` | `arguments.path("name")` | `Result<Option<PathBuf>, ActionError>` |
+| repeatable `path` | `arguments.paths("name")` | `Result<Vec<PathBuf>, ActionError>` |
+
+Return typed output through `response` and `value`:
+
+| Declared `output` | Return |
+| --- | --- |
+| `none` | `response::none()` |
+| `text` | `response::text("done")` |
+| `value` | `response::value(value::object([("score".to_string(), value::integer(9))]))` |
+| `table` | `response::table(["path", "bytes"], rows)` |
+
+The `value` module has `null`, `string`, `integer`, `float`, `boolean`, `bytes`, `timestamp`, `path`, `list` and `object`. Return data rather than printing it, because the host renders `--output human`, `json`, `ndjson` and `csv` from the typed value.
+
+## Report an error
+
+`response::error` accepts a string or an `ActionError`. A string gets the code `action-failed`.
+
+```rust
+response::error(ActionError::new("not-a-file", "expected a regular file"))
+```
+
+The host prints the message and the code, then exits with status 1:
+
+```text
+✗ Plugin Error
+
+  expected a regular file [not-a-file]
+```
+
+`--output json` doesn't change this form, so scripts should check the exit status. `ActionError::with_detail` attaches typed data that the 0.6.6 host doesn't display. A panic in native code returns `plugin panicked` and later calls return `plugin state is poisoned`.
+
+## Add an interactive action
+
+Set `interactive = true` when an action prompts or draws on the terminal. Bundled plugins use the `dialoguer` crate for this and print directly.
+
+Running one without a terminal, or with `--output` other than `human`, fails before your code runs:
+
+```text
+Action 'my_plugin:menu' is interactive and requires a TTY with --output human
+```
+
+`lla plugin my_plugin` with no action runs the `menu` action on a terminal when one exists, and `help` otherwise. Declare a `help` action, because a plugin with neither prints `Unknown action 'help'`.
+
+## Store configuration and cached data
+
+Use the private data directory: `$LLA_PLUGIN_DATA_DIR/<name>`, or `~/.config/lla/plugins/<name>` when the variable is unset. `lla plugin doctor` points `LLA_PLUGIN_DATA_DIR` at a temporary directory so its test calls don't touch real data. Components see this directory at `/data`.
+
+`lla_plugin_utils` covers both common cases. It needs `serde` with the `derive` feature for the configuration struct.
+
+```rust
+use lla_plugin_utils::{
+    canonical_cache_key, file_fingerprint, ConfigManager, PersistentCache, PluginConfig,
+};
+use serde::{Deserialize, Serialize};
+
+#[derive(Default, Serialize, Deserialize)]
+struct Settings {
+    threshold: u64,
+}
+
+impl PluginConfig for Settings {}
+
+fn threshold() -> u64 {
+    // Reads config.toml from the data directory, and writes the defaults on first use.
+    ConfigManager::<Settings>::new("my_plugin").get().threshold
+}
+
+fn cached_len(path: &std::path::Path) -> std::io::Result<u64> {
+    let mut cache = PersistentCache::<u64>::for_plugin("my_plugin", "lengths.toml", 1, 4096);
+    let key = canonical_cache_key(path);
+    let fingerprint = file_fingerprint(path)?;
+    if let Some(length) = cache.get(&key, &fingerprint) {
+        return Ok(length);
+    }
+    let length = std::fs::metadata(path)?.len();
+    cache.insert(key, fingerprint, length);
+    cache.persist()?;
+    Ok(length)
+}
+```
+
+`for_plugin` takes the plugin name, a file name, a schema version and a maximum entry count. Changing the schema version discards the old cache.
+
+## Test a plugin
+
+Call the trait methods directly in unit tests. `DecoratedEntry` and `EntryMetadata` implement `Default`.
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unknown_actions_fail() {
+        let response = MyPlugin.run_action("nope".to_string(), ActionArguments::new());
+        assert!(!response.success);
+    }
+
+    #[test]
+    fn large_files_get_a_field() {
+        let entry = proto::DecoratedEntry {
+            path: "big.bin".to_string(),
+            metadata: Some(proto::EntryMetadata {
+                size: 4096,
+                is_file: true,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let decorated = MyPlugin.decorate_entry(entry);
+        assert_eq!(decorated.custom_fields["kib"], "4K");
+    }
+}
+```
+
+Then check the package against the real host:
+
+```bash
+cargo fmt --check
+cargo test
+lla install --dir .
+lla plugin doctor
+lla plugin run my_plugin sizes --output json -- plugin.toml
+```
+
+`lla --enable-plugin my_plugin` persists to your config, and so does running an action or using a plugin in `--search-pipe`. To test without touching your main plugin directory, give `lla` its own one with `--plugins-dir`:
+
+```bash
+lla --plugins-dir ./test-plugins install --dir .
+lla --plugins-dir ./test-plugins plugin doctor
+```
+
+The [SDK fixtures](https://github.com/chaqchase/lla/tree/main/sdk/tests/fixtures) are small crates for [a minimal native plugin](https://github.com/chaqchase/lla/tree/main/sdk/tests/fixtures/minimal_native), [a custom batch](https://github.com/chaqchase/lla/tree/main/sdk/tests/fixtures/custom_batch) and [a component](https://github.com/chaqchase/lla/tree/main/sdk/tests/fixtures/wasm_component).
+
+## Diagnose a failure
+
+`lla install --dir` validates the manifest and builds the package. It does not load the library, so runtime contract failures only appear in `lla plugin doctor` or when the plugin loads.
+
+| What you see | Where | Cause | Fix |
+| --- | --- | --- | --- |
+| `error: invalid API v3 plugin.toml: ...` | `cargo build`, install | The manifest fails validation. | See [validation errors](/docs/plugins/manifest#validation-errors). |
+| `✗ file_score: manifest/runtime metadata mismatch` | Doctor | The actions from `registered_actions` differ from the manifest, or the library embeds a different manifest. | Build `registered_actions` from `manifest_action_infos` and reinstall. |
+| `format 'long' omitted present declared fields` | Doctor | `format_field` returned `None` for a declared format. | Return text for that format or remove it from `formats`. |
+| `batch decoration does not preserve single-entry behavior` | Doctor | `decorate_batch` and `decorate_entry` differ. | Share one function between them. |
+| `field 'score' cannot be converted to its declared Integer type` | Doctor | The display string doesn't parse as the declared type and no typed value was set. | Use `insert_field`. |
+| `action dispatch did not reject an unknown action safely` | Doctor | `run_action` succeeded for an unknown ID. | Return an error for unknown IDs. |
+| `plugin package checksum mismatch for ...` | Doctor, load | A packaged file changed after install. | Reinstall. Don't edit installed files. |
+| `✗ file_score: missing entrypoint` | Doctor | `entrypoint` names no file in the package. | Match `entrypoint` to `[lib] name`. |
+| `Cannot find runtime entrypoint 'x' in plugin package ...` | Install | The build produced no file for `entrypoint`. | Match `entrypoint` to `[lib] name`. |
+| `✗ file_score: incompatible API` | Doctor | `api_min`..`api_max` excludes 3. | Set both to `3`. |
+| `action 'x' returned output that does not match plugin.toml` | Run | The code returned another output kind than the manifest declares. | Match the `response::` call to `output.type`. |
+| `action 'x' returned a table that violates its column schema` | Run | Column names, cell count or cell types differ. | Match `columns` exactly. |
+| `Plugin X uses API v2 and is disabled; migrate it to API v3` | Load | A library built for an older API. | See [Migrating to v3](/docs/plugins/migration-v3). |
+
+Two doctor lines are warnings about layout rather than contract failures. `! name at path is shadowed by path` means an earlier search directory holds a plugin with the same name, and `! ID x at path is already provided by path` means two packages share an `id`.
+
+`lla clean` runs the same checks and moves invalid packages to `<plugins_dir>/.quarantine/<timestamp>`.
+
+## Build a WebAssembly component
+
+Starting from a working native plugin, make three changes. Change the dependency in `Cargo.toml`:
 
 ```toml
-[lib]
-name = "my_plugin"
-crate-type = ["cdylib"]
-
 [dependencies]
 lla_plugin_sdk = { version = "0.6", features = ["component"] }
 ```
 
+Change the runtime and entrypoint in `plugin.toml`. The scopes must now cover what the code touches, because the host enforces them:
+
+```toml
+[plugin]
+runtime = "wasm-component"
+entrypoint = "file_score.wasm"
+
+[permissions]
+filesystem = ["metadata:selection", "read:user-path"]
+```
+
+Change the export in `src/lib.rs`, at the crate root:
+
 ```rust
-use lla_plugin_sdk::Plugin;
-
-#[derive(Default)]
-struct MyPlugin;
-
-impl Plugin for MyPlugin {}
-
-lla_plugin_sdk::export_component!(MyPlugin);
+lla_plugin_sdk::export_component!(FileScore);
 ```
 
-Set `runtime = "wasm-component"` and use the generated `.wasm` filename as the
-manifest entrypoint. Then build it:
+Then install it:
 
 ```bash
-rustup target add wasm32-wasip2
-cargo build --release --target wasm32-wasip2
-```
-
-The maintained interface is
-[`sdk/wit/lla-plugin.wit`](https://github.com/chaqchase/lla/blob/main/sdk/wit/lla-plugin.wit).
-
-## Install and test locally
-
-```bash
-cargo build --release
-lla install --dir /path/to/my-plugin
+lla install --dir .
 lla plugin doctor
-lla plugin info my_plugin
-lla plugin run my_plugin inspect -- README.md
-lla plugin run my_plugin inspect --output json -- README.md
 ```
 
-Workspace maintainers can validate an entire release bundle with:
+The installer needs `rustup`, because it runs `rustup target add wasm32-wasip2 --toolchain stable` and builds with the stable toolchain. It prints the requested permissions and asks `Approve these WASM sandbox permissions? [y/N]`. Without a terminal it fails with `requests new permissions (...); reinstall from a TTY to approve them`. Your answer is saved in `<plugins_dir>/plugin-grants.toml`, keyed by `id`.
 
-```bash
-./scripts/build_plugins.sh --target "$(rustc -vV | sed -n 's/^host: //p')"
-./scripts/verify_plugins_v3.sh dist/plugins-<os>-<arch>
-```
+Code needs these adjustments to run as a component:
 
-Use the SDK fixtures as executable examples:
+| Task | Native | Component |
+| --- | --- | --- |
+| Keep state between calls | Store it in `self` | Store it in `/data`. Each request gets a new instance. |
+| Read a selected entry | Open `entry.path` | Needs a `read:selection` or `read:tree` scope. |
+| Read a path argument | Open the path | Needs `read:user-path`. |
+| Run a subprocess | `std::process::Command` | Unavailable. |
+| Copy to the clipboard | Any crate | `crate::lla::plugin::host::clipboard_write(text)` with `clipboard = true`. |
+| Open a URL | Any crate | `crate::lla::plugin::host::open_url(url)` with `open_url = true`. |
+| Send an HTTP request | Any crate | A WASI HTTP client, to a host listed in `network`. |
 
-- [Minimal native plugin](https://github.com/chaqchase/lla/tree/main/sdk/tests/fixtures/minimal_native)
-- [Custom native batch](https://github.com/chaqchase/lla/tree/main/sdk/tests/fixtures/custom_batch)
-- [Rust WebAssembly component](https://github.com/chaqchase/lla/tree/main/sdk/tests/fixtures/wasm_component)
+`export_component!` generates the `crate::lla::plugin::host` module. Other languages can build a component from the published [WIT world](https://github.com/chaqchase/lla/blob/main/sdk/wit/lla-plugin.wit), though Rust is the only maintained SDK. See [Platform architecture](/docs/plugins/architecture#webassembly-runtime) for how the sandbox and its limits work.
+
+## Install from other sources
+
+| Command | Use it for |
+| --- | --- |
+| `lla install --dir PATH` | A local crate or a repository of plugins. |
+| `lla install --git URL` | A plugin published on GitHub. |
+| `lla install --prebuilt` | The official release bundle. |
+| `lla update NAME` | Rebuild a plugin from its recorded directory or repository. |
+
+`--dir` and `--git` search for `Cargo.toml` files that depend on `lla_plugin_sdk` or `lla_plugin_interface`, up to 5 levels deep, or 3 in a Cargo workspace. To share a plugin, publish its source so others can run `lla install --git`.
+
+The [first-party plugin list](/docs/first-party-plugins/overview) doubles as a set of examples. Their source is in [`plugins/`](https://github.com/chaqchase/lla/tree/main/plugins). To add one to the repository, follow [Contributing](/docs/support/contributing#add-a-bundled-plugin).

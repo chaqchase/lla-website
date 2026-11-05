@@ -1,23 +1,103 @@
 ---
-title: "Project Context"
-description: "Detects the nearest Rust, Node, Python, or Go project and exposes its root, dependency lock state, generated artifacts, toolchain versions, and Git branch/working-tree health. Multi-ecosystem repositories are reported as combined project types."
+title: "project_context"
+description: "Tags entries with their project type and health, and reports a project's locks, artifacts, toolchains and Git state."
 order: 30
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/project_context]
 ---
 
-# Project Context Plugin
+`project_context` finds the project a listing belongs to and reports its type, lockfile state, build artifacts, toolchains and Git state. Reach for it when you move between repositories and want to see each one's state without running several commands.
 
-Detects the nearest Rust, Node, Python, or Go project and exposes its root, dependency
-lock state, generated artifacts, toolchain versions, and Git branch/working-tree health.
-Multi-ecosystem repositories are reported as combined project types.
+<Shot name="plugin-project-context" alt="A listing of the interface directory with each entry tagged project: rust; dirty." caption="`lla interface` with `project_context` on." />
 
-```bash
-lla --enable-plugin project_context --long .
-lla --enable-plugin project_context --json --pretty .
-lla plugin run project_context inspect -- .
-lla plugin run project_context refresh
+## Turn it on
+
+```toml
+# ~/.config/lla/config.toml
+enabled_plugins = ["project_context"]
 ```
 
-The cache avoids running toolchain and Git probes once per displayed entry; use
-`refresh` before inspecting state changed by another process.
+Or run `lla --enable-plugin project_context`, which writes the same setting, so it stays on. `lla --disable-plugin project_context` removes it.
+
+Output shows in the default, long and table views. In the table view, the long text follows each row.
+
+The plugin looks for `Cargo.toml`, `package.json`, `pyproject.toml`, `requirements.txt`, `setup.py`, `Pipfile` or `go.mod`, walking up to 12 levels from the path you list. A repository with several ecosystems reports a combined type such as `rust+node`.
+
+<Callout type="warning" title="Relative paths can't walk above the current directory">
+`lla` from inside a project's `src/` reports `[project: none; not-a-project]`, and so does `inspect -- .`. Pass an absolute path instead: `lla "$PWD"` or `inspect -- "$PWD"`.
+</Callout>
+
+`project_health` is one of these:
+
+| Value | Meaning |
+| --- | --- |
+| `healthy` | No problems found |
+| `warning` | An ecosystem has no lockfile, or more than one |
+| `dirty` | The working tree has uncommitted changes |
+| `not-a-project` | No project marker found |
+
+The plugin adds these typed fields: `project_type`, `project_root` (path), `project_health`, `project_issues` (integer), `lockfile_state`, `build_artifacts`, `toolchains`, `repository_state` and `git_branch`. The rest are strings. `project_issues` counts lock problems plus uncommitted entries. Read them from JSON:
+
+```bash
+lla --json interface | jq -c '.[] | select(.name == "Cargo.toml") | .plugin | {project_type, project_health, project_issues, git_branch}'
+```
+
+```text
+{"project_type":"rust","project_health":"dirty","project_issues":5,"git_branch":"main"}
+```
+
+Or show them as columns:
+
+```toml
+[formatters.table]
+columns = ["name", "field:project_type", "field:project_health"]
+```
+
+## Actions
+
+Run an action with `lla plugin run project_context <action>`.
+
+| Action | What it does |
+| --- | --- |
+| `inspect -- <path>` | Print the full report for a path, always reading fresh values. The path is required |
+| `refresh` | Clear the cache |
+| `help` | Show help |
+
+All of them are interactive, so they need a TTY.
+
+## Example
+
+<Shot name="plugin-project-inspect" alt="The inspect action printing a repository's root, project types, health, locks, artifacts, toolchains, repository state and branch." caption="`lla plugin run project_context inspect -- .`" />
+
+```bash
+lla plugin run project_context inspect -- .
+```
+
+```text
+Root: .
+Project types: rust
+Health: dirty (5 issues)
+Locks: rust:Cargo.lock
+Artifacts: none
+Toolchains: rustc 1.99.0 (b940084d7 2026-09-28) (Homebrew)
+Repository: dirty
+Branch: main
+```
+
+A Rust and Node project with no Node lockfile, outside any Git repository, reports:
+
+```text
+Root: .
+Project types: rust, node
+Health: warning (1 issues)
+Locks: rust:Cargo.lock; node:missing
+Artifacts: target
+Toolchains: rustc 1.99.0 (b940084d7 2026-09-28) (Homebrew); node v24.14.1
+Repository: not-a-repository
+```
+
+The artifacts it checks for are `target`, `node_modules`, `.venv`, `venv`, `dist`, `build` and `__pycache__`.
+
+## Permissions
+
+`process = true`, because the plugin runs `git status`, `rustc --version`, `node --version`, `python3 --version` and `go version`. It also reads the project tree (`metadata:tree`, `read:tree`, `read:user-path`). Listings reuse a cached result for up to 2 seconds, unless the project's files change.

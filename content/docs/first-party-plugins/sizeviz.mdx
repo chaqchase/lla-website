@@ -1,53 +1,108 @@
 ---
-title: "Size Visualizer"
-description: "File size visualization plugin for `lla` providing real-time size analysis with rich formatting."
+title: "sizeviz"
+description: "Draws a bar beside each file that shows its size against a fixed 1 GiB reference."
 order: 34
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/sizeviz]
 ---
 
-# lla Size Visualizer Plugin
+`sizeviz` draws a bar beside each file that shows its size against a fixed 1 GiB reference. Turn it on when you want files in the hundreds of megabytes or larger to stand out while you browse.
 
-File size visualization plugin for `lla` providing real-time size analysis with rich formatting.
+## Turn it on
 
-## Features
+```toml
+# ~/.config/lla/config.toml
+enabled_plugins = ["sizeviz"]
+```
 
-- Human-readable size formatting
-- Visual progress bars with Unicode blocks
-- Size-based color coding
-- Multiple display formats
-- Smart caching and quick analysis
+Or run `lla --enable-plugin sizeviz`, which writes the same setting, so it stays on. `lla --disable-plugin sizeviz` removes it.
 
-## Configuration
+The bar shows in the default, long and table views. In the table view, the long text follows each row.
 
-Config file: `~/.config/lla/sizeviz/config.toml`
+Files get one typed field, `size` (bytes). Read it from JSON:
+
+```bash
+lla --json | jq -c '.[] | {name, size: .plugin.size}'
+```
+
+```text
+{"name":"medium.bin","size":2500000}
+{"name":"small.bin","size":4000}
+{"name":"sub","size":null}
+```
+
+Or show it as a column:
+
+```toml
+[formatters.table]
+columns = ["name", "size", "field:size"]
+```
+
+## Actions
+
+The only action is `help`: `lla plugin run sizeviz help`. It's interactive, so it needs a TTY.
+
+## Example
+
+```bash
+lla
+```
+
+```text
+backup.bin ██████████ 2.00 GB
+empty.txt ░░░░░░░░░░ 0 B
+medium.bin █░░░░░░░░░ 2.4 MB
+note.txt █░░░░░░░░░ 6 B
+small.bin █░░░░░░░░░ 3.9 KB
+sub/
+video.bin ██░░░░░░░░ 143.1 MB
+```
+
+The long view uses a wider bar and adds the percentage:
+
+```bash
+lla -l --hide-group small.bin
+```
+
+```text
+-rw-r--r-- 3.9K Nov 05 00:17 you small.bin
+┌─ Size ─────────────────────────────────────────
+│ █░░░░░░░░░░░░░░░░░░░ 3.9 KB
+│ 0.0% of reference (1GB)
+└──────────────────────────────────────────────────
+```
+
+## The 1 GB reference
+
+The reference is hard-coded at 1 GiB (1,073,741,824 bytes), and no setting changes it. That's why a 3.9 KB file reads `0.0% of reference (1GB)`.
+
+The bar rounds up to whole blocks, so any non-empty file shows one block. Each block stands for about 102 MiB in the default view and about 51 MiB in the long view. A file over 1 GiB fills the bar and its percentage passes 100.
+
+To compare the files in a directory with each other, use the [size map view](/docs/usage/views#size-map-view) instead:
+
+```bash
+lla -S
+```
+
+## Settings
+
+Set the bar colors in `~/.config/lla/plugins/sizeviz/config.toml`:
 
 ```toml
 [colors]
-tiny = "bright_green"      # ≤ 1KB
-small = "bright_cyan"      # 1KB - 1MB
-medium = "bright_yellow"   # 1MB - 10MB
-large = "bright_red"       # 10MB - 100MB
-huge = "bright_magenta"    # > 100MB
-info = "bright_blue"
-size = "bright_yellow"
-percentage = "bright_magenta"
+tiny = "bright_green"
+small = "bright_cyan"
+medium = "bright_yellow"
+large = "bright_red"
+huge = "bright_magenta"
 ```
 
-## Display Formats
+| Key | Used for files |
+| --- | --- |
+| `tiny` | Up to 1 KiB |
+| `small` | Up to 1 MiB |
+| `medium` | Up to 10 MiB |
+| `large` | Up to 1 GiB |
+| `huge` | Above 1 GiB |
 
-Default:
-
-```
-document.pdf
-█████░░░░░ 2.5 MB
-```
-
-Long:
-
-```
-┌─ Size ────────────────────────────────────
-│ ████████████░░░░░░░░░░ 25.5 MB
-│ 2.5% of reference (1GB)
-└──────────────────────────────────────────
-```
+The five values above are the only colors that render. Any other value comes out white. The plugin rewrites this file when it loads, so comments you add won't survive.

@@ -1,77 +1,94 @@
 ---
-title: "File Tagger"
-description: "A file tagging plugin for `lla` that provides persistent tag management."
+title: "file_tagger"
+description: "Attaches tags to file paths and shows them in default and long listings."
 order: 16
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/file_tagger]
 ---
 
-# lla File Tagger Plugin
+`file_tagger` attaches tags to file paths and shows them in listings. Reach for it when you want to mark files as `work` or `important` and find them again later with `files-by-tag`.
 
-A file tagging plugin for `lla` that provides persistent tag management.
-
-## Features
-
-- Add, remove, and list file tags
-- Persistent storage with efficient lookup
-- Color-coded tag display
-- Interactive commands
-- List all tags across files
-- Query files by tag
-
-## Configuration
-
-Config file: `~/.config/lla/file_tagger/config.toml`
+## Turn it on
 
 ```toml
-[colors]
-tag = "bright_cyan"        # Tag text
-tag_label = "bright_green" # Tag label
-success = "bright_green"   # Success messages
-info = "bright_blue"      # Info messages
-name = "bright_yellow"    # Name highlighting
+# ~/.config/lla/config.toml
+enabled_plugins = ["file_tagger"]
 ```
 
-## Storage
-
-Persistent tag data is stored at: `~/.config/lla/file_tags.txt`
-
-## Usage
+Or run this once. It saves the same setting, so the plugin stays on until you run `lla --disable-plugin file_tagger`.
 
 ```bash
-# Add tag
-lla plugin run file_tagger add-tag -- "/path/to/file" "important"
-
-# Remove tag
-lla plugin run file_tagger remove-tag -- "/path/to/file" "important"
-
-# List tags
-lla plugin run file_tagger list-tags -- "/path/to/file"
-
-# List all tags
-lla plugin run file_tagger all-tags
-
-# List files by tag
-lla plugin run file_tagger files-by-tag -- "important"
-
-# Help
-lla plugin run file_tagger help
+lla --enable-plugin file_tagger
 ```
 
-### Display Examples
+Tags appear in the default and long views (`formats = ["default", "long"]`), and in the table view, which uses the long format. They come from one string field, `tags`.
 
-Default format:
-
-```
-document.pdf
-Tags: [important] [work] [urgent]
+```bash
+lla --json | jq '.[] | select(.name=="README.md") | .plugin'
 ```
 
-Long format:
+```text
+{
+  "tags": "important, work"
+}
+```
 
+<Callout type="warning" title="Tags match the exact path string">
+A tag shows only when the listing produces the same path you tagged. `lla` and `lla .` list `./README.md`, so tag that form and run from the same directory. A tag on `/abs/dir/README.md` shows only with `lla /abs/dir`, and a tag on plain `README.md` never shows.
+</Callout>
+
+## Actions
+
+Run an action with `lla plugin run file_tagger <action> -- <args>`. Every action is interactive, so it needs a TTY and the default `--output human`. Running one also enables the plugin and saves that setting.
+
+| Action | Arguments | What it does |
+| --- | --- | --- |
+| `add-tag` | `<file> <tag>` | Adds a tag. |
+| `remove-tag` | `<file> <tag>` | Removes a tag. |
+| `list-tags` | `<file>` | Lists a file's tags. |
+| `all-tags` | | Lists every tag in use. |
+| `files-by-tag` | `<tag>` | Lists the files with a tag. |
+| `help` | | Prints usage. |
+
+Tags live in `file_tags.txt`, in `~/Library/Application Support/lla/` on macOS and `~/.config/lla/` on Linux. It holds one path and tag per line. The plugin doesn't check that the path exists.
+
+## Example
+
+```bash
+lla plugin run file_tagger add-tag -- ./README.md important
+lla plugin run file_tagger add-tag -- ./README.md work
+lla
 ```
-document.pdf
-Tag: important
-Tag: work
-Tag: urgent
+
+```text
+┌──────────────────────────────────────┐
+│ Added tag 'important' to ./README.md │
+└──────────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│ Added tag 'work' to ./README.md │
+└─────────────────────────────────┘
+
+.git/
+README.md 
+┌─
+│ Tags         [important] [work]
+└─
+
+docs/
+src/
 ```
+
+```bash
+lla plugin run file_tagger files-by-tag -- important
+```
+
+```text
+┌─
+│ All Files for [important] ./README.md
+└─
+```
+
+## Settings
+
+`~/.config/lla/plugins/file_tagger/config.toml` sets colors in a `[colors]` table: `tag` and `tag_label`.

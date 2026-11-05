@@ -1,22 +1,97 @@
 ---
-title: "Security Audit"
-description: "Audits listing entries and directory trees without reading file contents. It reports world-writable entries, SUID/SGID bits, dangling or escaping symlinks, and secret-like files whose permissions expose them to a group or other users."
+title: "security_audit"
+description: "Flags world-writable entries, SUID and SGID bits, risky symlinks and exposed secret files, using metadata only."
 order: 33
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/security_audit]
 ---
 
-# Security Audit Plugin
+`security_audit` scores entries for risky permissions and symlinks. It reads metadata and never opens a file. Reach for it before you share a directory or deploy from it, or when you want to find secret files that other users can read.
 
-Audits listing entries and directory trees without reading file contents. It reports
-world-writable entries, SUID/SGID bits, dangling or escaping symlinks, and secret-like
-files whose permissions expose them to a group or other users.
+<Shot name="plugin-security-audit" alt="An audit reporting a critical world-writable script, a high exposed .env file and a medium symlink that escapes its directory." caption="`lla plugin run security_audit audit -- . --recursive`" />
 
-```bash
-lla --enable-plugin security_audit --long .
-lla --enable-plugin security_audit --json --pretty .
-lla plugin run security_audit audit -- . -- --recursive
+## Turn it on
+
+The `audit` action works whether or not the plugin is on. Turn it on to score every entry in your listings:
+
+```toml
+# ~/.config/lla/config.toml
+enabled_plugins = ["security_audit"]
 ```
 
-Machine output includes `security_risk`, `security_score`, `security_findings`,
-`suspicious_symlink`, and `secret_exposed`.
+Or run `lla --enable-plugin security_audit`, which writes the same setting, so it stays on. `lla --disable-plugin security_audit` removes it.
+
+Scores show in the default, long and table views. In the table view, the long text follows each row.
+
+```text
+.env [security: high (75)]
+README.md [security: clean (0)]
+dead [security: medium (45)]
+scripts/ [security: clean (0)]
+```
+
+The plugin adds five typed fields: `security_risk` (string), `security_score` (integer), `security_findings` (string), `suspicious_symlink` (boolean) and `secret_exposed` (boolean). Read them from JSON:
+
+```bash
+lla --json | jq -c '.[] | select(.plugin.secret_exposed) | .name'
+```
+
+Or show them as columns:
+
+```toml
+[formatters.table]
+columns = ["name", "field:security_risk", "field:security_score"]
+```
+
+```text
+│ .env      │ high          │ 75             │ Security risk: high (75/100)
+```
+
+## What it checks
+
+Each finding adds to the score, up to 100.
+
+| Finding | Score |
+| --- | --- |
+| SUID executable bit is set | 80 |
+| Secret-like file is readable or writable by group or others | 75 |
+| World-writable entry | 65 |
+| SGID executable bit is set | 65 |
+| Executable is writable by group or others | 50 |
+| Unreadable symlink target | 50 |
+| Dangling symlink | 45 |
+| Symlink targets outside its containing directory | 35 |
+| Group-writable directory lacks a sticky bit | 30 |
+| World-writable directory protected by sticky bit | 20 |
+
+The total sets the risk level: `clean` at 0, `low` from 1, `medium` from 30, `high` from 60 and `critical` from 90.
+
+Secret-like names are `.env`, `.env.local`, `.env.production`, `.npmrc`, `.pypirc`, `.netrc`, `id_rsa`, `id_dsa`, `id_ed25519`, `credentials`, `credentials.json`, `service-account.json`, and anything ending in `.pem`, `.key`, `.p12` or `.pfx`.
+
+## Actions
+
+Run an action with `lla plugin run security_audit <action>`.
+
+| Action | What it does |
+| --- | --- |
+| `audit -- <path> [--recursive]` | Report entries with findings. Without `--recursive` it covers the path and its direct children |
+| `help` | Show help |
+
+Both are interactive, so they need a TTY.
+
+## Example
+
+```bash
+lla plugin run security_audit audit -- . --recursive
+```
+
+```text
+high   75/100  ./notes/.env
+  - secret-like file is readable or writable by group/others
+critical  100/100  ./notes/deploy.sh
+  - world-writable entry
+  - executable is writable by group or others
+medium   35/100  ./notes/hosts-link
+  - symlink targets outside its containing directory
+Audited 541 entries; 3 had findings.
+```

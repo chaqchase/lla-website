@@ -1,84 +1,78 @@
 ---
-title: "Machine Output"
-description: "Emit stable JSON, NDJSON, and CSV for scripts and pipelines, including plugin fields and search-result contracts."
+title: "Machine output"
+description: "Print listings as JSON, NDJSON or CSV for scripts and pipelines, with fixed fields and typed plugin data."
 order: 5
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/machine-output.md]
 ---
 
-# Machine output
-
-`lla` provides stable JSON, NDJSON, and CSV listing modes for scripts and data
-pipelines. They preserve normal path, filtering, sorting, depth, and archive
-behavior; only rendering changes. JSON and NDJSON include plugin fields, while
-listing CSV uses the fixed schema below.
-
-## Formats
+These flags replace the human-readable view with data for scripts. Paths, filters, sorting, depth and archive handling all work as usual.
 
 ```bash
-lla --json
-lla --json --pretty
-lla --ndjson
-lla --csv
+lla --json            # one JSON array
+lla --json --pretty   # the same, indented
+lla --ndjson          # one JSON object per line
+lla --csv             # a header row, then data rows
 ```
 
-- `--json` streams one JSON array. `--pretty` only affects this mode.
-- `--ndjson` emits one JSON object per line.
-- `--csv` emits a header followed by data rows.
-- The three output flags are mutually exclusive.
+The three formats are mutually exclusive.
+
+<Diagram caption="One selection, several outputs."><OutputPipeline /></Diagram>
 
 ## JSON and NDJSON fields
 
+<Shot name="json-pretty" alt="Indented JSON describing a single file, with fields for path, size, dates and owner." caption="`lla Cargo.toml --json --pretty | head -25`" />
+
 ```json
 {
-  "path": "src/main.rs",
-  "name": "main.rs",
-  "extension": "rs",
+  "path": "Cargo.toml",
+  "name": "Cargo.toml",
+  "extension": "toml",
   "file_type": "file",
-  "size_bytes": 1234,
-  "modified": "2024-05-01T12:34:56Z",
-  "created": null,
-  "accessed": null,
+  "size_bytes": 1379,
+  "modified": "2026-10-30T22:28:00Z",
+  "created": "2026-10-07T15:26:54Z",
+  "accessed": "2026-10-30T22:28:00Z",
   "mode_octal": "0644",
-  "owner_user": "mohamed",
+  "owner_user": "you",
   "owner_group": "staff",
-  "inode": 1234567,
+  "inode": 262,
   "hard_links": 1,
   "allocated_size_bytes": 4096,
-  "xattrs": {"user.example": 12},
+  "xattrs": {},
   "has_acl": false,
   "security_context": null,
   "mount_point": "/",
-  "mount_source": "/dev/sda1",
-  "filesystem": "ext4",
+  "mount_source": "/dev/disk3s1",
+  "filesystem": "apfs",
   "symlink_target": null,
   "is_hidden": false,
-  "git_status": "M.",
+  "git_status": null,
   "plugin": {}
 }
 ```
 
-`extension`, timestamps other than `modified`, ownership, filesystem metadata,
-the symlink target, and Git status can be `null`. `file_type` is `file`, `dir`,
-`symlink`, or `other`. The `plugin` object contains enabled plugin fields.
+`file_type` is `file`, `dir`, `symlink` or `other`. `extension`, timestamps other than `modified`, ownership, filesystem metadata, `symlink_target` and `git_status` can be `null`. `plugin` holds the fields from your enabled plugins.
+
+For example, to print the ten entries with the largest sizes:
+
+```bash
+lla --json -s size | jq -r '.[:10][] | [.size_bytes, .name] | @tsv'
+```
+
+<Shot name="json-jq" alt="The output of lla piped into jq, printing sizes and names in two columns." caption="The same listing, shaped by `jq`." />
 
 ## CSV columns
 
-CSV uses this fixed column order:
+CSV uses a fixed column order and doesn't include plugin fields:
 
 ```text
 path,name,extension,file_type,size_bytes,modified,created,accessed,mode_octal,owner_user,owner_group,inode,hard_links,allocated_size_bytes,xattrs,has_acl,security_context,mount_point,mount_source,filesystem,symlink_target,is_hidden,git_status
 ```
 
-Plugin actions have their own typed output modes. See
-[Installing and managing plugins](/docs/plugins/overview#run-an-action).
-
-For selecting records before emission, see
-[Filtering and search](/docs/usage/filtering-search).
-
 ## Search results
 
-Content search uses a separate output contract:
+`--search` has its own output format, which differs from the listings above.
 
 ```bash
 lla --search "TODO" --json
@@ -86,20 +80,22 @@ lla --search "TODO" --ndjson
 lla --search "TODO" --csv
 ```
 
-For search, both `--json` and `--ndjson` pass through ripgrep's newline-delimited
-JSON event stream. It contains ripgrep event types such as `begin`, `match`,
-`end`, and `summary`; it is not the listing JSON array described above.
-`--pretty` does not transform this event stream.
+Both `--json` and `--ndjson` pass through ripgrep's stream of JSON events, one per line, with types such as `begin`, `context`, `match`, `end` and `summary`. It isn't a single array, and `--pretty` has no effect on it.
 
-Search CSV currently prints one line per collected match under these columns:
+```json
+{"type":"begin","data":{"path":{"text":"./lla/src/commands/search.rs"}}}
+```
+
+`--csv` prints one row per collected line under these columns:
 
 ```text
 file,line,column,kind,text
 ```
 
-This search-specific renderer does not fully escape commas or quotes in file
-names, so use the ripgrep JSON event stream when paths may contain those
-characters.
+<Callout type="warning" title="Unusual file names">
+  Search CSV doesn't fully escape commas or quotes in file names. Use `--json` if your paths might contain them.
+</Callout>
 
-See [Filtering and search](/docs/usage/filtering-search#search-file-contents) for the
-search filters that are currently applied.
+## Plugin actions
+
+Plugin actions have their own output modes, set with `--output`. See [Run an action](/docs/plugins/overview#run-an-action).

@@ -1,85 +1,90 @@
 ---
-title: "Folder Cleaner"
-description: "`folder_cleaner` is a safety-first plugin for turning chaotic folders into clean, unified directory structures. It scans a target folder, builds a reviewable plan, lets you approve the exact actions, and quarantines cleanup candidates instead of deleting them."
+title: "folder_cleaner"
+description: "Plans how to sort and clean a messy folder, moves clutter to quarantine, and can undo the run."
 order: 18
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/folder_cleaner]
 ---
 
-# lla Folder Cleaner Plugin
+`folder_cleaner` scans a folder, saves a plan for sorting files and setting clutter aside, then applies the plan after you confirm. Reach for it on a folder such as `~/Downloads` when you want to review every move and be able to undo the run. It adds nothing to listings.
 
-`folder_cleaner` is a safety-first plugin for turning chaotic folders into clean,
-unified directory structures. It scans a target folder, builds a reviewable plan,
-lets you approve the exact actions, and quarantines cleanup candidates instead
-of deleting them.
+Cleanup candidates go to `.lla-quarantine/<plan_id>/` inside the folder and stay there until you empty the quarantine. The candidates are temporary files, OS junk, empty directories, duplicates (the oldest copy stays) and archives older than 30 days.
 
-## Features
+## Actions
 
-- Recursive scan with safe defaults and ignored system/project folders.
-- Configurable category rules for documents, images, videos, audio, archives,
-  code, design files, spreadsheets, presentations, books, installers, logs, and
-  uncategorized files.
-- Conservative cleanup detection for temporary files, OS metadata junk, empty
-  directories, duplicate files, and old archives.
-- SHA-256 duplicate detection with size limits; the oldest copy is kept.
-- Preview-first workflow with saved JSON plans.
-- Compact approval for large plans: apply all actions, organize only,
-  quarantine only, choose individual actions, or cancel.
-- Quarantine-first cleanup under `.lla-quarantine/<plan_id>/`.
-- Preflight validation before any move: missing sources, stale targets, duplicate
-  sources, and unsafe source/target chains stop the run before changes happen.
-- Incremental run manifests with source path, target path, operation type,
-  timestamp, optional hash, completion status, and restore status.
-- Restore support for completed runs.
-- Doctor diagnostics for partial runs, missing targets, orphaned quarantine
-  files, and repairable moved files.
+Run an action with `lla plugin run folder_cleaner <action> -- <args>`. Every action is interactive, so it needs a TTY and the default `--output human`. A directory defaults to the current one.
 
-## Usage
+| Action | Arguments | What it does |
+| --- | --- | --- |
+| `scan` | `[dir]` | Prints a summary and saves nothing. |
+| `preview` | `[dir] [profile]` | Prints the planned actions and saves the plan. |
+| `clean` | `[dir] [profile]` | Previews, asks which actions to run (all, organize only, quarantine only or one by one), then runs them. |
+| `apply` | `<plan_id>` | Applies a saved plan after a confirmation. |
+| `show-plan` | `<plan_id>` | Prints a saved plan. |
+| `restore` | `[run_id]` | Moves a run's items back after a confirmation. With no ID, you pick the run. Folders the run created stay in place. |
+| `history` | | Lists saved plans and runs. |
+| `doctor` | `[run_id] [--repair]` | Checks run records and recovers restorable items when asked. |
+| `quarantine-list` | | Lists quarantined files. |
+| `quarantine-empty` | `[days]` | Permanently deletes quarantined files older than `days`, by file modified time, after a confirmation. Defaults to 30. |
+| `config-wizard` | | Adjusts common settings through prompts. |
+| `help` | | Prints usage. |
+
+| Profile | Organize | Cleanup | Scan |
+| --- | --- | --- | --- |
+| `downloads` (default) | yes | yes | Recursive, depth 8 |
+| `desktop` | yes | yes | Recursive, depth 8 |
+| `project` | yes | yes | Top level only |
+| `media` | yes | no | Recursive, depth 6 |
+
+<Callout type="warning" title="Read the plan before using the project profile">
+The `project` profile doesn't look inside subdirectories, so it lists them as `empty directory` even when they hold files. Applying the plan moves those whole directories into quarantine. `restore` puts them back.
+</Callout>
+
+## Example
 
 ```bash
-# Analyze a folder without saving or moving anything
-lla plugin run folder_cleaner scan -- ~/Downloads
-
-# Preview and save a proposed plan
-lla plugin run folder_cleaner preview -- ~/Downloads downloads
-
-# Preview, interactively approve, and apply selected actions
-lla plugin run folder_cleaner clean -- ~/Downloads downloads
-
-# Apply a saved plan
-lla plugin run folder_cleaner apply -- plan-20260508090000000
-
-# Restore files moved by a previous run
-lla plugin run folder_cleaner restore -- run-20260508090000000
-
-# If you pass a plan id to restore, or a run-like id made from a plan timestamp,
-# folder_cleaner resolves the applied run when there is exactly one match.
-
-# Inspect history and render saved plans
-lla plugin run folder_cleaner history
-lla plugin run folder_cleaner show-plan -- plan-20260508090000000
-
-# Diagnose run health; add --repair to restore recoverable moved files
-lla plugin run folder_cleaner doctor
-lla plugin run folder_cleaner doctor -- run-20260508090000000 --repair
-
-# Inspect or empty quarantine
-lla plugin run folder_cleaner quarantine-list
-lla plugin run folder_cleaner quarantine-empty -- 30
-
-# Edit common profile settings
-lla plugin run folder_cleaner config-wizard
+lla plugin run folder_cleaner preview -- ~/project/clean
 ```
-
-## Configuration
-
-The config file is created at:
 
 ```text
-~/.config/lla/plugins/folder_cleaner/config.toml
+Folder Cleaner Preview
+Plan: plan-20261104230028394
+Directory: ~/project/clean
+Profile: downloads
+Actions: 9
+Summary: 5 organize · 4 quarantine · 75 B quarantine bytes · 1 duplicates · 1 empty dirs
+
+Organize 5
+  [1] report copy.pdf -> Documents/report copy.pdf (organize as documents)
+  [2] unknown.xyz -> Uncategorized/unknown.xyz (organize as uncategorized)
+  [3] photo.png -> Images/photo.png (organize as images)
+  [4] sub/script.py -> Code/script.py (organize as code)
+  [5] notes.md -> Documents/notes.md (organize as documents)
+
+Quarantine 4
+  [6] scratch.tmp -> .lla-quarantine/plan-20261104230028394/scratch.tmp (temporary or backup file)
+  [7] archive.zip -> .lla-quarantine/plan-20261104230028394/archive.zip (archive older than 30 days)
+  [8] report.pdf -> .lla-quarantine/plan-20261104230028394/report.pdf (duplicate file; oldest copy kept)
+  [9] empty-dir -> .lla-quarantine/plan-20261104230028394/empty-dir (empty directory)
+Info: Saved plan plan-20261104230028394 at ~/.config/lla/plugins/folder_cleaner/plans/plan-20261104230028394.json
 ```
 
-Important sections:
+```bash
+lla plugin run folder_cleaner apply -- plan-20261104230028394
+lla plugin run folder_cleaner history
+lla plugin run folder_cleaner restore -- run-20261104230029646
+```
+
+```text
+Success: Applied plan plan-20261104230028394 as run run-20261104230029646
+run-20261104230029646  9 actions  9 completed  0 restored  4 quarantined  ~/project/clean
+plan-20261104230028394  9 actions  downloads  ~/project/clean
+Success: Restored 9 items from run run-20261104230029646
+```
+
+## Settings
+
+The plugin reads `~/.config/lla/plugins/folder_cleaner/config.toml` and keeps plans and run records in `plans/` and `runs/` beside it.
 
 ```toml
 [scan]
@@ -88,16 +93,13 @@ max_depth = 8
 include_hidden = false
 follow_symlinks = false
 same_filesystem = true
-ignore_patterns = [".git", "node_modules", "target", ".venv", ".lla-quarantine"]
+ignore_patterns = [".git", "node_modules", "target", ".lla-quarantine"]
 
 [safety]
 quarantine_dir = ".lla-quarantine"
 require_confirmation = true
-allow_permanent_delete = false
-collision_policy = "rename"
 
 [cleanup]
-level = "conservative"
 duplicate_detection = true
 empty_dirs = true
 temp_files = true
@@ -105,49 +107,24 @@ os_junk = true
 old_archives = true
 duplicate_max_bytes = 268435456
 old_archive_days = 30
-```
 
-Rules use extensions plus optional glob patterns:
+[profiles.media]
+organize = true
+cleanup = false
+recursive = true
+max_depth = 6
+include_hidden = false
 
-```toml
 [[rules]]
-category = "documents"
-destination = "Documents"
-extensions = ["pdf", "docx", "txt", "md"]
+category = "notes"
+destination = "Notes"
+extensions = ["org"]
 filename_patterns = []
 path_patterns = []
 ```
 
-Built-in image rules include common modern camera and web formats such as
-`jpg`, `jpeg`, `png`, `gif`, `bmp`, `svg`, `webp`, `heic`, `avif`, `tif`,
-`tiff`, `raw`, `cr2`, and `nef`.
+`require_confirmation = false` skips only the final prompt in `clean`. `apply`, `restore` and `quarantine-empty` always ask. The `cleanup.level` and `safety.allow_permanent_delete` keys do nothing in 0.6.6.
 
-Existing config files are preserved, but the plugin merges newly supported
-default rules into them on startup. User settings such as `old_archive_days`
-remain unchanged.
+## Permissions
 
-Saved plans and run manifests live under:
-
-```text
-~/.config/lla/plugins/folder_cleaner/plans
-~/.config/lla/plugins/folder_cleaner/runs
-```
-
-## Safety Model
-
-`folder_cleaner` does not permanently delete during normal organization or
-cleanup, even with aggressive cleanup defaults. Cleanup candidates are moved
-into quarantine, and `restore <run_id>` can move completed actions back.
-Permanent removal is limited to the explicit `quarantine-empty` action and
-still requires confirmation.
-
-If a run is interrupted or files are hard to find, use:
-
-```bash
-lla plugin run folder_cleaner doctor
-lla plugin run folder_cleaner history
-```
-
-`doctor --repair` restores recoverable files whose targets still exist. Orphaned
-quarantine files are reported but left in place because their original paths are
-unknown.
+`filesystem = ["read:tree", "write:tree", "delete:quarantine"]`: it moves files inside the target folder, and `quarantine-empty` deletes from the quarantine.

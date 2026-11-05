@@ -1,25 +1,21 @@
 ---
-title: "Architecture Handbook"
-description: "Canonical technical guide to the lla workspace and Plugin Platform v3: execution pipeline, plugin lifecycle, SDK, security, packaging, and releases."
+title: "Architecture handbook"
+description: "How the lla workspace works: the listing pipeline, Plugin Platform v3, the SDK, permissions, packaging and releases."
 order: 3
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/handbook.md]
 ---
 
-# lla architecture and Plugin Platform handbook
+This handbook explains how the `lla` workspace and Plugin Platform v3 work, from the listing pipeline to the release process. Read it when you need the whole system on one page.
 
-This is the canonical technical guide to the `lla` workspace and Plugin
-Platform v3. It is intended for four audiences:
+| If you are | Start at |
+| --- | --- |
+| Installing and running plugins | [Install and use plugins](#install-and-use-plugins) |
+| Building a plugin | [Create a complete native plugin](#create-a-complete-native-plugin) |
+| Changing the host, SDK or formatters | [CLI execution architecture](#cli-execution-architecture) |
+| Building and publishing a release | [Release architecture](#release-architecture) |
 
-- users installing, enabling, and running plugins;
-- plugin authors building native or WebAssembly packages;
-- contributors changing the host, SDK, interface, or formatters;
-- maintainers building and publishing releases.
-
-The root [README](/docs/about/introduction) is the product overview. This handbook explains
-how the implementation works, how to create a complete plugin, and how to
-operate the plugin lifecycle safely. Focused references remain available in
-[`docs/plugins`](/docs/plugins/overview) and are linked throughout this guide.
+Shorter pages cover the same ground by task: [plugins](/docs/plugins/overview), [developing plugins](/docs/plugins/developing), the [manifest reference](/docs/plugins/manifest) and [releasing](/docs/support/releasing).
 
 ## Contents
 
@@ -78,11 +74,15 @@ formatter ── terminal view or JSON/NDJSON/CSV
 Subcommands such as `install`, `plugin run`, `diff`, `jump`, and `upgrade`
 branch from command dispatch and do not necessarily use the listing pipeline.
 
-The default Cargo feature is `dynamic-plugins`, which enables native plugins
-without embedding Wasmtime. `wasm-plugins` opts into the Component Model runtime
-and implies `dynamic-plugins`. A binary compiled with `--no-default-features`
-retains core listing behavior but uses the static plugin-manager stub and
-reports that dynamic plugins are unavailable.
+Cargo features decide which plugins a build can load:
+
+| Build | Native plugins | WebAssembly components |
+| --- | --- | --- |
+| Default, the `dynamic-plugins` feature | yes | no |
+| `--features wasm-plugins`, which implies `dynamic-plugins` | yes | yes |
+| `--no-default-features` | no | no |
+
+A build with `--no-default-features` keeps core listing behavior. It uses the static plugin-manager stub and reports that dynamic plugins are unavailable.
 
 ## Workspace map
 
@@ -108,6 +108,8 @@ types needed by implementations and the export macros needed at the crate root.
 
 ### Startup and configuration
 
+<Diagram caption="Flags override the project profile, which overrides your config file, which overrides the built-in defaults."><ConfigLayers /></Diagram>
+
 At startup, `lla`:
 
 1. loads built-in defaults;
@@ -127,25 +129,22 @@ lla config show-effective
 lla config diff --default
 ```
 
-CLI flags override effective configuration for the current invocation. Plugin
-enable/disable commands persist changes to the global configuration.
+CLI flags override effective configuration for the current invocation, with one
+exception. `--enable-plugin` and `--disable-plugin` write to the global
+configuration and stay in effect.
 
 ### Listing pipeline
 
-The normal listing path is deliberately staged:
+A normal listing runs in stages:
 
-1. **Select a lister.** Basic, recursive, fuzzy, single-file, and archive paths
-   produce filesystem paths or virtual archive entries.
-2. **Read metadata.** The host builds `DecoratedEntry` values with an
-   `EntryMetadata` record. Symlink handling and optional directory-size
-   calculation happen here.
-3. **Apply filters.** Name, extension, glob, regex, size, timestamps, file type,
-   dotfile, Git-ignore, and preset filters remove entries before rendering.
-4. **Decorate entries.** Enabled plugins supporting the selected plugin format
-   receive batches of entries and may add string and typed fields.
-5. **Sort.** Name, size, and date sorters apply directory-first, reverse,
-   case-sensitive, and natural-order options.
-6. **Format.** A terminal formatter or machine serializer produces output.
+| Stage | What happens |
+| --- | --- |
+| Select a lister | Basic, recursive, fuzzy, single-file and archive paths produce filesystem paths or virtual archive entries. |
+| Read metadata | The host builds `DecoratedEntry` values with an `EntryMetadata` record. Symlink handling and optional directory-size calculation happen here. |
+| Apply filters | Name, extension, glob, regex, size, timestamp, file type, dotfile, Git-ignore and preset filters remove entries before rendering. |
+| Decorate entries | Enabled plugins that declare the view's format receive batches of entries and can add string and typed fields. |
+| Sort | Name, size and date sorters apply directory-first, reverse, case-sensitive and natural-order options. |
+| Format | A terminal formatter or machine serializer produces output. |
 
 Expensive metadata such as recursive directory sizes, extended attributes,
 security context, and mount details is only calculated when requested.
@@ -155,10 +154,12 @@ security context, and mount details is only calculated when requested.
 `FileLister` is the host abstraction for obtaining paths. Implementations live
 under `lla/src/lister/`:
 
-- `BasicLister`: immediate directory contents;
-- `RecursiveLister`: recursive traversal with depth and safety limits;
-- `FuzzyLister`: candidates for interactive fuzzy selection;
-- archive support: `.zip`, `.tar`, `.tar.gz`, and `.tgz` virtual entries.
+| Lister | Produces |
+| --- | --- |
+| `BasicLister` | Immediate directory contents. |
+| `RecursiveLister` | Recursive traversal with depth and safety limits. |
+| `FuzzyLister` | Candidates for interactive fuzzy selection. |
+| Archive support | Virtual entries from `.zip`, `.tar`, `.tar.gz` and `.tgz` files. |
 
 ### Filters and sorters
 
@@ -171,32 +172,29 @@ alphabetical, size, and date ordering.
 
 Human formatters live under `lla/src/formatter/`:
 
-| CLI | Host formatter | Purpose |
-| --- | --- | --- |
-| `lla` | default | compact names and optional plugin suffixes |
-| `lla -l` | long | detailed configurable columns |
-| `lla -T` | table | structured configurable columns |
-| `lla -t` | tree | hierarchy |
-| `lla -g` | grid | terminal-width-aware grid |
-| `lla -R` | recursive | grouped recursive listing |
-| `lla -G` | Git | repository status view |
-| `lla --timeline` | timeline | time-grouped listing |
-| `lla -S` | sizemap | size bars and totals |
-| `lla -F` | fuzzy | interactive selection |
-| `lla --json` | JSON | streamed JSON array |
-| `lla --ndjson` | NDJSON | one JSON object per entry |
-| `lla --csv` | CSV | stable fixed columns |
+| CLI | Host formatter | Plugin format | Purpose |
+| --- | --- | --- | --- |
+| `lla` | default | `default` | compact names and optional plugin suffixes |
+| `lla -l` | long | `long` | detailed configurable columns |
+| `lla -T` | table | `long` | structured configurable columns |
+| `lla -t` | tree | `tree` | hierarchy |
+| `lla -g` | grid | `grid` | terminal-width-aware grid |
+| `lla -R` | recursive | `recursive` | grouped recursive listing |
+| `lla -G` | Git | `git` | repository status view |
+| `lla --timeline` | timeline | `timeline` | time-grouped listing |
+| `lla -S` | sizemap | `sizemap` | size bars and totals |
+| `lla -F --respect-gitignore` | fuzzy | `fuzzy`, decoration only | interactive selection |
+| `lla --json` | JSON | view flag's format, or `default` | streamed JSON array |
+| `lla --ndjson` | NDJSON | view flag's format, or `default` | one JSON object per entry |
+| `lla --csv` | CSV | view flag's format, or `default` | fixed columns, no plugin fields |
 
-Plugin Platform v3 currently normalizes plugin formatting to `default` and
-`long`; table uses the `long` plugin representation. Other human views do not
-currently invoke plugin formatting through the v3 format contract. Typed fields
-already present on an entry are included in JSON/NDJSON under `plugin`.
+A plugin is only called for a view whose format it lists in `capabilities.formats`.
+Typed fields on an entry appear in JSON and NDJSON under `plugin`.
 
 ## Using lla
 
-This section consolidates the public workflows. Run `lla --help` or
-`lla <subcommand> --help` for the exact options supported by the installed
-version.
+This section collects the everyday commands. Run `lla --help` or
+`lla <subcommand> --help` for the exact options of your installed version.
 
 ### Basic listing and views
 
@@ -212,11 +210,12 @@ lla -R -d 3                 # recursive view
 lla -G                      # Git view
 lla --timeline              # group by modification period
 lla -S --include-dirs       # sizemap with recursive directory sizes
-lla -F                      # interactive fuzzy finder
+lla -F --respect-gitignore  # interactive fuzzy finder
 ```
 
 View flags override `default_format` from configuration. `--include-dirs` can
-be expensive because it recursively calculates directory sizes.
+be expensive because it recursively calculates directory sizes. `-F` needs
+`--respect-gitignore`, or `respect_gitignore = true` in configuration.
 
 ### Visibility and file types
 
@@ -240,23 +239,34 @@ retaining link identity. `--no-symlink-target` hides the `-> target` suffix.
 
 ```bash
 lla -f '.rs'                        # name/extension filter
+lla -f '.rs OR .toml'               # either extension
 lla --size '>10M'
 lla --size '5K..2G'
-lla --modified '<7d'
+lla --modified '>7d'                # changed within the last 7 days
 lla --modified '2026-01-01..2026-12-31'
-lla --created '<24h'
+lla --created '>24h'                # created within the last 24 hours
 lla --preset source-files
 lla --case-sensitive -f README
 ```
 
-Filters compose with visibility, traversal, sort, and output options. Named
-presets are defined in configuration. Repeat `--refine <expression>` to apply
-additional name/path filters sequentially after the normal walk and plugin
-decoration, for example `lla --refine '*.rs' --refine test`. Each expression
-uses the same filter language as `--filter`, and every refinement must match.
-Despite the CLI help's historical “previous listing/cache” wording, the current
-implementation does not read a persisted prior listing and still walks the
-filesystem normally.
+Filters compose with visibility, traversal, sort and output options. For
+`--modified` and `--created`, `>` means newer than the given age and `<` means
+older.
+
+Named presets are defined in configuration:
+
+```toml
+[filter.presets.source-files]
+filter = ".rs OR .toml"
+```
+
+Repeat `--refine <expression>` to narrow a listing further, as in
+`lla --refine 'glob:*.rs' --refine test`. Each expression uses the `--filter`
+language, and every refinement must match.
+
+`--refine` reads the cached listing at `<cache dir>/lla/listings/<key>.json` when
+one exists and skips the walk, so it can miss files created since the last plain
+`lla` in that directory. A plain listing refreshes the cache.
 
 ### Git-ignore behavior
 
@@ -313,6 +323,8 @@ detected. `always` is useful in controlled tests and compatible terminals.
 
 ### Machine output
 
+<Diagram caption="A directory goes in, and JSON, NDJSON or CSV comes out."><OutputPipeline /></Diagram>
+
 ```bash
 lla --json
 lla --json --pretty
@@ -334,27 +346,32 @@ lla archive.zip -l -f '.rs'
 ```
 
 Archives are read as virtual directories without extraction. Supported formats
-are ZIP, TAR, TAR.GZ, and TGZ. Plugin decoration follows the same view mapping:
-only default, long, and table currently invoke plugin formatting. Archive paths
-are virtual entries, so plugins that assume every path is directly openable on
-the host filesystem must handle missing or inaccessible paths safely.
+are ZIP, TAR, TAR.GZ, and TGZ. Plugin decoration follows the same format mapping
+as any other listing, through single-entry calls. Archive paths are virtual
+entries, so a plugin that opens paths must handle ones that don't exist on disk.
 
 ### Content search and plugin pipelines
 
 ```bash
 lla --search 'TODO'
 lla --search 'fn main' --search-context 4
-lla --search 'secret' --search-pipe security_audit:audit
+lla --search 'TODO' --search-pipe my_plugin:inspect
 ```
 
-Content search uses `ripgrep`. A search pipeline runs a plugin action after the
-search. Its syntax is `plugin:action[:arg...]`: colon-separated extra arguments
-are placed first, followed by each unique matched file path in first-match
-order. For example, `security_audit:audit:strict` invokes `audit` with `strict`
-and then the matched paths. Multiple `--search-pipe` flags run sequentially.
-The normal human/JSON/NDJSON/CSV search result is rendered first; each action
-then renders its own result, so pipelines are not a single combined machine
-document. No matches means no action call.
+Content search uses `ripgrep`. It works from the current directory or with an
+absolute root. A search pipeline runs a plugin action after the search. Its
+syntax is `plugin:action[:arg...]`: colon-separated extra arguments come first,
+followed by each unique matched file path in first-match order.
+
+The action has to accept those paths. Give it a repeatable `path` argument,
+because a single-path action fails with `too many positional arguments` as soon
+as there is more than one match. Interactive actions need a terminal, so most
+don't suit a pipeline.
+
+Multiple `--search-pipe` flags run in sequence. The normal human, JSON, NDJSON or
+CSV search result prints first, and each action then prints its own result, so a
+pipeline doesn't produce one combined machine document. With no matches, lla
+prints `No matches to feed into search pipelines.` and calls nothing.
 
 ### Diff
 
@@ -408,9 +425,8 @@ lla completion zsh --output ./_lla
 lla completion zsh --path ~/.zsh/completions/_lla
 ```
 
-Without either option, the command installs to its shell-specific default file.
-`--path` overrides that installed file; `--output` writes the generated script
-to the requested file. Release packages may also include pre-generated assets.
+Without an option, the command prints the script to stdout. `--output` writes the
+script to a file, and `--path` sets a custom installation path.
 
 ### Shortcuts
 
@@ -420,16 +436,17 @@ shortcut command to select a plugin/action and assign a name:
 ```bash
 lla shortcut create
 lla shortcut list
-lla shortcut add audit security_audit audit --description "Audit selected paths"
-lla shortcut remove audit
+lla shortcut add inspect my_plugin inspect --description "Inspect a path"
+lla shortcut remove inspect
 lla shortcut export shortcuts.toml
 lla shortcut import shortcuts.toml --merge
-lla audit README.md
+lla inspect README.md
 ```
 
 The shortcut name becomes a top-level `lla` command and forwards remaining
 arguments to the selected action. Shortcuts and plugin aliases live in
 configuration. Import replaces the current shortcuts unless `--merge` is used.
+Running a shortcut enables its plugin in your configuration.
 
 ### Upgrade
 
@@ -446,6 +463,8 @@ migration commands.
 ## Plugin Platform architecture
 
 Plugin Platform v3 separates authoring, transport, execution, and packaging:
+
+<Diagram caption="The host runs walk, filter, decorate and format. Native plugins attach in-process, and components attach through approved grants."><PluginPlatform /></Diagram>
 
 ```text
 plugin source
@@ -469,7 +488,7 @@ plugin source
           └── host-owned rendering
 ```
 
-### Why protobuf is used internally
+### Protobuf transport
 
 Both runtimes receive the same protobuf `PluginMessage` request envelope. This
 keeps decoration, formatting, actions, structured errors, and typed values
@@ -497,7 +516,7 @@ into errors.
 WASM plugins use Wasmtime, WASI Preview 2, and the Component Model. The
 maintained WIT world exports:
 
-```wit
+```text
 world plugin {
     import host;
     export manifest: func() -> string;
@@ -524,8 +543,7 @@ An installed v3 package is a directory:
 my_plugin/
 ├── plugin.toml
 ├── libmy_plugin.so       # Linux native example
-├── checksums.toml
-└── README.md             # optional
+└── checksums.toml
 ```
 
 On macOS the native entrypoint is a `.dylib`; on Windows it is a `.dll`. A WASM
@@ -549,10 +567,13 @@ runtime artifact with embedded manifest
 plugin.toml + entrypoint + checksums.toml
         │ lla install
         ▼
-checksum/API/manifest/permission verification
+manifest validation and permission approval
         │ enable
         ▼
-discovery → decoration/formatting or typed action
+discovery: checksum, API and manifest checks
+        │
+        ▼
+decoration/formatting or typed action
 ```
 
 ### Discovery and loading
@@ -563,7 +584,7 @@ and verifies package integrity. Duplicate plugin identities in lower-priority
 paths are shadowed and reported by diagnostics.
 
 For ordinary listings, the host discovers only enabled plugins and plugins
-named by temporary CLI overrides or search pipelines. `list-plugins` and `use`
+named by `--enable-plugin`, `--disable-plugin` or search pipelines. `list-plugins` and `use`
 perform full discovery. A direct action or info request discovers only the
 named plugin.
 
@@ -606,8 +627,12 @@ lla install --dir /absolute/path/to/my_plugin
 ```
 
 The installer searches the supplied tree for plugin crates, builds selected
-plugins, creates package directories and checksum inventories, verifies the
-runtime contract, and records source metadata for future updates.
+plugins, creates package directories and checksum inventories, and records
+source metadata for future updates. It validates the manifest and never loads the
+library, so run `lla plugin doctor` afterward to check the runtime contract.
+
+On a terminal the installer shows a multi-select list with nothing selected, even
+for one plugin. Press Space to select, then Enter.
 
 ### Install from Git
 
@@ -618,8 +643,8 @@ lla install --git https://github.com/example/my-lla-plugins
 The installer clones the repository, discovers plugin crates, builds selected
 plugins, and records the source URL.
 
-Installation does not enable newly installed plugins automatically. Run
-`lla use` to persist a selection, or use `--enable-plugin <name>` for one run.
+Installation does not enable newly installed plugins. Run `lla use` to choose
+interactively, or `lla --enable-plugin <name>`. Both persist to `enabled_plugins`.
 
 ### Inspect and manage installed plugins
 
@@ -634,32 +659,37 @@ lla update
 lla clean
 ```
 
-- `list-plugins` displays discovered plugins.
-- `use` is the interactive enable/disable manager.
-- `plugin info` prints identity, runtime, API range, formats, fields, and
-  permissions.
-- `plugin permissions` prints only the permission declaration.
-- `plugin doctor` verifies packages and runtime contracts.
-- `update [name]` rebuilds source-installed plugins using recorded metadata.
-- `clean` quarantines invalid plugin packages rather than blindly loading them.
+| Command | What it does |
+| --- | --- |
+| `list-plugins` | Displays discovered plugins. |
+| `use` | Opens the interactive enable and disable manager. |
+| `plugin info` | Prints identity, runtime, API range, formats, fields and permissions. |
+| `plugin permissions` | Prints only the permission declaration. |
+| `plugin doctor` | Verifies packages and runtime contracts. |
+| `update [name]` | Rebuilds source-installed plugins using recorded metadata. |
+| `clean` | Moves invalid packages to `<plugins_dir>/.quarantine/<timestamp>`. |
 
-`lla` 0.6 has no dedicated uninstall command. Disable a valid plugin with
-`lla use` before removing its package directory from `plugins_dir`. `lla clean`
-is a repair command for invalid packages, not an uninstaller. Prebuilt plugins
-are not rebuilt by `lla update`; rerun `lla install --prebuilt` to refresh the
+`lla` 0.6 has no uninstall command. Disable a plugin with
+`lla --disable-plugin <name>`, then remove its package directory from
+`plugins_dir`. `lla clean` only touches invalid packages. `lla update` doesn't
+rebuild prebuilt plugins, so rerun `lla install --prebuilt` to refresh the
 official bundle.
 
-Enable or disable a plugin for one listing without changing configuration:
+`--enable-plugin` and `--disable-plugin` change your configuration, and the change
+applies to later runs:
 
 ```bash
-lla --enable-plugin my_plugin
-lla --disable-plugin my_plugin
+lla --enable-plugin my_plugin    # adds it to enabled_plugins
+lla --disable-plugin my_plugin   # removes it
 ```
+
+Running `lla plugin run`, a shortcut or a `--search-pipe` on a disabled plugin also
+enables it.
 
 ### Use listing fields
 
-Enabled plugins can append their formatted summary in default and long views.
-Long and table formatters can also select a declared field explicitly:
+Enabled plugins can append their formatted summary in any view whose format they
+declare. Long and table formatters can also select a declared field explicitly:
 
 ```toml
 [formatters.long]
@@ -679,8 +709,10 @@ lla plugin run my_plugin list --output csv -- README.md  # table action only
 ```
 
 The `--` separates host options from plugin action arguments. The older form
-`lla plugin my_plugin inspect ...` remains deprecated during the 0.6.x series;
-new documentation and manifests must use `lla plugin run`.
+`lla plugin my_plugin inspect ...` still works in 0.6 and prints a deprecation
+warning. New documentation and manifests use `lla plugin run`. `lla plugin my_plugin`
+with no action runs `menu` on a terminal when that action exists, and `help`
+otherwise.
 
 Interactive actions require a TTY and human output. The host rejects an
 interactive action combined with `json`, `ndjson`, or `csv`.
@@ -693,6 +725,9 @@ This example creates `file_score`, a plugin that:
 - prints compact and long human fields;
 - exposes a typed `inspect` action;
 - returns a typed value suitable for human and machine output.
+
+The [tutorial](/docs/guides/plugin-development-tutorial) builds this same plugin with
+the output of every step.
 
 ### 1. Create the crate
 
@@ -708,7 +743,6 @@ Use this `Cargo.toml` for an external plugin:
 name = "file-score"
 version = "1.0.0"
 edition = "2021"
-license = "MIT"
 
 [lib]
 name = "file_score"
@@ -718,12 +752,12 @@ crate-type = ["cdylib"]
 lla_plugin_sdk = "0.6"
 ```
 
-For a plugin inside this repository, add `plugins/file_score` to the workspace
-implicitly through `plugins/*` and use:
+For a plugin inside this repository, the workspace picks up `plugins/file_score`
+through `plugins/*`. Use the same dependency form as the bundled plugins:
 
 ```toml
 [dependencies]
-lla_plugin_sdk.workspace = true
+lla_plugin_sdk = { path = "../../sdk" }
 ```
 
 ### 2. Add `plugin.toml`
@@ -741,9 +775,7 @@ api_min = 3
 api_max = 3
 runtime = "native"
 entrypoint = "file_score"
-description = "Score files from their filesystem metadata"
-license = "MIT"
-repository = "https://github.com/example/file-score"
+description = "Score files by size"
 
 [capabilities]
 decorates_entries = true
@@ -752,38 +784,26 @@ machine_output = true
 
 [permissions]
 filesystem = ["metadata:selection", "read:user-path"]
-network = []
-process = false
-clipboard = false
-open_url = false
 
 [[fields]]
 name = "score"
 type = "integer"
-sortable = true
-filterable = true
-description = "A score derived from file size"
+description = "Base-2 logarithm of the file size"
 
 [[fields]]
 name = "size_class"
 type = "string"
-sortable = true
-filterable = true
-description = "small, medium, or large"
+description = "small, medium or large"
 
 [[actions]]
 id = "inspect"
-description = "Calculate a score for one path"
-examples = [
-  "lla plugin run file_score inspect -- README.md",
-  "lla plugin run file_score inspect -- README.md --multiplier 2",
-]
-interactive = false
+description = "Score one file"
+examples = ["lla plugin run file_score inspect -- README.md --multiplier 2"]
 arguments = [
-  { name = "path", type = "path", description = "File to inspect", position = 0, required = true },
-  { name = "multiplier", type = "integer", description = "Score multiplier", option = "--multiplier", default = 1, min = 1, max = 10 },
+  { name = "path", type = "path", description = "File to score", position = 0, required = true },
+  { name = "multiplier", type = "integer", description = "Multiply the score", option = "--multiplier", default = 1, min = 1, max = 10 },
 ]
-output = { type = "value", schema = { path = "path", score = "integer", size_class = "string" } }
+output = { type = "value" }
 ```
 
 The native entrypoint is a logical library name. Packaging resolves it to the
@@ -796,12 +816,7 @@ Replace `src/lib.rs` with:
 
 ```rust
 use lla_plugin_sdk::{
-    interface::proto,
-    response,
-    value,
-    ActionArguments,
-    ActionArgumentsExt,
-    DecoratedEntryExt,
+    interface::proto, response, value, ActionArguments, ActionArgumentsExt, DecoratedEntryExt,
     Plugin,
 };
 
@@ -809,11 +824,7 @@ use lla_plugin_sdk::{
 struct FileScore;
 
 fn score(size: u64) -> i64 {
-    if size == 0 {
-        0
-    } else {
-        size.ilog2().min(100) as i64
-    }
+    size.checked_ilog2().unwrap_or(0) as i64
 }
 
 fn size_class(size: u64) -> &'static str {
@@ -825,17 +836,13 @@ fn size_class(size: u64) -> &'static str {
 }
 
 impl Plugin for FileScore {
-    fn decorate_entry(
-        &mut self,
-        mut entry: proto::DecoratedEntry,
-    ) -> proto::DecoratedEntry {
+    fn decorate_entry(&mut self, mut entry: proto::DecoratedEntry) -> proto::DecoratedEntry {
         let Some(metadata) = entry.metadata.as_ref() else {
             return entry;
         };
         if !metadata.is_file {
             return entry;
         }
-
         let size = metadata.size;
         entry.insert_field(
             "score",
@@ -850,17 +857,6 @@ impl Plugin for FileScore {
         entry
     }
 
-    fn decorate_batch(
-        &mut self,
-        entries: Vec<proto::DecoratedEntry>,
-        _format: &str,
-    ) -> Vec<proto::DecoratedEntry> {
-        entries
-            .into_iter()
-            .map(|entry| self.decorate_entry(entry))
-            .collect()
-    }
-
     fn format_field(&mut self, entry: proto::DecoratedEntry, format: String) -> Option<String> {
         let score = entry.custom_fields.get("score")?;
         let class = entry.custom_fields.get("size_class")?;
@@ -872,53 +868,65 @@ impl Plugin for FileScore {
     }
 
     fn registered_actions(&mut self) -> Vec<proto::ActionInfo> {
-        lla_plugin_sdk::manifest_action_infos(include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/plugin.toml"
-        )))
+        lla_plugin_sdk::manifest_action_infos(include_str!("../plugin.toml"))
     }
 
     fn run_action(&mut self, action: String, arguments: ActionArguments) -> proto::ActionResponse {
         if action != "inspect" {
             return response::error(format!("unknown action '{action}'"));
         }
-
         let path = match arguments.path("path") {
             Ok(Some(path)) => path,
             Ok(None) => return response::error("path is required"),
             Err(error) => return response::error(error),
         };
         let multiplier = match arguments.integer("multiplier") {
-            Ok(Some(value)) => value,
-            Ok(None) => 1,
+            Ok(value) => value.unwrap_or(1),
             Err(error) => return response::error(error),
         };
-        let metadata = match std::fs::metadata(&path) {
-            Ok(metadata) => metadata,
+        let size = match std::fs::metadata(&path) {
+            Ok(metadata) => metadata.len(),
             Err(error) => return response::error(format!("{}: {error}", path.display())),
         };
-        let final_score = score(metadata.len()) * multiplier;
-
         response::value(value::object([
             ("path".to_string(), value::path(path.to_string_lossy())),
-            ("score".to_string(), value::integer(final_score)),
             (
-                "size_class".to_string(),
-                value::string(size_class(metadata.len())),
+                "score".to_string(),
+                value::integer(score(size) * multiplier),
             ),
+            ("size_class".to_string(), value::string(size_class(size))),
         ]))
     }
 }
 
 lla_plugin_sdk::export_plugin!(FileScore);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scores_are_log2_of_size() {
+        assert_eq!(score(0), 0);
+        assert_eq!(score(1024), 10);
+    }
+
+    #[test]
+    fn classes_change_at_one_kib_and_one_mib() {
+        assert_eq!(size_class(1023), "small");
+        assert_eq!(size_class(1024), "medium");
+        assert_eq!(size_class(1_048_576), "large");
+    }
+}
 ```
 
 Important details:
 
 - `DecoratedEntryExt::insert_field` writes both a display string and a typed
   value. This is preferred over manually keeping the two maps synchronized.
-- `decorate_batch` must preserve entry count and order. Override it to share
-  expensive I/O; otherwise the trait default calls `decorate_entry`.
+- `decorate_batch` must preserve entry count and order. The trait default calls
+  `decorate_entry`. Override it to share expensive I/O, and keep the results equal
+  to the single-entry path.
 - `registered_actions` must return exactly the action IDs declared in the
   manifest. Building the inventory from the embedded manifest prevents drift.
 - the export macro requires `Default + Send + 'static`, validates
@@ -929,8 +937,7 @@ Important details:
 ```bash
 cargo fmt --check
 cargo test
-cargo build --release
-lla install --dir "$PWD"
+lla install --dir .
 lla plugin doctor
 lla plugin info file_score
 ```
@@ -941,18 +948,20 @@ complete package.
 
 ### 5. Enable and use
 
-Enable through the interactive manager:
+Enable through the interactive manager, or with a flag. Either way the choice is
+saved in `enabled_plugins`.
 
 ```bash
 lla use
+lla --enable-plugin file_score
 ```
 
-Or enable for one invocation:
+Then list as usual:
 
 ```bash
-lla --enable-plugin file_score
-lla -l --enable-plugin file_score
-lla --json --pretty --enable-plugin file_score
+lla
+lla -l
+lla --json --pretty
 ```
 
 Run the typed action:
@@ -965,7 +974,7 @@ lla plugin run file_score inspect --output json -- README.md --multiplier 2
 The first `--` ends host option parsing. Tokens after it are plugin-action
 arguments; positional paths and declared options may be interleaved there.
 
-Add fields to long/table columns after persistently enabling the plugin:
+Add fields to long and table columns:
 
 ```toml
 [formatters.long]
@@ -988,8 +997,7 @@ crate-type = ["cdylib"]
 lla_plugin_sdk = { version = "0.6", features = ["component"] }
 ```
 
-Inside this workspace, keep the feature and use the local path/workspace form
-appropriate to the crate.
+Inside this repository, use `lla_plugin_sdk = { path = "../../sdk", features = ["component"] }`.
 
 ### 2. Change the manifest runtime and entrypoint
 
@@ -1018,15 +1026,15 @@ lla_plugin_sdk::export_component!(FileScore);
 ### 4. Build the component
 
 ```bash
-rustup target add wasm32-wasip2
-cargo build --release --target wasm32-wasip2
-lla install --dir "$PWD"
+lla install --dir .
 lla plugin doctor
 ```
 
-The output is normally under
-`target/wasm32-wasip2/release/file_score.wasm`. The source installer copies the
-declared entrypoint into the package.
+The installer runs `rustup target add wasm32-wasip2 --toolchain stable` and builds
+with `rustup run stable cargo build --release --target wasm32-wasip2`, so it needs
+`rustup`. The output lands at `target/wasm32-wasip2/release/file_score.wasm`, and the
+installer copies the declared entrypoint into the package. It then asks
+`Approve these WASM sandbox permissions? [y/N]`. Without a terminal it fails closed.
 
 ### WASM host capabilities
 
@@ -1034,7 +1042,9 @@ declared entrypoint into the package.
 - HTTP is restricted to exact declared domains;
 - clipboard and URL opening use explicit host functions;
 - raw sockets and subprocesses are unavailable;
-- memory and execution are bounded by the host.
+- memory and execution are bounded by the host;
+- each request gets a new instance, so state in `self` doesn't last between calls.
+  Keep it in `/data`.
 
 Other languages may generate Component Model bindings from
 [`sdk/wit/lla-plugin.wit`](https://github.com/chaqchase/lla/blob/main/sdk/wit/lla-plugin.wit), but Rust is the maintained
@@ -1042,8 +1052,9 @@ authoring path in the 0.6 release line.
 
 ## Manifest reference
 
-`plugin.toml` is a compiled and packaged contract, not descriptive metadata.
-The complete schema is implemented in `interface/src/manifest.rs`.
+`plugin.toml` is compiled into the plugin and packaged beside it, and the two copies
+must match. The schema is implemented in `interface/src/manifest.rs`. The
+[manifest reference](/docs/plugins/manifest) has every key and accepted value.
 
 ### Identity
 
@@ -1079,13 +1090,19 @@ IDs, names, action IDs, argument names, field names, and table column names use
 ASCII letters, digits, `.`, `_`, and `-`. Values cannot contain surrounding
 whitespace.
 
-`runtime` defaults to `native`; plugin `description` defaults to empty;
-capabilities, permissions, fields, and actions default empty; and action output
-defaults to `none`. License and repository are optional. Plugin version is only
-required to be nonempty—it is not parsed as SemVer. Action descriptions and all
-argument descriptions are required and nonblank; field/table-column
-descriptions may be empty. Treat these permissive parser defaults as
-compatibility behavior, not as authoring recommendations.
+The parser is permissive about what you can leave out. Prefer to set these
+explicitly anyway.
+
+| Key | When omitted |
+| --- | --- |
+| `runtime` | `native` |
+| `description` on the plugin, fields and table columns | Empty |
+| `license`, `repository` | Absent |
+| `[capabilities]`, `[permissions]`, `[[fields]]`, `[[actions]]` | Empty |
+| Action `output` | `none` |
+
+`version` only has to be non-empty, and isn't parsed as SemVer. Action descriptions
+and argument descriptions are required.
 
 ### Capabilities
 
@@ -1096,15 +1113,15 @@ formats = ["default", "long"]
 machine_output = true
 ```
 
-- `decorates_entries`: the plugin adds per-entry metadata;
-- `formats`: human formats the implementation supports;
-- `machine_output`: declares that the plugin intends to support structured
-  output. In API v3 it is metadata only; listing JSON/NDJSON field inclusion and
-  action rendering are governed by the actual returned values and output schema.
+| Key | Meaning |
+| --- | --- |
+| `decorates_entries` | Declares that the plugin adds per-entry metadata. The 0.6.6 host doesn't read it. |
+| `formats` | The views that call the plugin. |
+| `machine_output` | Declares that the plugin intends to support structured output. The 0.6.6 host doesn't read it. Listing fields and action rendering follow the returned values and the output schema. |
 
-For the current host, declare `default`, `long`, or both. Table rendering uses
-the `long` plugin format. Unknown format names pass manifest validation but are
-not selected by the current host.
+The host sends `default`, `long`, `tree`, `grid`, `recursive`, `git`, `timeline`,
+`sizemap` and `fuzzy`. Table rendering uses `long`. Other names pass manifest
+validation and are never selected.
 
 ### Fields
 
@@ -1167,8 +1184,8 @@ Argument constraints:
 - options must begin with `--`;
 - every argument needs a description.
 
-Every manifest example for a bundled plugin must begin with the canonical
-`lla plugin run <plugin> <action>` command.
+Every manifest example for a bundled plugin must begin with
+`lla plugin run <plugin> <action>`.
 
 ### Output schemas
 
@@ -1299,8 +1316,8 @@ response::error("operation failed");
 response::from_result(result);
 ```
 
-For actionable failures, construct `ActionError` with a stable code and typed
-details:
+For actionable failures, construct `ActionError` with a stable code. The 0.6.6 host
+prints `message [code]`, and doesn't display the typed details:
 
 ```rust
 let error = lla_plugin_sdk::ActionError::new("not-found", "path does not exist")
@@ -1336,19 +1353,27 @@ Formatting should be deterministic, quick, and side-effect free.
 
 ### Supported plugin format behavior
 
-The current host contract normalizes:
+The host sends these format names:
 
 | Host view | Plugin format sent |
 | --- | --- |
 | default | `default` |
 | long | `long` |
 | table | `long` |
-| grid/tree/recursive/Git/timeline/sizemap/fuzzy | none currently |
+| tree | `tree` |
+| grid | `grid` |
+| recursive | `recursive` |
+| Git | `git` |
+| timeline | `timeline` |
+| sizemap | `sizemap` |
+| fuzzy | `fuzzy`, for decoration only |
+| JSON, NDJSON, CSV | The format of any view flag in the same command, otherwise `default` |
 
-Therefore, do not declare view names beyond `default` and `long` expecting the
-current host to call them. Extending cross-view plugin formatting requires a
-host change to `normalize_plugin_format`, formatter integration, tests, and an
-updated manifest contract.
+Declare each view you want. `lla plugin doctor` requires text from `format_field` for
+every declared format when an entry has a declared field. It calls `format_field`
+directly, so keep any `format_batch` override in step with it. Several bundled
+plugins declare only one view: `activity_history` uses `timeline`, `change_risk` uses
+`git`, `reclaimable_space` uses `sizemap` and `tree_summary` uses `tree`.
 
 ### Long and table columns
 
@@ -1374,14 +1399,16 @@ object assembled from entry custom fields, including host-internal fields when
 present. Typed values remain JSON numbers, booleans, arrays, or objects and
 override a same-key display string rather than being flattened into strings.
 
+This is real output from `file_score`, trimmed:
+
 ```json
 {
-  "path": "README.md",
-  "name": "README.md",
-  "size_bytes": 1234,
+  "path": "plugin.toml",
+  "name": "plugin.toml",
+  "size_bytes": 961,
   "plugin": {
-    "score": 10,
-    "size_class": "medium"
+    "size_class": "small",
+    "score": 9
   }
 }
 ```
@@ -1404,19 +1431,20 @@ The host, not the plugin, parses raw arguments. It:
 
 Plugins should not reparse `std::env::args`.
 
-### Human output
+### Output by format
 
-- `none`: no result body;
-- `text`: printed as supplied;
-- `value`: rendered as a scalar or structured value;
-- `table`: rendered with declared columns.
+| Declared output | `human` | `json` | `ndjson` | `csv` |
+| --- | --- | --- | --- | --- |
+| `none` | Nothing | `null` | `null` | Error |
+| `text` | The text as supplied | JSON string | JSON string | Error |
+| `value` | Pretty JSON | Pretty JSON | One line, or one line per item for a list | Error |
+| `table` | Tab-separated with a header | Array of objects | One object per line | Header and rows |
 
-### Machine output
+A CSV request for anything but a table fails with
+`CSV output requires a table action result`.
 
-- JSON emits the structured result;
-- NDJSON emits rows/items as newline-delimited JSON where applicable;
-- CSV accepts only a declared table result and emits its columns and rows;
-- structured errors include a stable error code, message, and typed details.
+A plugin's structured error prints `✗ Plugin Error` and `message [code]` and exits
+with status 1, whatever `--output` says. Typed details aren't displayed.
 
 ### Search pipelines
 
@@ -1424,12 +1452,12 @@ Listing content search can feed matched paths to plugin actions:
 
 ```bash
 lla --search 'TODO' --search-pipe my_plugin:inspect
-lla --search 'secret' --search-pipe security_audit:audit
 ```
 
-The syntax is `plugin:action[:arg...]`. The plugin is discovered even when it
-was named only by the pipeline. Design pipeline actions to accept repeated path
-inputs when processing multiple matches.
+The syntax is `plugin:action[:arg...]`. The plugin is discovered even when only the
+pipeline names it, and running the pipeline enables it. Give pipeline actions a
+repeatable `path` argument so they can take several matches. lla prints
+`↪ Running plugin:action on N matched files` before each action.
 
 ## Permissions and security
 
@@ -1496,13 +1524,13 @@ the plugin name as a stable security identity; use an unchanging `plugin.id`.
 
 ### Runtime limits
 
-The shared contract enforces:
-
-- at most 512 entries per plugin batch;
-- at most 16 MiB per response;
-- 128 MiB of memory per WASM instance;
-- a 5-second WASM timeout for decoration/formatting calls;
-- a 60-second WASM timeout for actions.
+| Limit | Value | Applies to |
+| --- | --- | --- |
+| Entries per plugin batch | 512 | Both runtimes |
+| Response size | 16 MiB | Both runtimes |
+| Memory per instance | 128 MiB | WASM |
+| Decoration and formatting timeout | 5 seconds | WASM |
+| Action timeout | 60 seconds | WASM |
 
 WASM traps, timeouts, permission failures, and limit violations are reported as
 host plugin errors rather than crashing the host. A structured error response
@@ -1576,21 +1604,22 @@ immutable package directory.
 
 ### Package verification
 
-Installation and `plugin doctor` verify:
+Different stages check different things. A source install validates the manifest and
+writes checksums, and a package that passes it can still fail the doctor.
 
-1. manifest schema and identifiers;
-2. host API compatibility;
-3. package checksum coverage and content;
-4. safe package-local entrypoint resolution;
-5. packaged versus embedded manifest equality;
-6. runtime type and platform support;
-7. registered action IDs versus manifest declarations;
-8. static argument/output declaration consistency;
-9. single and batch decoration consistency;
-10. declared field type conversion;
-11. formatting responses for declared formats;
-12. safe rejection of unknown actions;
-13. permission/runtime constraints.
+| Check | Compile | `install --dir`, `--git` | `install --prebuilt` | Load | `plugin doctor`, `clean` |
+| --- | --- | --- | --- | --- | --- |
+| Manifest schema and identifiers | yes | yes | yes | yes | yes |
+| Host API compatibility | | | yes | yes | yes |
+| Package checksum coverage and content | | writes them | yes | yes | yes |
+| Package-local entrypoint resolution | | yes | yes | yes | yes |
+| Runtime type and platform support | | yes | yes | yes | yes |
+| Packaged and embedded manifests are equal | | | | yes | yes |
+| Registered action IDs equal declarations | | | | yes | yes |
+| Single and batch decoration agree | | | | | yes |
+| Declared fields convert to their types | | | | | yes |
+| Declared formats return text | | | | | yes |
+| Unknown actions are rejected | | | | | yes |
 
 Declared actions are not invoked by `plugin doctor`: it compares the registered
 action inventory with the manifest and probes rejection of an unknown action.
@@ -1653,6 +1682,7 @@ Verify them with:
 ```bash
 cargo check --manifest-path sdk/tests/fixtures/minimal_native/Cargo.toml
 cargo check --manifest-path sdk/tests/fixtures/custom_batch/Cargo.toml
+cargo check --manifest-path sdk/tests/fixtures/wasm_component/Cargo.toml
 rustup target add wasm32-wasip2
 cargo build --manifest-path sdk/tests/fixtures/wasm_component/Cargo.toml \
   --target wasm32-wasip2
@@ -1662,16 +1692,16 @@ cargo build --manifest-path sdk/tests/fixtures/wasm_component/Cargo.toml \
 
 ```bash
 cargo fmt --all -- --check
-cargo test --workspace --all-targets
+cargo test --workspace
 cargo test -p lla --features wasm-plugins
 cargo clippy -p lla --all-targets -- -D warnings
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo clippy -p lla --no-default-features --all-targets -- -D warnings
 ```
 
-CI additionally checks the default build natively on NetBSD and asserts that
-its dependency graph does not include Wasmtime. The release workflow also
-builds and smoke-tests that native configuration as `lla-netbsd-amd64`.
+CI also runs `cargo build --release -p lla` natively on NetBSD, and
+`cargo tree -p lla -i wasmtime` must fail there. The release workflow builds and
+smoke-tests that configuration as `lla-netbsd-amd64`.
 Windows CI runs the workspace and WASM suites natively on AMD64 and ARM64,
 builds statically linked MSVC executables, and verifies the matching plugin
 archives on each architecture.
@@ -1694,14 +1724,15 @@ lla plugin doctor
 lla plugin info my_plugin
 lla plugin permissions my_plugin
 lla --enable-plugin my_plugin
-lla -l --enable-plugin my_plugin
-lla --json --pretty --enable-plugin my_plugin
+lla -l
+lla --json --pretty
 lla plugin run my_plugin action -- required-argument
 lla plugin run my_plugin action --output json -- required-argument
 ```
 
-Also test installation into a clean temporary `--plugins-dir` to avoid passing
-because of stale local artifacts.
+Also test installation into a clean temporary directory, with
+`lla --plugins-dir DIR install --dir .`, to avoid passing because of stale local
+artifacts.
 
 ## Performance and reliability
 
@@ -1750,7 +1781,8 @@ TTY interaction and cannot be combined with machine output.
 2. Run `lla list-plugins` and confirm the name.
 3. Inspect `lla config show-effective` for `enabled_plugins`, `plugins_dir`, and
    project profile overrides.
-4. Try `lla --enable-plugin <name>`.
+4. Try `lla --enable-plugin <name>`, which also saves the plugin to
+   `enabled_plugins`.
 5. Confirm the manifest declares the selected format. Table requires `long`.
 
 ### `Cannot checksum missing plugin package file`
@@ -1787,8 +1819,7 @@ Ensure all three surfaces agree:
 2. `registered_actions()` output;
 3. the `run_action` match arm.
 
-Using `manifest_action_infos` for registration eliminates the first two drifting
-apart.
+Using `manifest_action_infos` for registration keeps the first two in step.
 
 ### Field missing from a column
 
@@ -1862,9 +1893,9 @@ plugins/<name>/
 └── src/lib.rs
 ```
 
-The directory name, manifest plugin name, and expected package name must agree.
-Use workspace versions and dependencies. New native libraries use `cdylib` and
-`lla_plugin_sdk.workspace = true`.
+The directory name and the manifest plugin name must agree. New native libraries
+use `cdylib` and `lla_plugin_sdk = { path = "../../sdk" }`, with `version` set to the
+product version.
 
 ### Implementation requirements
 
@@ -1874,14 +1905,16 @@ Use workspace versions and dependencies. New native libraries use `cdylib` and
 - emit typed fields for declared values;
 - implement both single and batch decoration for decorators;
 - register and implement every declared action;
-- use canonical action examples;
-- avoid legacy request adapters;
+- start every action example with `lla plugin run <name> <id>`;
+- don't use `handle_raw_request`, `PluginRequest`, `PluginResponse` or
+  `ProtobufHandler`;
 - document dependencies, actions, examples, and platform limits in README;
 - add unit tests for core behavior.
 
-The interface test suite statically audits bundled source for undeclared
-clipboard, URL-opening, and process usage. This complements runtime verification
-but does not replace code review.
+`cargo test -p lla_plugin_interface` statically audits bundled source for these
+rules and for undeclared clipboard, URL-opening and process usage. It reads source
+text only, so runtime verification and code review still apply.
+[Contributing](/docs/support/contributing#add-a-bundled-plugin) lists every rule.
 
 ### Regenerate the catalog
 
@@ -1910,11 +1943,12 @@ Maintainers add release notes under `## [Unreleased]`, then run the Prepare
 Release workflow or:
 
 ```bash
-RELEASE_VERSION=0.6.1 .github/scripts/prepare_release.sh
+RELEASE_VERSION=0.6.7 .github/scripts/prepare_release.sh
 ```
 
-Preparation updates workspace/internal/plugin versions, `Cargo.lock`, and the
-changelog, then opens a conventional release PR in the automated workflow.
+The script updates workspace, internal and plugin versions and the changelog. The
+workflow also refreshes `Cargo.lock` and opens a release pull request. Merging that
+pull request starts `release.yml`, which creates the matching tag.
 
 ### Gates and artifacts
 
@@ -1925,7 +1959,7 @@ quality gates, and builds:
   builds explicitly enable `wasm-plugins`, so supported x86_64 and ARM64
   artifacts include WASM while Linux i686 does not;
 - standalone Windows AMD64/ARM64 executables with the static MSVC runtime and
-  matching `.zip` archives containing native DLLs and WASM components;
+  matching `.zip` plugin archives of native DLLs;
 - a native NetBSD amd64 CLI binary built with default features, with native
   plugin loading enabled and Wasmtime omitted;
 - static musl amd64/arm64 binaries with the plugin runtime;
@@ -1957,8 +1991,7 @@ artifact verification, and crate publication succeed. A failed release can be
 resumed with workflow dispatch and the existing tag; already-published valid
 state is skipped safely.
 
-See [`docs/maintainers/releasing.md`](/docs/support/releasing) for the concise
-operator checklist.
+See [Releasing](/docs/support/releasing) for the steps a maintainer runs.
 
 ## Compatibility and migration
 
@@ -2008,15 +2041,15 @@ and update both in the same change:
 | Plugin verifier | `scripts/verify_plugins_v3.sh` |
 | Release preparation workflow | `.github/workflows/prepare-release.yml` |
 | Release preparation script | `.github/scripts/prepare_release.sh` |
-| Shared release helpers | `.github/scripts/release_common.sh` |
+| Shared release helpers | `.github/scripts/release_helpers.sh` |
 | Release workflow | `.github/workflows/release.yml` |
 
 Focused documentation:
 
-- [Plugin user guide](/docs/plugins/overview)
-- [Bundled catalog](/docs/first-party-plugins/overview)
-- [Architecture reference](/docs/plugins/architecture)
-- [Development quick start](/docs/plugins/developing)
+- [Plugins](/docs/plugins/overview)
+- [First-party plugins](/docs/first-party-plugins/overview)
+- [Platform architecture](/docs/plugins/architecture)
+- [Developing plugins](/docs/plugins/developing)
 - [Manifest reference](/docs/plugins/manifest)
-- [Migration guide](/docs/plugins/migration-v3)
-- [Release guide](/docs/support/releasing)
+- [Migrating to v3](/docs/plugins/migration-v3)
+- [Releasing](/docs/support/releasing)

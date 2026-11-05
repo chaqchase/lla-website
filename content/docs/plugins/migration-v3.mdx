@@ -1,57 +1,112 @@
 ---
 title: "Migrating to v3"
-description: "Migrate installed official plugins and rebuild third-party sources for API v3-only lla 0.6."
+description: "Replace official plugins with API v3 packages and rebuild third-party plugin source for lla 0.6."
 order: 5
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/plugins/migration-v3.md]
 ---
 
-# Migrating to Plugin Platform v3
+lla 0.6 only loads API v3 plugins. It detects API v1 and v2 libraries by reading their symbols, without running their code, and reports them as disabled. There is no binary compatibility bridge, so old libraries must be replaced or rebuilt.
 
-lla 0.6.0 supports API v3 plugins only. API v1 and v2 native libraries are
-detected without loading their code and are reported as disabled.
+`lla plugin doctor` shows which plugins need attention:
 
-## Installed official plugins
+```text
+✗ <path>: API v2 is disabled; run `lla plugin migrate --prebuilt` for official plugins
+```
 
-After installing lla 0.6.0, migrate the official prebuilt bundle:
+Loading one directly fails with `Plugin NAME uses API v2 and is disabled; migrate it to API v3`.
+
+## Migrate official plugins
+
+Run this after you upgrade to lla 0.6:
 
 ```bash
 lla plugin migrate --prebuilt
 lla plugin doctor
 ```
 
-Migration replaces matching official packages and preserves the previous
-artifacts in a timestamped legacy backup. Unmatched third-party plugins are not
-modified and are listed in the report. If replacement fails, the installer
-restores the previous artifacts, metadata, and permission grants.
+The command downloads the prebuilt bundle from the latest release. It treats a plugin as official when `metadata.toml` records it as installed from a prebuilt release.
 
-## Third-party plugin source
+| Outcome | What happens | Message |
+| --- | --- | --- |
+| Success | Old files move to `<plugins_dir>/.legacy/<timestamp>`, and the v3 packages take their place. | `Migrated N official plugin artifact(s); legacy files are preserved in ...` |
+| Third-party plugins present | They stay where they are, untouched, and still won't load. | `Unmatched third-party plugins left untouched: ...` |
+| Failure | Old artifacts, `metadata.toml` and `plugin-grants.toml` are restored. Partial results move to `.legacy/<timestamp>/failed-v3-install`. | `Plugin migration failed and legacy artifacts were restored: ...` |
 
-There is no binary compatibility bridge. Rebuild the plugin against
-`lla_plugin_sdk` 0.6 and replace its manifest with schema 3.
+## Rebuild third-party plugins
 
-For a native Rust plugin:
+Rebuild each one from source against `lla_plugin_sdk`.
 
-1. Add `lla_plugin_sdk = "0.6"` and build a `cdylib`.
-2. Implement `lla_plugin_sdk::Plugin`.
-3. Replace the old export with `lla_plugin_sdk::export_plugin!(PluginType)`.
-4. Add stable identity, API range, runtime, and entrypoint fields to
-   `plugin.toml`.
-5. Declare every field, action, argument, output schema, and permission.
-6. Install from source and run `lla plugin doctor`.
+### Update the dependencies
 
-Existing protobuf-oriented source can temporarily implement the SDK's
-compatibility request adapter, but new code should implement `decorate_entry`,
-`decorate_batch`, `format_field`, `registered_actions`, and `run_action`
-directly. The compatibility adapter is not part of the native ABI and may be
-removed in a later SDK major version.
+`lla_plugin_sdk` replaces direct use of `lla_plugin_interface`, and `prost` and `bytes` are no longer needed for plugin code.
 
-## Behavioral changes
+```toml
+[lib]
+name = "my_plugin"
+crate-type = ["cdylib"]
 
-- `plugin.toml` is now a compiled and packaged contract, not passive metadata.
-- Actions receive typed, host-validated arguments.
-- Plugins return structured output for host rendering.
-- Interactive actions must be explicitly declared.
-- WebAssembly permissions are enforced and persisted as grants.
-- Native and WebAssembly calls are subject to response, batch, and timeout
-  limits.
+[dependencies]
+lla_plugin_sdk = "0.6"
+```
+
+### Update the manifest
+
+Add `schema_version = 3`, set the API range to 3, and describe everything the plugin does. Unknown keys are ignored, so an old `actions` list under `[capabilities]` has no effect and can go.
+
+```toml
+schema_version = 3
+
+[plugin]
+id = "dev.example.my-plugin"
+name = "my_plugin"
+version = "1.0.0"
+api_min = 3
+api_max = 3
+runtime = "native"
+entrypoint = "my_plugin"
+
+[capabilities]
+decorates_entries = true
+formats = ["default", "long"]
+machine_output = true
+```
+
+Then declare every field in `[[fields]]`, and every action with its arguments and output in `[[actions]]`. The [manifest reference](/docs/plugins/manifest) has the exact keys. Every argument needs a `description`.
+
+### Update the code
+
+| v1 and v2 | v3 |
+| --- | --- |
+| `lla_plugin_interface::Plugin` | `lla_plugin_sdk::Plugin`. The type must be `Default + Send + 'static`. |
+| `handle_raw_request(&mut self, &[u8]) -> Vec<u8>` | `decorate_entry`, `decorate_batch`, `format_field`, `format_batch`, `registered_actions`, `run_action`. |
+| `PluginRequest` and `PluginResponse` | Removed. The SDK decodes the protocol. |
+| Actions parsing `&[String]` by hand | Typed arguments read through `ActionArgumentsExt`. The host has already validated them. |
+| Actions printing their results | `response::value`, `response::table`, `response::text` or `response::none`. |
+| `lla_plugin_interface::declare_plugin!(MyPlugin)` | `lla_plugin_sdk::export_plugin!(MyPlugin)`. |
+
+There is no adapter for the old request type, so `handle_raw_request` has to go. Declare actions that prompt the user with `interactive = true`.
+
+### Check the result
+
+```bash
+cargo test
+lla install --dir .
+lla plugin doctor
+lla plugin run my_plugin my_action -- <arguments>
+```
+
+A source install doesn't run the contract checks, so run the doctor. [Diagnose a failure](/docs/plugins/developing#diagnose-a-failure) lists what each message means.
+
+## What behaves differently
+
+| Area | In v3 |
+| --- | --- |
+| Manifest | Compiled into the plugin and packaged beside it. The two copies must match. |
+| Action arguments | Parsed and validated by the host from the manifest. Invalid input never reaches the plugin. |
+| Action output | Typed. The host renders `human`, `json`, `ndjson` and `csv`. |
+| Command form | `lla plugin run NAME ACTION -- ARGS`. The old `lla plugin NAME ACTION` still works in 0.6 and prints a deprecation warning. |
+| Interactive actions | Declared in the manifest. They need a terminal and `--output human`. |
+| Batches and responses | Limited to 512 entries per batch and 16 MiB per response, for both runtimes. |
+| WebAssembly | Components run sandboxed, with time and memory limits and approved permissions. Native plugins have no time limit. |
+| Package integrity | `checksums.toml` must exist and cover the entrypoint and manifest. |

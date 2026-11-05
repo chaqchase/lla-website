@@ -1,110 +1,65 @@
 ---
 title: "Installation"
-description: "Install lla with the install script, a package manager, or a manual download, then initialize configuration and upgrade."
+description: "Install lla with the script, a package manager or a release download, then set it up and keep it current."
 order: 2
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/getting-started.md]
 ---
 
-# Installation and first run
-
-This guide covers supported installation methods, upgrading, and the first-run
-configuration flow. For everyday commands, continue with
-[Views and display](/docs/usage/views) or the [command reference](/docs/reference/cli-reference).
-
-## Install with the script
+The install script is the shortest route on Linux, macOS and NetBSD:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
 ```
 
-The script detects the operating system and architecture, downloads the matching
-release binary, verifies it against the release checksum, and installs it in
-`/usr/local/bin`.
+It detects your system, downloads the matching release, checks it against the release's `SHA256SUMS` file and installs it to `/usr/local/bin`.
 
-On Windows PowerShell, use the native installer:
+On Windows, use PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/chaqchase/lla/main/install.ps1 | iex
 ```
 
-It detects AMD64 or ARM64, verifies `SHA256SUMS`, installs to
-`%LOCALAPPDATA%\Programs\lla`, and adds that directory to the user `PATH`.
-Download `install.ps1` first to use its `-Version`, `-InstallDir`, or
-`-NoPathUpdate` options.
+This installs to `%LOCALAPPDATA%\Programs\lla` and adds that directory to your user `PATH`. To use its `-Version`, `-InstallDir` or `-NoPathUpdate` options, download `install.ps1` first and run it from there.
 
-## Install with a package manager
+## Package managers
 
 | Platform | Command |
 | --- | --- |
 | Cargo | `cargo install lla` |
-| macOS with Homebrew | `brew install lla` |
-| Arch Linux with paru | `paru -S lla` |
-| NetBSD with pkgin | `pkgin install lla` |
+| Homebrew | `brew install lla` |
+| Arch Linux (paru) | `paru -S lla` |
+| NetBSD (pkgin) | `pkgin install lla` |
 | X-CMD | `x install lla` |
 
-## Install a release manually
+## Download a release
 
-Download the release asset that matches the operating system and architecture
-from [GitHub Releases](https://github.com/chaqchase/lla/releases), then make it
-executable and place it on `PATH`:
+Pick the asset for your system from [GitHub Releases](https://github.com/chaqchase/lla/releases), then put it on your `PATH`:
 
 ```bash
 wget -c https://github.com/chaqchase/lla/releases/download/<version>/<asset> -O lla
 chmod +x lla
-sudo chown root:root lla
 sudo mv lla /usr/local/bin/lla
 ```
 
-Linux releases include GNU binaries for amd64, arm64, and i686. Static musl
-binaries are available as `lla-linux-amd64-musl` and
-`lla-linux-arm64-musl`; the install script selects them on musl systems. Static
-musl builds support core listing, formatting, search, archives, themes,
-configuration, and upgrades, but not dynamically loaded plugins. The 32-bit x86
-`.apk` is a GNU-based legacy package.
+## Set it up
 
-NetBSD releases include `lla-netbsd-amd64`, which the install script selects on
-NetBSD amd64. It is built natively with the default feature set: native dynamic
-plugins are enabled, but the embedded WASM runtime is omitted because Wasmtime
-does not support NetBSD. Official prebuilt plugin archives are not currently
-published for NetBSD; native plugins can still be built and installed locally.
-
-Windows releases include `lla-windows-amd64.exe` and
-`lla-windows-arm64.exe`, built natively with `wasm-plugins`. Matching
-`plugins-windows-amd64.zip` and `plugins-windows-arm64.zip` archives contain
-native DLLs and WASM components. Windows reports file size and timestamps
-normally, synthesizes Unix-style permission columns from file type and the
-read-only attribute, and returns null or `-` for Unix-only ownership, inode,
-hard-link, xattr, security-context, and mount metadata. Supported systems are
-Windows 10 or Windows Server 2016 and newer on AMD64 or ARM64; 32-bit x86 is
-rejected by the installer.
-
-Creating symlinks may require Windows Developer Mode or an elevated terminal.
-Existing directory and file symlinks can still be listed normally when the
-current account can access them.
-
-## Initialize lla
-
-Run the guided setup after installation:
+lla works as soon as it's installed. To choose your defaults, run the setup wizard:
 
 ```bash
 lla init
 ```
 
-The wizard configures appearance, the default view, permission formatting,
-listing and sorting defaults, dotfile and `.gitignore` behavior, long-view
-columns, plugin directories and enablement, and recursion safety limits.
+It asks about appearance, the default view, permission format, sorting, dotfiles and `.gitignore` handling, long-view columns, plugins and recursion limits, and writes the result to `~/.config/lla/config.toml`.
 
-To write the built-in defaults without prompts, or inspect the active config:
+To write the defaults without any prompts, run `lla init --default`. [Configuration](/docs/usage/configuration) covers every setting.
+
+Plugins and extra themes are separate downloads:
 
 ```bash
-lla init --default
-lla config
+lla install --prebuilt   # the 37 official plugins
+lla theme pull           # the 23 official themes
 ```
-
-The configuration file is stored at `~/.config/lla/config.toml`. See
-[Configuration](/docs/usage/configuration) for profiles, themes, shortcuts, and the
-supported settings.
 
 ## Upgrade
 
@@ -114,15 +69,22 @@ lla upgrade --version v0.5.1
 lla upgrade --path /usr/local/bin/lla
 ```
 
-`lla upgrade` uses the official installation logic to detect the platform,
-verify `SHA256SUMS`, and atomically replace the executable. It targets the
-currently running executable unless `--path` is provided. NetBSD amd64 upgrades
-select the `lla-netbsd-amd64` release asset. Windows upgrades select the matching
-`.exe` asset and use a Windows-safe self-replacement path.
+`lla upgrade` checks the download against `SHA256SUMS`, then replaces the running executable, or the file at `--path` if you set one.
+
+## Platform notes
+
+| Build | Assets | What to know |
+| --- | --- | --- |
+| Linux (GNU) | amd64, arm64, i686 | The 32-bit x86 `.apk` is a GNU-based legacy package. |
+| Linux (musl) | `lla-linux-amd64-musl`, `lla-linux-arm64-musl` | Static builds. Listing, search, archives, themes and upgrades all work, but dynamically loaded plugins don't. The install script chooses these on musl systems. |
+| NetBSD | `lla-netbsd-amd64` | Native plugins work, but WebAssembly plugins don't, because Wasmtime doesn't support NetBSD. There are no prebuilt plugin archives, so build plugins from source. |
+| Windows | `lla-windows-amd64.exe`, `lla-windows-arm64.exe` | Needs Windows 10, Windows Server 2016 or later. 32-bit x86 isn't supported. |
+
+Windows has no Unix ownership, inodes, hard-link counts, extended attributes or mount data, so those columns show `-` and those JSON fields are `null`. The permissions column is derived from the file type and the read-only attribute. Creating symlinks may need Developer Mode or an elevated terminal, but listing existing ones works normally.
 
 ## Next steps
 
-- Choose a layout in [Views and display](/docs/usage/views).
-- Learn selection tools in [Filtering and search](/docs/usage/filtering-search).
-- Set up bookmarks and the interactive finder in [Navigation](/docs/usage/navigation).
-- Add capabilities from the [bundled plugin catalog](/docs/first-party-plugins/overview).
+<Cards>
+  <Card href="/docs/guides/getting-started-tutorial" title="Getting started">A 15-minute tour on your own project.</Card>
+  <Card href="/docs/usage/views" title="Views">Choose how listings look.</Card>
+</Cards>

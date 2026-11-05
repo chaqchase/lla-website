@@ -1,126 +1,63 @@
 ---
-title: "Introduction to lla"
-description: "lla is a modern, fast file explorer built in Rust that enhances the traditional ls command with multiple views, Git integration, content search, and an extensible plugin platform."
+title: "Introduction"
+description: "What lla is, what it shows you that ls doesn't, and where to go from here."
 order: 1
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/README.md]
 ---
 
-<Banner/>
+lla is a command-line file lister. Run it wherever you'd run `ls`. It's a single binary, and it works without any configuration.
 
-# Welcome to lla
+<Shot name="view-default" alt="The default lla view, listing a repository's files and directories with icons." caption="`lla` in a checkout of its own repository, with icons turned on." />
 
-**lla** is a modern, customizable, feature-rich, and extensible `ls` replacement. It combines familiar directory listings with multiple views, Git-aware output, filtering and content search, interactive navigation, machine-readable formats, themes, shortcuts, and an extensible plugin platform.
+## What it adds to ls
 
-Built with Rust for exceptional performance and reliability, lla transforms how you interact with your filesystem through intelligent views, powerful plugins, and seamless Git integration.
+`ls` tells you what's in a directory. lla also answers the questions you usually open a second tool for.
 
-## Why lla?
-
-The traditional `ls` command has served us well for decades, but modern workflows demand more. Whether you are navigating large codebases, managing cloud infrastructure, or organizing complex project hierarchies, lla provides the tools you need without sacrificing speed or simplicity.
-
-- **Zero Configuration Required**: Works beautifully out of the box with sensible defaults
-- **Blazing Fast**: Written in Rust, optimized for directories with thousands of files
-- **Git-Aware**: Native Git integration shows repository status at a glance
-- **Extensible**: A robust plugin system with 37 bundled plugins lets you add exactly the features you need
-- **Beautiful Output**: Carefully designed themes and formatting that respect your terminal
-- **Automation-Friendly**: Stable JSON, NDJSON, and CSV output for scripts and pipelines
-
-### Who is lla for?
-
-- **Developers** navigating large codebases and managing multiple projects
-- **System Administrators** monitoring file systems and organizing server directories
-- **DevOps Engineers** automating workflows with machine-readable output
-- **Power Users** who want more from their command line tools
-- **Anyone** who spends significant time in the terminal
-
-## Try it
-
-```bash
-lla                     # default view
-lla -l                  # long view with metadata
-lla -t -d 3             # tree view, three levels deep
-lla -G                  # Git-aware view
-lla --timeline          # group entries by time
-lla --search "TODO"     # search file contents
-lla --json --pretty     # machine-readable output
-```
+| You want to know | Run |
+| --- | --- |
+| How is this project laid out? | `lla -t -d 3` |
+| What changed, and who last touched it? | `lla -G` |
+| What did I work on recently? | `lla --timeline` |
+| Where did the disk space go? | `lla -S --include-dirs` |
+| Which files mention this? | `lla --search "TODO"` |
+| How does this differ from the last commit? | `lla diff src --git` |
+| What's inside this archive? | `lla backup.tar.gz -t` |
+| Can a script read this? | `lla --json` |
 
 ## Views
 
-- **Default**: Quick browsing
-<img src="https://github.com/user-attachments/assets/3517c63c-f4ec-4a51-ab6d-46a0ed7918f8" className="rounded-2xl" alt="default" />
-- **Long**: Detailed metadata
-<img src="https://github.com/user-attachments/assets/2a8d95e4-efd2-4bff-a905-9d9a892dc794" className="rounded-2xl" alt="long" />
-- **Tree**: Directory structure
-<img src="https://github.com/user-attachments/assets/cb32bfbb-eeb1-4701-889d-f3d42c7d4896" className="rounded-2xl" alt="tree" />
-- **Table**: Structured data view
-<img src="https://github.com/user-attachments/assets/9f1d6d97-4074-4480-b242-a6a2eace4b38" className="rounded-2xl" alt="table" />
-- **Grid**: Dense directories
-<img src="https://github.com/user-attachments/assets/b81d01ea-b830-4833-8791-7b62ff9137df" className="rounded-2xl" alt="grid" />
-- **Git**: Repository status
-<img src="https://github.com/user-attachments/assets/b0654b20-c37d-45c2-9fd0-f3399fce385e" className="rounded-2xl" alt="git" />
-- **Timeline**: Chronological grouping
-<img src="https://github.com/user-attachments/assets/06a156a7-628a-4948-b75c-a0da584c9224" className="rounded-2xl" alt="timeline" />
-- **Size map**: Storage insights
-<img src="https://github.com/user-attachments/assets/dad703ec-ef23-460b-9b9c-b5c5d6595300" className="rounded-2xl" alt="sizemap" />
-- **Recursive**: Nested directory walk
-<img src="https://github.com/user-attachments/assets/f8fa0901-8866-4b92-a76e-3b7fd307f04e" className="rounded-2xl" alt="recursive" />
-- **Fuzzy search**: Fast file finding
-<img src="https://github.com/user-attachments/assets/ec946fd2-34d7-40b7-b951-ffd9c4009ad6" className="rounded-2xl" alt="fuzzy" />
+A view changes how a listing is drawn. Filters and sorting carry over, so you can narrow a selection first and then look at it in different ways.
 
-See [Views and display](/docs/usage/views) for guidance on choosing a view.
+<ViewIndex />
 
-## Highlights
+[Views](/docs/usage/views) shows each one with a screenshot. For opening and acting on files interactively, use the [fuzzy view](/docs/usage/navigation#fuzzy-view).
 
-### Precise filtering and content search
+## Selecting and searching
 
-- Sort by name, size, or date; reverse the result; place directories first; and choose natural or case-sensitive ordering.
-- Select entries by name, extension, glob, regular expression, file type, size, timestamps, dotfile visibility, or Git ignore rules.
-- Combine compatible name filters with AND, OR, and NOT expressions, save common combinations as presets, and apply sequential refinements.
-- Search file contents with ripgrep-backed literal or regular-expression matching, syntax-highlighted context, and optional plugin action pipelines.
+You can select entries by name, regular expression, size, date, type or `.gitignore` status, and save a combination you use often as a preset. `lla --search` runs ripgrep over file contents and prints highlighted matches with surrounding lines. See [Filtering and search](/docs/usage/filtering-search).
 
-See [Filtering and search](/docs/usage/filtering-search) for the exact compatibility rules.
+## Plugins
 
-### Rich metadata and configurable presentation
+Plugins add columns to listings and commands to lla. The project maintains [37 of them](/docs/first-party-plugins/overview), including file hashes, code complexity, security audits and terminal previews. You can install them all with one command and turn on only the ones you want.
 
-- Long and table views can show permissions, ownership, timestamps, inode and hard-link counts, allocated size, extended attributes, security context, mount information, symlink targets, and plugin-provided fields.
-- Choose symbolic, octal, binary, compact, or verbose permissions; absolute or relative dates; icons; color; hyperlinks; and an explicit column order.
-- Keep global defaults in `~/.config/lla/config.toml` and repository-specific overrides in `.lla.toml`.
+<Shot name="plugin-manager" alt="The interactive plugin manager, a checklist of installed plugins with their versions." caption="`lla use` turns plugins on and off." />
 
-See [Configuration](/docs/usage/configuration) for persistent settings, profiles, themes, and shell completion.
+Native plugins run inside the lla process and are fully trusted. WebAssembly plugins run in a sandbox and can only use the access you grant them. [Plugins](/docs/plugins/overview) explains the difference.
 
-### Navigation and repeatable workflows
+## Scripts
 
-- The directory jumper combines bookmarks and deduplicated visit history with a generated `j` shell function for Bash, Zsh, and Fish.
-- Command shortcuts turn frequently used plugin actions into concise top-level `lla` commands and can be exported or imported as TOML.
-- File and directory diffing supports local-to-local comparison and comparison against Git references.
+`--json`, `--ndjson` and `--csv` print the same selection with a fixed set of fields, so lla can feed `jq`, a spreadsheet or a build step. See [Machine output](/docs/usage/machine-output).
 
-See [Navigation](/docs/usage/navigation) for jump and fuzzy controls.
+## Platforms
 
-### Automation-friendly output
+lla runs on Linux, macOS, NetBSD and Windows 10 or later. Static musl builds on Linux and the NetBSD build have fewer plugin options; [Installation](/docs/about/installation#platform-notes) has the details.
 
-- Emit listing data as a JSON array, newline-delimited JSON, or fixed-schema CSV while retaining the selected path, sort, filter, depth, and archive behavior.
-- JSON and NDJSON include typed plugin fields. Content search and plugin actions provide their own documented machine-output contracts.
-- Generate completion scripts for Bash, Zsh, Fish, PowerShell, and Elvish.
+## Where to go next
 
-See [Machine output](/docs/usage/machine-output) for schemas, or the [CLI reference](/docs/reference/cli-reference) for flags.
-
-### Extensible Plugin Platform
-
-- Install official prebuilt plugins, build from a local directory, or install from a Git repository; inspect packages and permissions before running them.
-- Native plugins provide trusted in-process extensions. On builds with the `wasm-plugins` feature, WebAssembly Component Model plugins run with declared, persisted grants and scoped host capabilities.
-- Plugins can add typed listing fields, formatting, and actions with human, JSON, NDJSON, or CSV output.
-
-<img src="https://github.com/user-attachments/assets/8ecd56bc-6fee-4822-acb8-6699a7226920" className="rounded-2xl" alt="plugin-use" />
-
-Start with [Installing and managing plugins](/docs/plugins/overview), browse the [bundled catalog](/docs/first-party-plugins/overview), or read the [plugin development guide](/docs/plugins/developing).
-
-## Supported platforms
-
-lla runs natively on Linux, macOS, NetBSD, and Windows (10 / Server 2016 and newer on AMD64 or ARM64). The installer selects the matching binary automatically, including static musl builds on musl systems and a native-only NetBSD binary without the embedded WebAssembly runtime.
-
-## What's next?
-
-Ready to get started? Head over to the [Installation Guide](/docs/about/installation) to install lla on your system, or follow the [Getting Started Tutorial](/docs/guides/getting-started-tutorial) for a hands-on walkthrough.
-
-Want to extend lla? Check out the [Plugin Development Tutorial](/docs/guides/plugin-development-tutorial) to create your first plugin, or dive into the [Architecture Handbook](/docs/about/architecture) for the complete technical picture.
+<Cards>
+  <Card href="/docs/about/installation" title="Install lla">One command on most systems.</Card>
+  <Card href="/docs/guides/getting-started-tutorial" title="Getting started">A 15-minute tour on your own project.</Card>
+  <Card href="/docs/usage/views" title="Views">Every view, with a screenshot.</Card>
+  <Card href="/docs/guides/plugin-development-tutorial" title="Write a plugin">From an empty directory to a working plugin.</Card>
+</Cards>

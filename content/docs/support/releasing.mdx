@@ -1,103 +1,143 @@
 ---
 title: "Releasing"
-description: "Release the lla workspace under one product version: preparation script, required verification, and publication order."
+description: "Cut an lla release: changelog notes, the Prepare Release workflow, the checks that run, and how to resume a failed release."
 order: 6
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/maintainers/releasing.md]
 ---
 
-# Releasing the lla workspace
+A release ships the CLI, the four plugin crates, the bundled plugins and the themes under one version and one Git tag. This page is for maintainers. Everything runs from GitHub Actions, and the workflows live in [`.github/workflows`](https://github.com/chaqchase/lla/tree/main/.github/workflows).
 
-The CLI, plugin SDK crates, bundled plugin manifests, binaries, and documentation
-are released from this repository under one product version and Git tag.
+## Cut a release
 
-## Release units
+1. Add your notes under `## [Unreleased]` in `CHANGELOG.md`, in Keep a Changelog form.
+2. Run the **Prepare Release** workflow with `version` set, such as `0.6.7`. The optional `changelog` input is a fallback for when `CHANGELOG.md` has no `## [Unreleased]` section.
+3. Review and merge the pull request it opens, `chore: prepare release v0.6.7`, from the branch `prepare-release-v0.6.7`.
 
-The Cargo workspace contains:
+Merging is the trigger. `release.yml` runs when a pull request labeled `release` is merged, and it creates the `v0.6.7` tag itself from the workspace version.
 
-1. `lla_plugin_interface`
-2. `lla_plugin_sdk_macros`
-3. `lla_plugin_sdk`
-4. `lla_plugin_utils`
-5. `lla`
-6. The bundled plugin crates
+<Callout type="warning" title="Don't push the tag by hand">
+The pull request body from `prepare-release.yml` says to push the tag manually. `release.yml` already tags on merge, so skip that step.
+</Callout>
 
-The first five crates are published to crates.io. Bundled native plugin packages
-are built for each release target and attached to the GitHub release. The WIT
-world is included in the SDK crate.
+## Prepare locally
 
-## Prepare a version
-
-Use the release preparation workflow or run its script with a semantic version:
+The workflow's script also runs on its own:
 
 ```bash
-RELEASE_VERSION=0.6.0 .github/scripts/prepare_release.sh
+RELEASE_VERSION=0.6.7 .github/scripts/prepare_release.sh
 ```
 
-The script updates the shared workspace version, all internal dependency
-versions, bundled `Cargo.toml` files, bundled `plugin.toml` files, and the
-changelog. Release validation fails if any of these versions diverge.
+Set `RELEASE_CHANGELOG` to supply notes when there is no `## [Unreleased]` section. The script fails if it has no notes, or if `CHANGELOG.md` already has a section for that version. It updates:
 
-## Required verification
+- the workspace version in the root `Cargo.toml`
+- internal dependency versions in `lla`, `utils`, `sdk`, `macros` and the root manifest
+- `Cargo.toml` and `plugin.toml` in every directory under `plugins/`
+- `CHANGELOG.md`, moving the unreleased notes to the new version
 
-Before tagging a release, run:
+It then runs `validate_release_versions` and `validate_changelog_section`. The workflow refreshes `Cargo.lock` with `cargo metadata`, and the script doesn't, so do that yourself when you run it by hand.
+
+## Check before merging
+
+These are the commands CI runs on every pull request:
 
 ```bash
 cargo fmt --all -- --check
-cargo test --workspace --all-targets
-cargo test -p lla --features wasm-plugins
 cargo clippy -p lla --all-targets -- -D warnings
-cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo clippy -p lla --no-default-features --all-targets -- -D warnings
-```
-
-CI also runs `cargo check -p lla` natively inside NetBSD and verifies that its
-default dependency graph does not contain Wasmtime.
-
-The release workflow separately builds `lla-netbsd-amd64` inside NetBSD 10.1,
-checks that Wasmtime remains absent, exercises the binary's help path, and adds
-it to the verified release assets and checksum manifest. Linux, macOS, and
-Windows binaries build with `--features wasm-plugins`. Windows AMD64 and ARM64
-builds run natively, use the static MSVC runtime, and verify their corresponding
-plugin `.zip` archives.
-
-Build the SDK fixtures, including a real Component Model target:
-
-```bash
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test --workspace
+cargo test -p lla --features wasm-plugins
 cargo check --manifest-path sdk/tests/fixtures/minimal_native/Cargo.toml
 cargo check --manifest-path sdk/tests/fixtures/custom_batch/Cargo.toml
-rustup target add wasm32-wasip2
-cargo build --manifest-path sdk/tests/fixtures/wasm_component/Cargo.toml \
-  --target wasm32-wasip2
+cargo check --manifest-path sdk/tests/fixtures/wasm_component/Cargo.toml
+cargo build --manifest-path sdk/tests/fixtures/wasm_component/Cargo.toml --target wasm32-wasip2
 ```
 
-Build and verify the bundled plugins:
+To verify the plugin bundle for your own platform:
 
 ```bash
 ./scripts/build_plugins.sh --target "$(rustc -vV | sed -n 's/^host: //p')"
 ./scripts/verify_plugins_v3.sh dist/plugins-<os>-<arch>
 ```
 
-## Publication order
+`build_plugins.sh` writes `dist/plugins-<os>-<arch>/` with `.tar.gz` and `.zip` archives. `verify_plugins_v3.sh` needs `rustup` and Python 3 with `tomllib`. It compares the plugin count and manifests, builds the WASM fixture, builds `lla` with `--features wasm-plugins`, and runs `lla plugin doctor`, a `file_hash` action and a WASM listing.
 
-The release workflow publishes crates in dependency order:
+To check versions and notes without building:
 
-```text
-lla_plugin_interface
-        ↓
-lla_plugin_sdk_macros
-        ↓
-lla_plugin_sdk
-        ↓
-lla_plugin_utils
-        ↓
-lla
+```bash
+bash -c 'source .github/scripts/release_helpers.sh; validate_release_versions 0.6.7; validate_changelog_section 0.6.7'
 ```
 
-After each dependency is published, the workflow waits until crates.io exposes
-that exact version before continuing. A resumed workflow skips versions already
-published and rejects an inconsistent partial publication state.
+## What the release workflow does
 
-The GitHub release is published only after validation, binary/plugin artifact
-collection (including NetBSD and both Windows architectures), and crates.io
-publication succeed.
+`release.yml` runs these jobs in dependency order:
+
+| Job | What it does |
+| --- | --- |
+| `validate` | Checks the tag is SemVer and on `main`, the versions agree, the changelog section exists, and crates.io is in a consistent state. |
+| `quality` | Runs formatting, clippy and tests. |
+| `build_core` | Builds the CLI for every target with `--features wasm-plugins`. |
+| `build_netbsd` | Builds `lla-netbsd-amd64` natively inside NetBSD, without Wasmtime. |
+| `build_plugins` | Builds and verifies the plugin archives. |
+| `test_musl` | Smoke tests the static Linux binaries in Alpine. |
+| `build_packages` | Builds `.deb`, `.rpm`, `.apk` and `.pkg.tar.zst` packages. |
+| `package_themes` | Builds `themes.zip`. |
+| `collect_assets` | Gathers artifacts, checks the expected list, and writes `SHA256SUMS`. |
+| `publish_crates` | Publishes to crates.io. |
+| `publish_release` | Creates a draft GitHub release, uploads and verifies assets, then publishes it. |
+
+Crates publish in this order, because each depends on the ones before it:
+
+1. `lla_plugin_interface`
+2. `lla_plugin_sdk_macros`
+3. `lla_plugin_sdk`
+4. `lla_plugin_utils`
+5. `lla`
+
+Each step runs `cargo publish --dry-run`, publishes, and waits for the version to appear on crates.io, up to 30 tries 10 seconds apart. Versions already published are skipped.
+
+## Release assets
+
+| Kind | Files |
+| --- | --- |
+| Linux binaries | `lla-linux-amd64`, `lla-linux-amd64-musl`, `lla-linux-arm64`, `lla-linux-arm64-musl`, `lla-linux-i686` |
+| macOS binaries | `lla-macos-amd64`, `lla-macos-arm64` |
+| NetBSD binary | `lla-netbsd-amd64` |
+| Windows binaries | `lla-windows-amd64.exe`, `lla-windows-arm64.exe` |
+| Plugin bundles | `plugins-linux-amd64`, `plugins-linux-arm64`, `plugins-linux-i686`, `plugins-macos-amd64` and `plugins-macos-arm64`, each as `.tar.gz` and `.zip` |
+| Windows plugin bundles | `plugins-windows-amd64.zip`, `plugins-windows-arm64.zip` |
+| Linux packages | `.deb`, `.rpm`, `.apk` and `.pkg.tar.zst` for amd64, arm64 and i386 |
+| Other | `themes.zip`, `SHA256SUMS` |
+
+`write_expected_assets` in `release_helpers.sh` is the source of this list, and `check_expected_files` fails the release if anything is missing.
+
+## Recover from a failure
+
+Rerun **Release** through `workflow_dispatch` with `release_tag` set to the existing tag, such as `v0.6.7`. Crates already on crates.io are skipped, and assets already uploaded stay in place. A push of a `v*.*.*` tag also starts the workflow.
+
+To replace only the plugin archives of a published release, run `rebuild-release-plugins.yml` with `release_tag`. It rebuilds and verifies the archives, replaces them on the release, and regenerates `SHA256SUMS` and the release notes.
+
+The workflows need `GITHUB_TOKEN` and `CRATES_IO_TOKEN`.
+
+## Helper functions
+
+`.github/scripts/release_helpers.sh` holds the shared shell functions. It sets `-euo pipefail`, so source it in a `bash -c` subshell to run one by hand.
+
+| Function | Purpose |
+| --- | --- |
+| `workspace_version` | Prints the workspace version from the root `Cargo.toml`. |
+| `validate_semver_tag` | Checks a tag has the form `vX.Y.Z`. |
+| `validate_tag_on_main` | Checks the tag's commit is on `main`. |
+| `validate_changelog_section` | Checks `CHANGELOG.md` has a section for the version. |
+| `validate_release_versions` | Checks all manifests agree on the version. |
+| `crate_version_published` | Checks whether a crate version is on crates.io. |
+| `validate_crates_io_state` | Rejects an inconsistent partial publication. |
+| `write_expected_assets` | Writes the expected asset list. |
+| `check_expected_files` | Compares files on disk with that list. |
+| `generate_checksums` | Writes `SHA256SUMS`. |
+| `create_release_notes` | Builds release notes from the changelog and checksums. |
+| `ensure_release_exists` | Creates a draft release when there is none. |
+| `asset_exists`, `upload_asset_if_missing` | Upload assets idempotently. |
+| `publish_release` | Publishes the draft. |
+| `dispatch_next_stage` | Triggers the next workflow stage. |

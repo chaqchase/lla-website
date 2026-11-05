@@ -1,26 +1,90 @@
 ---
-title: "Last Git Commit"
-description: "Git history plugin for `lla` providing real-time commit tracking with rich formatting."
+title: "last_git_commit"
+description: "Shows the last commit that touched each file in a listing: its short hash, age and author."
 order: 26
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/last_git_commit]
 ---
 
-# lla Last Git Commit Plugin
+`last_git_commit` shows the last commit that touched each file in a listing. Turn it on when you want to see what changed recently without running `git log` on each file.
 
-Git history plugin for `lla` providing real-time commit tracking with rich formatting.
+## Turn it on
 
-## Features
+```toml
+# ~/.config/lla/config.toml
+enabled_plugins = ["last_git_commit"]
+```
 
-- Short hash, author, and timestamp display
-- Path-specific history
-- Color-coded information
-- Multiple display formats
-- Smart caching and quick lookups
+Or run `lla --enable-plugin last_git_commit`, which writes the same setting, so it stays on. `lla --disable-plugin last_git_commit` removes it.
 
-## Configuration
+<Callout type="warning" title="Use an explicit path below the repository root">
+`lla sdk`, and `lla` from inside a subdirectory of the repository, print a plain listing with no commits. Use `lla ./sdk` from the root, or an absolute path such as `lla "$PWD"`.
+</Callout>
 
-Config file: `~/.config/lla/last_git_commit/config.toml`
+Output shows in the default, long and table views. In the table view, the long text follows each row.
+
+The plugin adds three typed fields: `commit_hash` (string), `commit_author` (string) and `commit_time` (timestamp in Unix seconds). Read them from JSON:
+
+```bash
+lla --json ./sdk | jq -c '.[] | {name, hash: .plugin.commit_hash, time: .plugin.commit_time}'
+```
+
+```text
+{"name":"Cargo.toml","hash":"a3f8778","time":1791386814}
+{"name":"README.md","hash":"567a439","time":1786892075}
+```
+
+Or show them as columns:
+
+```toml
+[formatters.table]
+columns = ["name", "field:commit_hash", "field:commit_author", "field:commit_time"]
+```
+
+```text
+│ Cargo.toml │ a3f8778     │ Mohamed Achaq │ 1791386814  │
+```
+
+## Actions
+
+The only action is `help`: `lla plugin run last_git_commit help`. It's interactive, so it needs a TTY.
+
+## Example
+
+```bash
+lla ./sdk
+```
+
+```text
+Cargo.toml
+┌─
+│ Commit       a3f8778 28 days ago
+└─
+
+README.md
+┌─
+│ Commit       567a439 80 days ago
+└─
+```
+
+The long view adds the author:
+
+```bash
+lla -l ./sdk
+```
+
+```text
+-rw-r--r-- 614B Oct 07 15:26 you staff Cargo.toml
+┌─
+│ Commit       a3f8778
+│ Author       Mohamed Achaq
+│ Time         28 days ago
+└─
+```
+
+## Settings
+
+Set the colors in `~/.config/lla/plugins/last_git_commit/config.toml`:
 
 ```toml
 [colors]
@@ -28,23 +92,10 @@ hash = "bright_yellow"
 author = "bright_cyan"
 time = "bright_green"
 info = "bright_blue"
-name = "bright_yellow"
 ```
 
-## Display Formats
+`info` colors the labels.
 
-Default:
+## Permissions
 
-```
-document.txt
-Commit: a1b2c3d 2 days ago
-```
-
-Long:
-
-```
-document.txt
-Commit:  a1b2c3d
-Author:  John Doe
-Time:    2 days ago
-```
+`process = true`, because the plugin runs `git log`. It caches results until `HEAD` moves.

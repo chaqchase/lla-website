@@ -1,54 +1,80 @@
 ---
-title: "File Metadata"
-description: "A file metadata plugin for `lla` that provides comprehensive file information with rich formatting."
+title: "file_meta"
+description: "Adds access, modified and created times, owner IDs, size and mode to each entry in a listing."
 order: 12
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/file_meta]
 ---
 
-# lla File Metadata Plugin
+`file_meta` prints the access, modified and created times, UID and GID, size and mode under each file and directory. Turn it on when you need exact timestamps or numeric owners that a normal listing hides.
 
-A file metadata plugin for `lla` that provides comprehensive file information with rich formatting.
+<Shot name="plugin-file-meta" alt="A long listing in which each entry also shows its accessed, modified and created times, UID and GID, size and permissions." caption="`lla -l --hide-group <dir>` with only `file_meta` enabled." />
 
-## Features
-
-- Timestamp tracking (access, modify, create)
-- Ownership and permission details
-- Size statistics
-- Color-coded information display
-
-## Configuration
-
-Located at `~/.config/lla/file_meta/config.toml`:
+## Turn it on
 
 ```toml
-[colors]
-accessed = "bright_blue"      # Access time color
-modified = "bright_green"     # Modification time color
-created = "bright_yellow"     # Creation time color
-ownership = "bright_magenta"  # UID/GID information color
-size = "bright_cyan"         # File size color
-permissions = "bright_red"    # Permissions color
-success = "bright_green"     # Success messages
-info = "bright_blue"        # Information messages
-name = "bright_yellow"      # Name highlighting
+# ~/.config/lla/config.toml
+enabled_plugins = ["file_meta"]
 ```
 
-## Usage
+Or run this once. It saves the same setting, so the plugin stays on until you run `lla --disable-plugin file_meta`.
 
 ```bash
-# View help information
-lla plugin run file_meta help
+lla --enable-plugin file_meta
 ```
 
-## Display Format
+The same block appears in the default and long views (`formats = ["default", "long"]`), and in the table view, which uses the long format.
 
+| Field | Type | Holds |
+| --- | --- | --- |
+| `size` | bytes | Size in bytes |
+| `modified` | timestamp | Modified time as epoch seconds |
+| `permissions` | integer | Mode as a decimal number, such as `33188` for `100644` |
+
+JSON also carries untyped strings: `accessed`, `created`, `uid` and `gid`.
+
+```bash
+lla --json | jq '.[] | select(.name=="README.md") | .plugin'
 ```
-document.pdf
-Accessed:    2024-03-15 14:30:22
-Modified:    2024-03-15 14:30:20
-Created:     2024-03-15 14:30:18
-UID/GID:     1000/1000
-Size:        1.0 MB
-Permissions: 644
+
+```text
+{
+  "modified": 1793832837,
+  "permissions": 33188,
+  "accessed": "1793832837",
+  "uid": "501",
+  "gid": "20",
+  "created": "1793832837",
+  "size": 7
+}
 ```
+
+You can also add them as [columns](/docs/usage/views#choose-the-columns), such as `field:modified`. These print the same raw values.
+
+## Actions
+
+Run an action with `lla plugin run file_meta help`. `help` prints usage and is interactive, so it needs a TTY and the default `--output human`. Running it also enables the plugin and saves that setting.
+
+## Example
+
+The `Permissions` row includes the file type bits: `100644` is a regular file and `40755` is a directory.
+
+```bash
+lla -l --hide-group
+```
+
+```text
+-rw-r--r--  17B Aug 13 05:21 you .gitignore 
+┌─
+│ Accessed     2024-08-13 05:21:04
+│ Modified     2024-08-13 05:21:04
+│ Created      2024-08-13 05:21:04
+│ UID/GID      501/20
+│ Size         17 B
+│ Permissions  100644
+└─
+```
+
+## Settings
+
+`~/.config/lla/plugins/file_meta/config.toml` sets colors in a `[colors]` table: `accessed`, `modified`, `created`, `ownership`, `size` and `permissions`.

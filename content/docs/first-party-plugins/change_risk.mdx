@@ -1,19 +1,108 @@
 ---
-title: "Change Risk"
-description: "Adds a compact risk score to Git view using file size, structural complexity, Git churn, commit count, and current worktree state."
+title: "change_risk"
+description: "Adds a risk level and score to the Git view, based on a file's size, branching and name."
 order: 5
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/change_risk]
 ---
 
-# Change Risk Plugin
+`change_risk` adds a risk level and score to each file in the Git view. Turn it on when you review a working tree and want the large, branch-heavy and configuration files marked.
 
-Adds a compact risk score to Git view using file size, structural complexity, Git
-churn, commit count, and current worktree state.
+<Callout type="warning" title="Git data reads 0 in lla 0.6.6">
+Churn and commit counts always read 0, and modified files aren't flagged, even for a file with history and uncommitted changes. The plugin's `git log --format=commit` call fails, so the score reflects only size, structure and file name.
+</Callout>
 
-```bash
-lla --git --enable-plugin change_risk
-lla plugin run change_risk inspect -- ./src/main.rs
+## Turn it on
+
+```toml
+# ~/.config/lla/config.toml
+enabled_plugins = ["change_risk"]
 ```
 
-The score is a prioritization hint, not a correctness or security verdict.
+Or run this once. It saves the same setting, so the plugin stays on until you run `lla --disable-plugin change_risk`.
+
+```bash
+lla --enable-plugin change_risk
+```
+
+Output appears only in the [Git view](/docs/usage/views#git-view) (`formats = ["git"]`), and only for files. Directories stay bare.
+
+| Field | Type | Holds |
+| --- | --- | --- |
+| `change_risk_level` | string | `low`, `medium` or `high` |
+| `change_risk_score` | integer | The score |
+| `change_risk_reasons` | string | Reasons, joined with `; ` |
+| `change_churn` | integer | Always 0 in 0.6.6 |
+| `change_commits` | integer | Always 0 in 0.6.6 |
+
+The fields exist only when the listing uses the Git format, so add `--git` to read them as JSON. Plain `lla --json` leaves `plugin` empty, and `field:` columns in long and table views print `-`.
+
+```bash
+lla --git --json | jq '.[] | select(.name=="engine.rs") | .plugin'
+```
+
+## How the score works
+
+| Signal | Points | Reason text |
+| --- | --- | --- |
+| More than 1,000 lines, or over 2 MiB | +25 | `very large file` |
+| More than 400 lines | +15 | `large file` |
+| More than 150 lines | +8 | `moderate file size` |
+| More than 80 structural markers | +20 | `high structural complexity` |
+| More than 30 structural markers | +10 | `moderate structural complexity` |
+| `Cargo.toml`, `package.json`, `Dockerfile`, `Makefile`, `build.rs`, `pyproject.toml` or `go.mod` | +10 | `core configuration` |
+| Name contains `test` or `spec`, or the path has a `test` or `tests` directory | -15 | `test file` |
+| `.min.js`, `.min.css`, a lockfile, or a path through `dist`, `build`, `target` or `generated` | capped at 10 | `generated artifact` |
+
+Structural markers are counted per line: `if `, `else`, `match `, `for `, `while `, `&&`, `||`, `catch` and `except`. A file with no other reason reports `no elevated indicators`.
+
+A score of 0 to 24 is `low`, 25 to 49 is `medium` and 50 to 74 is `high`. The source also defines `critical` from 75, which needs the Git signals, so it doesn't appear in 0.6.6.
+
+## Actions
+
+| Action | Arguments | What it does |
+| --- | --- | --- |
+| `inspect` | `<file>` | Prints the score and reasons for one file. A directory returns `path is not a readable file`. |
+
+```bash
+lla plugin run change_risk inspect -- src/engine.rs
+```
+
+`inspect` isn't interactive, so it works in scripts and pipes. Running the action also enables the plugin and saves that setting.
+
+## Example
+
+Run `lla --git` from inside the directory, or pass a path such as `./src`. In 0.6.6, `lla --git src` reports `Not a git repository`.
+
+```bash
+lla --git
+```
+
+```text
+Status   Name       Commit    Subject        Time            Author  Plugins
+───────────────────────────────────────────────────────────────────────────────────────────────
+[W:mod]  engine.rs  @420df49  Tweak engine   0 seconds ago   you     [risk:medium 45 · churn:0]
+[W:mod]  main.rs    @3f8c938  Update main 3  78 minutes ago  you     [risk:low 0 · churn:0]
+```
+
+```bash
+lla plugin run change_risk inspect -- src/engine.rs
+```
+
+```text
+{
+  "churn": 0,
+  "commits": 0,
+  "level": "medium",
+  "path": "src/engine.rs",
+  "reasons": [
+    "very large file",
+    "high structural complexity"
+  ],
+  "score": 45
+}
+```
+
+## Permissions
+
+`process = true`, because it runs `git rev-parse` and `git log`. `filesystem = ["read:selection"]`, because it reads each listed file to count lines and markers.

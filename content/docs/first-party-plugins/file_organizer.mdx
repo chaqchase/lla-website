@@ -1,222 +1,111 @@
 ---
-title: "File Organizer"
-description: "A plugin for `lla` that organizes files in directories using various strategies. It provides flexible, configurable organization methods with preview capabilities."
+title: "file_organizer"
+description: "Moves the top-level files of a directory into subdirectories by extension, type, date or size."
 order: 14
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/file_organizer]
 ---
 
-# lla File Organizer Plugin
+`file_organizer` moves the top-level files of a directory into subdirectories by extension, type, date or size. Reach for it when a directory such as `~/Downloads` needs a one-off sort. It leaves existing subdirectories alone and adds nothing to listings.
 
-A plugin for `lla` that organizes files in directories using various strategies. It provides flexible, configurable organization methods with preview capabilities.
+## Actions
 
-## Features
+Run an action with `lla plugin run file_organizer <action> -- <args>`. Every action is interactive, so it needs a TTY and the default `--output human`.
 
-### Organization Strategies
+| Action | Arguments | What it does |
+| --- | --- | --- |
+| `preview` | `<dir> [strategy]` | Prints the planned moves and changes nothing. |
+| `organize` | `<dir> [strategy]` | Moves the files. The strategy defaults to `extension`. |
+| `help` | | Prints usage. |
 
-- **Extension Strategy**
+<Callout type="warning">
+`organize` moves files as soon as you run it, with no confirmation, and a file already at the destination is overwritten. Run `preview` first. `organize` has no undo.
+</Callout>
 
-  - Groups files by their extensions
-  - Optional nested categorization (e.g., `images/png`, `documents/pdf`)
-  - Handles case-insensitive extensions
+| Strategy | Where files go |
+| --- | --- |
+| `extension` | A lowercase directory per extension, such as `rs/`, with known kinds nested: `images/jpg/`, `documents/pdf/`. Files with no extension stay put. |
+| `type` | `images/`, `audio/`, `videos/`, `archives/` or `documents/`. Other files stay put. |
+| `date` | By modified time, such as `2026/11/`. Includes dotfiles. |
+| `size` | `tiny/` up to 100 KB, then `small/`, `medium/`, `large/` and `huge/`. Includes dotfiles. |
 
-- **Date Strategy**
+## Example
 
-  - Organizes by file modification date
-  - Configurable grouping (year, month, day)
-  - Customizable date format patterns
+```bash
+lla plugin run file_organizer preview -- ~/project/org extension
+```
 
-- **Type Strategy**
+```text
+Directory: ~/project/org
+Strategy: extension
+Summary: 5 files will be organized into 5 directories
+```
 
-  - Predefined categories (documents, images, videos, etc.)
-  - Customizable category-to-extension mappings
-  - Smart file type detection
+```bash
+lla plugin run file_organizer organize -- ~/project/org extension
+lla -t ~/project/org
+```
 
-- **Size Strategy**
-  - Organizes files into size-based categories
-  - Configurable size ranges
-  - Default ranges: tiny (0-100KB), small (100KB-1MB), medium (1MB-100MB), large (100MB-1GB), huge (>1GB)
+```text
+Success: Successfully organized files in ~/project/org
+└── org/
+    ├── Makefile
+    ├── audio/
+    │   └── mp3/
+    │       └── song.mp3
+    ├── documents/
+    │   ├── md/
+    │   │   └── notes.md
+    │   └── pdf/
+    │       └── report.pdf
+    ├── images/
+    │   └── jpg/
+    │       └── photo.JPG
+    ├── keep/
+    │   └── inner.txt
+    └── rs/
+        └── main.rs
+```
 
-### Additional Features
+`Makefile` stays because it has no extension, and `keep/inner.txt` stays because `keep/` is a subdirectory.
 
-- Preview mode to review changes before applying
-- Configurable ignore patterns for files and directories
-- Color-coded output for better visibility
-- Detailed error reporting
+## Settings
 
-## Configuration
-
-The plugin uses a TOML configuration file located at `~/.config/lla/file_organizer/config.toml`:
+The plugin reads `~/.config/lla/plugins/file_organizer/config.toml`.
 
 ```toml
-[colors]
-success = "bright_green"
-info = "bright_blue"
-error = "bright_red"
-path = "bright_yellow"
-
 [extension]
 enabled = true
-create_nested = true  # Create nested folders for similar types
+create_nested = true
 
 [date]
 enabled = true
-format = "%Y/%m/%d"  # Folder structure format
-group_by = "month"   # year, month, or day
+group_by = "month"
 
 [type_strategy]
 enabled = true
-categories = {
-    "documents" = ["pdf", "doc", "docx", "txt", "md"],
-    "images" = ["jpg", "jpeg", "png", "gif", "svg"],
-    "videos" = ["mp4", "mov", "avi", "mkv"],
-    "audio" = ["mp3", "wav", "flac", "m4a"],
-    "archives" = ["zip", "rar", "7z", "tar", "gz"]
-}
+
+[type_strategy.categories]
+images = ["jpg", "jpeg", "png", "gif", "svg"]
 
 [size]
 enabled = true
-ranges = [
-    { name = "tiny", max_bytes = 102400 },      # 0-100KB
-    { name = "small", max_bytes = 1048576 },    # 100KB-1MB
-    { name = "medium", max_bytes = 104857600 }, # 1MB-100MB
-    { name = "large", max_bytes = 1073741824 }, # 100MB-1GB
-    { name = "huge" }                           # >1GB
-]
 
-[ignore]
-patterns = [".git", "node_modules", "target"]
-extensions = [".tmp", ".bak"]
+[[size.ranges]]
+name = "tiny"
+max_bytes = 102400
 ```
 
-## Usage
+| Key | Effect |
+| --- | --- |
+| `enabled` | `false` turns a strategy off, and it reports `No files to organize`. |
+| `create_nested` | `false` gives `pdf/` in place of `documents/pdf/`. |
+| `group_by` | `year`, `month` or `day`. |
+| `type_strategy.categories` | Maps a directory name to the extensions it collects. Your list replaces the defaults. |
+| `size.ranges` | Names each size directory and its upper limit in bytes. |
 
-### Basic Commands
+The `date.format` key and the `[ignore]` table do nothing in 0.6.6.
 
-```bash
-# Organize using default strategy (extension)
-lla plugin run file_organizer organize -- /path/to/dir
+## Permissions
 
-# Organize using specific strategy
-lla plugin run file_organizer organize -- /path/to/dir extension
-lla plugin run file_organizer organize -- /path/to/dir date
-lla plugin run file_organizer organize -- /path/to/dir type
-lla plugin run file_organizer organize -- /path/to/dir size
-
-# Preview changes before organizing
-lla plugin run file_organizer preview -- /path/to/dir extension
-
-# Show help information
-lla plugin run file_organizer help
-```
-
-### Preview Format
-
-The preview command shows a detailed, color-coded view of planned changes:
-
-```
-📦 File Organization Preview
-══════════════════════════════════════════════════
-Directory: /path/to/dir
-Strategy: extension
-══════════════════════════════════════════════════
-
-📁 images/jpg
-  → vacation1.jpg
-  → family-photo.jpg
-  → screenshot.jpg
-
-📁 documents/pdf
-  → report.pdf
-  → invoice.pdf
-
-📁 audio/mp3
-  → favorite-song.mp3
-  → podcast.mp3
-
-══════════════════════════════════════════════════
-Summary: 7 files will be organized into 3 directories
-══════════════════════════════════════════════════
-```
-
-The preview shows:
-
-- Current directory and selected strategy
-- Files grouped by their target directories
-- Clear arrows indicating file movements
-- Summary of total files and directories
-- Color-coded output for better readability
-
-### Example Results
-
-Each strategy organizes files differently:
-
-```
-# Extension Strategy (with nested = true)
-/path/to/dir/
-├── images/
-│   ├── jpg/
-│   │   └── photo.jpg
-│   └── png/
-│       └── screenshot.png
-└── documents/
-    ├── pdf/
-    │   └── report.pdf
-    └── txt/
-        └── notes.txt
-
-# Date Strategy (group_by = "month")
-/path/to/dir/
-├── 2024/
-│   ├── 01/
-│   │   └── report.pdf
-│   └── 02/
-│       └── photo.jpg
-└── 2023/
-    └── 12/
-        └── notes.txt
-
-# Type Strategy
-/path/to/dir/
-├── documents/
-│   ├── report.pdf
-│   └── notes.txt
-├── images/
-│   ├── photo.jpg
-│   └── screenshot.png
-└── audio/
-    └── song.mp3
-
-# Size Strategy
-/path/to/dir/
-├── tiny/
-│   └── notes.txt
-├── small/
-│   └── photo.jpg
-└── medium/
-    └── report.pdf
-```
-
-## Development
-
-The plugin is built with a modular architecture:
-
-- Each strategy implements the `OrganizationStrategy` trait
-- Configuration is handled through serde-compatible structs
-- Error handling with detailed messages
-- Color-coded output using the `colored` crate
-
-### Adding New Strategies
-
-1. Create a new strategy module in `src/strategies/`
-2. Implement the `OrganizationStrategy` trait
-3. Add configuration structs in `src/config.rs`
-4. Register the strategy in `src/lib.rs`
-
-## Building
-
-```bash
-cargo build --release
-```
-
-The compiled plugin will be available in `target/release/libfile_organizer.so` (Linux/macOS) or `target/release/file_organizer.dll` (Windows).
+`filesystem = ["read:tree", "write:tree", "delete:selection"]`: it creates directories inside the target and moves files into them.

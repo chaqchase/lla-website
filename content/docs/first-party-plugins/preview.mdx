@@ -1,24 +1,92 @@
 ---
-title: "Preview"
-description: "Renders bounded terminal previews without extracting archives or modifying files."
+title: "preview"
+description: "Prints a bounded terminal preview of a text file, image or archive without extracting or changing anything."
 order: 29
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/preview]
 ---
 
-# Preview Plugin
+`preview` prints a bounded view of a text file, image or archive in your terminal. It never extracts anything. Reach for it when you want to look inside a file or an archive while you're browsing a directory.
 
-Renders bounded terminal previews without extracting archives or modifying files.
+<Shot name="plugin-preview" alt="The start of lla/src/main.rs printed through bat, beginning with its mod declarations." caption="`lla plugin run preview show -- lla/src/main.rs`" />
 
-- Text and Markdown use `bat` when available, with a safe built-in text fallback.
-- Images use `chafa` when available, with a metadata fallback.
-- ZIP and tar-family archives are listed via `unzip`/`tar`; uncompressed ZIP and tar
-  files also have built-in listing fallbacks.
+## Turn it on
+
+The `show` action works whether or not the plugin is on. Turn it on to tag each entry with its preview kind and backend:
+
+```toml
+# ~/.config/lla/config.toml
+enabled_plugins = ["preview"]
+```
+
+Or run `lla --enable-plugin preview`, which writes the same setting, so it stays on. `lla --disable-plugin preview` removes it.
+
+Tags show in the default, long and table views. In the table view, the long text follows each row.
+
+```text
+a.tar.gz [preview: archive via listing]
+medium.bin [preview: unsupported via none]
+note.txt [preview: text via bat]
+pic.png [preview: image via metadata]
+sub/ [preview: directory via none]
+```
+
+The plugin adds two typed string fields, `preview_kind` and `preview_backend`. Read them from JSON or show them as `field:<name>` columns:
 
 ```bash
-lla plugin run preview show -- README.md
-lla plugin run preview show -- src/main.rs -- --lines 80
-lla plugin run preview show -- screenshot.png
-lla plugin run preview show -- release.tar.gz
+lla --json | jq -c '.[] | {name, kind: .plugin.preview_kind, backend: .plugin.preview_backend}'
+```
+
+```text
+{"name":"note.txt","kind":"text","backend":"bat"}
+```
+
+## Actions
+
+Run an action with `lla plugin run preview <action>`.
+
+| Action | What it does |
+| --- | --- |
+| `show -- <path> [--lines N]` | Preview a file. `--lines` limits text output: 120 by default, 5000 at most |
+| `backends` | Report which tools are on your `PATH` |
+| `help` | Show help |
+
+All of them are interactive, so they need a TTY.
+
+`show` picks a backend by file type and falls back when the tool is missing:
+
+| Kind | Files | Backend | Without it |
+| --- | --- | --- | --- |
+| Text | Common source, config and text formats, Markdown, and files with no extension | `bat --style=plain` | Prints the first 512 KiB, and refuses binary files |
+| Image | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.bmp`, `.tiff`, `.tif`, `.avif`, `.heic` | `chafa` at 80x40 | Prints the file's name and size, and a hint to install `chafa` |
+| Archive | `.zip`, `.tar`, `.tar.gz`, `.tgz`, `.tar.xz` | `unzip -l` or `tar` | Lists `.zip` and `.tar` itself, up to 200 entries |
+
+Other compressed formats, such as `.7z`, `.tar.bz2` or plain `.gz`, fail with `Install tar, unzip, or 7z to list this compressed archive`, even with those tools installed. Any other file type fails with `No safe preview backend is available`.
+
+## Example
+
+```bash
+lla plugin run preview show -- lla/src/main.rs --lines 4
+```
+
+```text
+mod commands;
+mod config;
+mod error;
+mod filter;
+```
+
+```bash
 lla plugin run preview backends
 ```
+
+```text
+bat: available
+chafa: not found (built-in fallback will be used where possible)
+tar: available
+unzip: available
+```
+
+## Permissions
+
+`process = true`, because the plugin runs `bat`, `chafa`, `tar` and `unzip`. It also has `read:selection` and `read:user-path`, so it can read the files you list or name.

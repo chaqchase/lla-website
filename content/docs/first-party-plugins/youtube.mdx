@@ -1,93 +1,45 @@
 ---
-title: "YouTube"
-description: "YouTube search plugin for `lla` with live autosuggestions, history management, and clipboard support."
+title: "youtube"
+description: "Opens a YouTube search in your browser from a terminal prompt with live suggestions and a search history."
 order: 38
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/youtube]
 ---
 
-# lla YouTube Plugin
+`youtube` opens a YouTube search in your browser from a terminal prompt with live suggestions. Reach for it when you're working in the terminal and want to find a video.
 
-YouTube search plugin for `lla` with live autosuggestions, history management, and clipboard support.
+## Actions
 
-## Features
+Run an action with `lla plugin run youtube <action>`.
 
-- **Live Autocomplete**: Real-time search suggestions from YouTube API as you type
-- **Loading States**: Visual spinner while fetching suggestions
-- **Smart Search**: Multiple input options (live suggestions, history, clipboard)
-- **Search Selected Text**: Instantly search using text from clipboard
-- **History Management**: Persistent search history with statistics
+| Action | What it does |
+| --- | --- |
+| `search` | Prompt for a query with live suggestions, then open the results |
+| `search-selected` | Same prompt, filled in from your clipboard |
+| `history` | Search again, copy, delete or clear past searches, or see statistics |
+| `preferences` | Change settings |
+| `help` | Show help |
 
-## Usage
+All of them are interactive, so they need a TTY. Despite its name, `search-selected` can't see selected text, so copy the text first.
+
+## Example
 
 ```bash
-# Perform a YouTube search
 lla plugin run youtube search
-
-# Search with selected/clipboard text
-lla plugin run youtube search-selected
-
-# Manage search history
-lla plugin run youtube history
-
-# Configure preferences
-lla plugin run youtube preferences
-
-# Show help
-lla plugin run youtube help
 ```
 
-## Configuration
+Type a query, pick a suggestion with the arrow keys if you want one, and press Enter. This opens `https://www.youtube.com/results?search_query=<query>` in your default browser.
 
-Config location: `~/.config/lla/plugins/youtube/config.toml`
+## Settings
 
-```toml
-remember_search_history = true    # Enable/disable history persistence
-use_clipboard_fallback = true     # Enable/disable clipboard fallback
-max_history_size = 100           # Maximum history entries
+Edit `~/.config/lla/plugins/youtube/config.toml`, or run the `preferences` action.
 
-[colors]
-success = "bright_green"
-info = "bright_cyan"
-warning = "bright_yellow"
-error = "bright_red"
-prompt = "bright_blue"
-link = "bright_magenta"
-```
+| Key | Default | What it does |
+| --- | --- | --- |
+| `remember_search_history` | `true` | Save searches in `search_history`, in the same file |
+| `use_clipboard_fallback` | `true` | Let `search-selected` read the clipboard. When `false`, it fails with `No text available in clipboard. Copy some text first.` |
+| `max_history_size` | `100` | Searches to keep |
 
-## Display Examples
+## Permissions
 
-Live Autocomplete:
-
-```
-💡 Enter a search query to see live YouTube suggestions
-Search query: rust tutorial
-
-🔄 Fetching suggestions from YouTube...
-⠋ Loading suggestions...
-
-✨ 10 suggestions found:
-Select a search query
-> 🎬 rust tutorial (your input)
-  💡 rust tutorial for beginners
-  💡 rust tutorial 2025
-  💡 rust tutorial game
-  💡 rust tutorial programming
-  ...
-```
-
-History Statistics:
-
-```
-📊 Search History Statistics:
-──────────────────────────────────────────────────
- • Total searches: 42
- • Unique queries: 28
- • Oldest search: 2025-10-15 09:30:00
- • Most recent: 2025-10-20 16:15:30
-
-🔥 Top 5 searches:
- • rust tutorial (8x)
- • golang explained (5x)
- • docker basics (3x)
-```
+The plugin can reach `youtube.com` and `suggestqueries.google.com`, and use the clipboard and open URLs. What you type goes to `suggestqueries.google.com` over plain HTTP before you press Enter, so don't type anything private into the prompt. Suggestions are cached for an hour.

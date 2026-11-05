@@ -1,84 +1,56 @@
 ---
-title: "File Remover"
-description: "A plugin for `lla` that provides an interactive interface for recoverable deletion. The default `remove` action moves entries into the shared `trash` store. Permanent deletion is available only through the explicit `purge` action and a second confirmation."
+title: "file_remover"
+description: "Deletes files you pick from a directory, either to recoverable trash or permanently."
 order: 15
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/file_remover]
 ---
 
-# lla File Remover Plugin
+`file_remover` deletes files and directories you pick from a multi-select prompt. `remove` moves them to the recoverable [trash](/docs/first-party-plugins/trash), and `purge` deletes them for good. Reach for it when you want to clear several items from one directory and see each one before it goes. It adds nothing to listings.
 
-A plugin for `lla` that provides an interactive interface for recoverable deletion. The
-default `remove` action moves entries into the shared `trash` store. Permanent deletion
-is available only through the explicit `purge` action and a second confirmation.
+## Actions
 
-## Features
+Run an action with `lla plugin run file_remover <action> -- <args>`. Every action is interactive, so it needs a TTY and the default `--output human`.
 
-- **Interactive Selection**: Multi-select interface for choosing files to remove
-- **Path Flexibility**: Support for both current and specified directories
-- **Recoverable by Default**: `remove` records original paths and moves entries to trash
-- **Explicit Permanent Deletion**: `purge` is deliberately separate and irreversible
-- **Directory Support**: Files, symlinks, and complete directory trees are supported
-- **User Interface**: Colored output and interactive menus
+| Action | Arguments | What it does |
+| --- | --- | --- |
+| `remove` | `[dir]` | Moves selected items to the trash after a confirmation. |
+| `purge` | `[dir]` | Permanently deletes selected items after a confirmation. |
+| `help` | | Prints usage. |
 
-## Configuration
+Both actions list one directory level, the current directory if you name none. The confirmation defaults to no.
 
-```toml
-[colors]
-success = "bright_green"
-info = "bright_blue"
-error = "bright_red"
-path = "bright_yellow"
-```
+<Callout type="warning">
+`purge` can't be undone. Trashed items are recoverable, so prefer `remove`.
+</Callout>
 
-## Usage
-
-### Basic Operations
+## Example
 
 ```bash
-# Move files/directories from the current directory to recoverable trash
-lla plugin run file_remover remove
-
-# Move files/directories from a specified directory to recoverable trash
-lla plugin run file_remover remove -- /path/to/directory
-
-# Permanently delete selected entries (cannot be restored)
-lla plugin run file_remover purge -- /path/to/directory
-
-# Show help information
-lla plugin run file_remover help
+lla plugin run file_remover remove -- ~/project/rm
 ```
 
-## Common Workflows
+```text
+Warning: The following items will be moved to trash:
+  → r3.txt
+Move these items to recoverable trash? yes
+Success: Trashed: ~/project/rm/r3.txt (id: 20261104T225943.213Z-27293-0)
 
-### 1. Trashing Files from Current Directory
+Summary: Operation completed: 1 items trashed, 0 errors
+```
+
+Trashed items go to `~/.config/lla/plugins/trash/`. Find the ID and restore with the `trash` plugin.
 
 ```bash
-# In target directory
-cd /path/to/directory
-lla plugin run file_remover remove
-# Select files to trash using space, confirm with enter
+lla plugin run trash list
+lla plugin run trash restore -- 20261104T225943.213Z-27293-0
 ```
 
-### 2. Trashing Files from Specific Directory
-
-```bash
-# Trash files from a specific directory without changing location
-lla plugin run file_remover remove -- /path/to/directory
-# Select files to trash using space, confirm with enter
+```text
+20261104T225943.213Z-27293-0  2026-11-04T22:59:43Z  3 bytes  ~/project/rm/r3.txt
+Restored to ~/project/rm/r3.txt
 ```
 
-## Display Format
+## Permissions
 
-```
-─────────────────────────────────────
- File Remover
-─────────────────────────────────────
- Select items to remove:
-   → file1.txt
-   → directory1
-   → file2.rs
-─────────────────────────────────────
- Use Space to select, Enter to confirm
-─────────────────────────────────────
-```
+`filesystem = ["read:tree", "write:user-path", "delete:selection", "delete:quarantine"]`: it deletes what you select and moves trashed items into the shared trash store.

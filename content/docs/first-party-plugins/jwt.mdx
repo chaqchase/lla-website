@@ -1,75 +1,36 @@
 ---
-title: "JWT"
-description: "JWT decoder and analyzer for `lla` with beautiful formatting, search capabilities, and validation."
+title: "jwt"
+description: "Decodes JSON Web Tokens in your terminal and searches their claims. It doesn't verify signatures."
 order: 23
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/jwt]
 ---
 
-# lla JWT Plugin
+`jwt` decodes a JSON Web Token and prints its header, payload and signature. Reach for it when you're debugging auth and want to read a token's claims without pasting it into a website. It has no network access. It also doesn't verify signatures, so a decoded token isn't a trusted one.
 
-JWT decoder and analyzer for `lla` with beautiful formatting, search capabilities, and validation.
+## Actions
 
-## Features
+Run an action with `lla plugin run jwt <action>`.
 
-- **Token Decoding**: Beautiful formatted display of JWT header, payload, and signature
-- **Expiration Checking**: Automatic expiration validation with time remaining
-- **Smart Search**: Regex-powered search through JWT contents
-- **History Management**: Store and manage decoded JWT tokens
-- **Multiple Input Methods**: Paste, clipboard, or select from history
-- **Flexible Copying**: Copy full token, header, payload, or specific claims
-- **Claim Highlighting**: Automatically highlight important JWT claims
+| Action | What it does |
+| --- | --- |
+| `decode` | Decode a token you paste, take from the clipboard or pick from history |
+| `search` | Search decoded tokens with a regex over header and payload keys and values |
+| `history` | Copy or remove saved tokens, or clear the list |
+| `preferences` | Change settings |
+| `help` | Show help |
 
-## Usage
+All of them are interactive, so they need a TTY. None takes arguments, since tokens come in through a prompt.
+
+## Example
 
 ```bash
-# Decode and view JWT token
 lla plugin run jwt decode
-
-# Search through JWT contents
-lla plugin run jwt search
-
-# Manage JWT history
-lla plugin run jwt history
-
-# Configure preferences
-lla plugin run jwt preferences
-
-# Show help
-lla plugin run jwt help
 ```
 
-## Configuration
+Choose Paste JWT token and paste it:
 
-Config location: `~/.config/lla/plugins/jwt/config.toml`
-
-```toml
-auto_check_expiration = true           # Automatically check token expiration
-save_to_history = true                 # Save decoded tokens to history
-max_history_size = 50                  # Maximum number of tokens in history
-highlight_claims = ["sub", "iss", "aud", "exp", "iat", "nbf"]  # Claims to highlight
-
-[colors]
-success = "bright_green"
-info = "bright_cyan"
-warning = "bright_yellow"
-error = "bright_red"
-header = "bright_blue"
-payload = "bright_magenta"
-claim = "bright_green"
-expired = "bright_red"
-valid = "bright_green"
-```
-
-## Display Examples
-
-Token Display:
-
-```
-═══════════════════════════════════════════════════════════════════════════════
-  🔐 JWT TOKEN DETAILS
-═══════════════════════════════════════════════════════════════════════════════
-
+```text
 ┌─ HEADER ─────────────────────────────────────────────────────────────┐
 {
   alg: "HS256",
@@ -79,33 +40,33 @@ Token Display:
 
 ┌─ PAYLOAD ────────────────────────────────────────────────────────────┐
 {
-  sub: "1234567890",
-  name: "John Doe",
-  iat: 1516239022,
-  exp: 1735689600
+  aud: "api",
+  exp: 1700003600,
+  iat: 1700000000,
+  iss: "https://auth.example.com",
+  role: "admin",
+  sub: "user-42"
 }
 └──────────────────────────────────────────────────────────────────────┘
 
-✅ Expires in 45 days
-
 ┌─ SIGNATURE ──────────────────────────────────────────────────────────┐
-  SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+  c2lnbmF0dXJl
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-Search Results:
+If the token has an `exp` claim, a line such as `Expired 1085 days ago` reports its status. A menu then lets you copy the header, the payload, the full token or one claim, or save the token to history.
 
-```
-═══════════════════════════════════════════════════════════════════════════════
-🔍 Found 3 matches for 'user'
-═══════════════════════════════════════════════════════════════════════════════
+<Callout type="warning" title="History stores raw tokens">
+Save to history writes the whole token in plain text to the config file. Don't save tokens that are still valid, or set `save_to_history = false`.
+</Callout>
 
-► payload » userId
-  "12345"
+## Settings
 
-► payload » username
-  "john.doe"
+Edit `~/.config/lla/plugins/jwt/config.toml`, or run the `preferences` action.
 
-► payload » user_role
-  "admin"
-```
+| Key | Default | What it does |
+| --- | --- | --- |
+| `max_history_size` | `50` | Tokens to keep in history |
+| `auto_check_expiration` | `true` | Report expiry when a token has an `exp` claim |
+| `save_to_history` | `true` | Allow Save to history |
+| `highlight_claims` | `["sub", "iss", "aud", "exp", "iat", "nbf"]` | Claims to highlight in the payload |

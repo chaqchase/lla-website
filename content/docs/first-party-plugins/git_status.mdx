@@ -1,53 +1,108 @@
 ---
-title: "Git Status"
-description: "Git integration plugin for `lla` providing real-time repository status with rich formatting."
+title: "git_status"
+description: "Adds Git status to each entry in default listings, plus branch and last commit in long listings."
 order: 19
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/git_status]
 ---
 
-# lla Git Status Plugin
+`git_status` adds each entry's Git status to a listing, plus the branch and last commit in the long view. Turn it on when you want Git state next to your files in every listing. For a dedicated commit view, use `lla --git` from the [Git view](/docs/usage/views#git-view).
 
-Git integration plugin for `lla` providing real-time repository status with rich formatting.
-
-## Features
-
-- Status tracking (staged, modified, untracked, conflicts)
-- Repository info (branch, commits, working tree)
-- Color-coded display
-- Performance optimized
-
-## Configuration
-
-Config location: `~/.config/lla/git_status/config.toml`
+## Turn it on
 
 ```toml
-[colors]
-clean = "bright_green"
-modified = "bright_yellow"
-staged = "bright_green"
-untracked = "bright_blue"
-conflict = "bright_red"
-branch = "bright_cyan"
-commit = "bright_yellow"
-info = "bright_blue"
-name = "bright_yellow"
+# ~/.config/lla/config.toml
+enabled_plugins = ["git_status"]
 ```
 
-## Display Examples
+Or run this once. It saves the same setting, so the plugin stays on until you run `lla --disable-plugin git_status`.
 
-Basic:
-
-```
-document.txt
-Git: modified, 2 staged
+```bash
+lla --enable-plugin git_status
 ```
 
-Detailed:
+Output appears in the default and long views (`formats = ["default", "long"]`), and in the table view, which uses the long format. A directory's status sums the entries under it.
 
+| Field | Type | Holds |
+| --- | --- | --- |
+| `git_status` | string | `clean`, `modified`, `untracked` and so on |
+| `git_branch` | string | Current branch |
+| `git_staged` | integer | Staged entries |
+| `git_modified` | integer | Modified entries |
+
+JSON also carries untyped strings: `git_commit`, `git_untracked` and `git_conflicts`.
+
+```bash
+lla --json | jq '.[] | select(.name=="src") | .plugin'
 ```
-project/
-Branch:  main
-Commit:  a1b2c3d Initial commit
-Status:  2 staged, 1 modified, 3 untracked
+
+```text
+{
+  "git_modified": 1,
+  "git_commit": "420df49 Tweak engine",
+  "git_branch": "main",
+  "git_untracked": "0",
+  "git_staged": 0,
+  "git_status": "modified",
+  "git_conflicts": "0"
+}
 ```
+
+You can also add them as [columns](/docs/usage/views#choose-the-columns). The plugin's block still prints with each row.
+
+```toml
+[formatters.table]
+columns = ["name", "field:git_status", "field:git_branch"]
+```
+
+<Callout type="warning">
+Decoration appears for `lla` or `lla .` at the repository root, for `lla ./src` and for absolute paths. In 0.6.6, `lla src` and `lla` run from a subdirectory show nothing.
+</Callout>
+
+## Actions
+
+Run an action with `lla plugin run git_status help`. `help` prints usage and is interactive, so it needs a TTY and the default `--output human`. Running it also enables the plugin and saves that setting.
+
+## Example
+
+```bash
+lla
+```
+
+```text
+README.md 
+┌─
+│ Git          clean
+└─
+
+docs/ 
+┌─
+│ Git          untracked
+└─
+
+src/ 
+┌─
+│ Git          modified
+└─
+```
+
+```bash
+lla -l --hide-group
+```
+
+```text
+drwxr-xr-x  96B Nov 04 22:53 you src/ 
+┌─
+│ Branch       main
+│ Commit       3f8c938 Update main 3
+│ Status       1 modified
+└─
+```
+
+## Settings
+
+`~/.config/lla/plugins/git_status/config.toml` sets colors in a `[colors]` table: `info`, `branch`, `commit`, `clean` and `modified`.
+
+## Permissions
+
+`process = true`, because it runs `git rev-parse`, `git log` and `git status`. `filesystem = ["metadata:tree"]`.

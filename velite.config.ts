@@ -3,6 +3,7 @@ import rehypePrettyCode from 'rehype-pretty-code'
 import rehypeSlug from 'rehype-slug'
 import { defineCollection, defineConfig, s } from 'velite'
 import { rehypeMermaid } from './lib/rehype-mermaid'
+import { lightTheme } from './lib/shiki-light'
 
 const computedFields = <T extends { slug: string }>(data: T) => ({
   ...data,
@@ -42,7 +43,14 @@ export default defineConfig({
     rehypePlugins: [
       rehypeSlug,
       rehypeMermaid, // Handle mermaid blocks BEFORE rehype-pretty-code
-      [rehypePrettyCode, { defaultLang: 'bash', theme: 'vesper' }],
+      [
+        rehypePrettyCode,
+        {
+          defaultLang: { block: 'bash' },
+          keepBackground: false,
+          theme: { light: lightTheme, dark: 'vesper' }
+        }
+      ],
       [
         rehypeAutolinkHeadings,
         {

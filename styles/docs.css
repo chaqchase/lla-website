@@ -1,0 +1,339 @@
+/* Long-form reading styles for MDX content. */
+
+.doc {
+  --doc-text: hsl(var(--fg) / 0.92);
+  color: var(--doc-text);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+.dark .doc {
+  --doc-text: hsl(var(--fg) / 0.92);
+}
+
+.doc > :first-child {
+  margin-top: 0;
+}
+
+/* Prose rules stop at .not-doc, so embedded components keep their own spacing. */
+.doc :is(p, ul, ol, blockquote, table):not(.not-doc, .not-doc *) {
+  margin-block: 1rem;
+}
+
+.doc strong {
+  color: hsl(var(--fg));
+  font-weight: 600;
+}
+
+/* Headings */
+.doc h1,
+.doc h2,
+.doc h3,
+.doc h4 {
+  color: hsl(var(--fg));
+  scroll-margin-top: calc(var(--nav-height) + 1.25rem);
+}
+
+.doc h1,
+.doc h2 {
+  font-weight: 500;
+  letter-spacing: -0.022em;
+}
+
+.doc h1 {
+  font-size: 1.875rem;
+  line-height: 1.2;
+  margin-block: 2.25rem 0.75rem;
+}
+
+.doc h2 {
+  font-size: 1.5rem;
+  line-height: 1.3;
+  margin-block: 2.25rem 0.6rem;
+}
+
+.doc h3 {
+  font-size: 1.125rem;
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-block: 1.75rem 0.4rem;
+}
+
+.doc h4 {
+  font-size: 1.0625rem;
+  font-weight: 500;
+  margin-block: 1.4rem 0.35rem;
+}
+
+.doc h2 + h3 {
+  margin-top: 1.1rem;
+}
+
+/* Heading anchors: the mark appears on hover, the heading stays where it is. */
+.doc .subheading-anchor {
+  color: inherit;
+  text-decoration: none;
+  position: relative;
+}
+
+.doc .subheading-anchor::before {
+  content: '#';
+  position: absolute;
+  left: -1.05em;
+  top: 0;
+  width: 1em;
+  color: hsl(var(--muted-fg));
+  font-weight: 400;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .doc .subheading-anchor:hover::before {
+    opacity: 1;
+  }
+}
+
+/* Links */
+.doc a:not(.subheading-anchor):not([data-plain]) {
+  color: hsl(var(--link));
+  text-decoration-line: underline;
+  text-decoration-color: hsl(var(--link) / 0.3);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color 160ms ease;
+}
+
+.doc a:not(.subheading-anchor):not([data-plain]):hover {
+  text-decoration-color: hsl(var(--link));
+}
+
+/* External links say so with a small arrow, kept out of the underline. */
+.doc a[href^='http']:not([data-plain])::after {
+  content: '\2197\FE0E';
+  display: inline-block;
+  margin-left: 0.12em;
+  font-size: 0.78em;
+  color: hsl(var(--muted-fg));
+  transition: transform 160ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .doc a[href^='http']:not([data-plain]):hover::after {
+    transform: translate(1px, -1px);
+    color: hsl(var(--primary));
+  }
+}
+
+/* Lists */
+.doc :is(ul, ol):not(.not-doc, .not-doc *) {
+  padding-left: 1.1rem;
+}
+
+.doc ul:not(.not-doc, .not-doc *) {
+  list-style-type: '\25AA\FE0E\2002';
+}
+
+.doc ul ul:not(.not-doc, .not-doc *) {
+  list-style-type: '\25AB\FE0E\2002';
+}
+
+.doc ul:not(.not-doc, .not-doc *) > li::marker {
+  color: hsl(var(--primary) / 0.8);
+}
+
+.doc ol:not(.not-doc, .not-doc *) {
+  list-style: decimal;
+}
+
+.doc ol:not(.not-doc, .not-doc *) > li::marker {
+  color: hsl(var(--muted-fg));
+  font-variant-numeric: tabular-nums;
+}
+
+.doc li:not(.not-doc *) {
+  margin-block: 0.25rem;
+}
+
+.doc li > p:not(.not-doc *) {
+  margin-block: 0.25rem;
+}
+
+/* Rules */
+.doc hr {
+  border: 0;
+  border-top: 1px solid hsl(var(--border));
+  margin-block: 2.25rem;
+}
+
+/* Quotes */
+.doc blockquote {
+  border-left: 2px solid hsl(var(--border));
+  padding-left: 0.9rem;
+  color: hsl(var(--muted-fg));
+}
+
+/* Inline code */
+.doc :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  font-feature-settings: 'calt' 0;
+  color: hsl(var(--fg));
+  background: hsl(var(--muted));
+  border-radius: 0.2rem;
+  padding: 0.12em 0.36em;
+  white-space: break-spaces;
+}
+
+.doc a > code {
+  color: inherit;
+}
+
+.doc h2 code,
+.doc h3 code {
+  font-size: 0.82em;
+}
+
+/* Tables: rules only, with the first column flush to the text. */
+.doc-table {
+  margin-block: 1.1rem;
+  overflow-x: auto;
+}
+
+.doc-table table {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.doc-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: hsl(var(--muted-fg));
+  padding: 0 1rem 0.4rem 0;
+  border-bottom: 1px solid hsl(var(--border));
+  white-space: nowrap;
+}
+
+.doc-table td {
+  padding: 0.45rem 1rem 0.45rem 0;
+  vertical-align: top;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.doc-table tr:first-child td {
+  border-top: 0;
+}
+
+.doc-table th:last-child,
+.doc-table td:last-child {
+  padding-right: 0;
+}
+
+.doc-table td:first-child {
+  color: hsl(var(--fg));
+}
+
+.doc-table td code {
+  white-space: nowrap;
+}
+
+/* Code blocks */
+.code-block {
+  position: relative;
+  margin-block: 1rem;
+  border: 1px solid hsl(var(--code-border));
+  border-radius: var(--radius);
+  background: hsl(var(--code-bg));
+  overflow: hidden;
+}
+
+.code-block pre {
+  margin: 0;
+  overflow-x: auto;
+  padding: 0.7rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.65;
+  background: transparent !important;
+}
+
+.code-block code {
+  display: grid;
+  min-width: max-content;
+  font-feature-settings: 'calt' 0;
+}
+
+.code-block [data-line] {
+  padding-inline: 0.875rem;
+  padding-right: 3rem;
+  min-height: 1.65em;
+}
+
+.code-block [data-highlighted-line] {
+  background: hsl(var(--code-line));
+  box-shadow: inset 2px 0 0 hsl(var(--primary));
+}
+
+/* Shiki emits both palettes as custom properties; choose one per theme. */
+.code-block code[data-theme] span {
+  color: var(--shiki-light);
+}
+
+.dark .code-block code[data-theme] span {
+  color: var(--shiki-dark);
+}
+
+/* Vesper's comments are semi-transparent, too faint to read at this size. */
+.dark .code-block code[data-theme] span[style*='8B8B8B94' i] {
+  color: #a3a3a3;
+}
+
+.code-block[data-language='bash'] [data-line]:empty {
+  min-height: 0.8em;
+}
+
+.code-title {
+  display: flex;
+  align-items: center;
+  height: 1.875rem;
+  padding-inline: 0.875rem;
+  border-bottom: 1px solid hsl(var(--code-border));
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: hsl(var(--muted-fg));
+  background: hsl(var(--card-header));
+}
+
+/* Mermaid */
+.mermaid-figure svg {
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+
+/* A heading reached by link glows once, so the eye lands in the right place. */
+@media (prefers-reduced-motion: no-preference) {
+  .doc :is(h2, h3):target {
+    animation: target-flash 1400ms var(--ease-out);
+  }
+
+  @keyframes target-flash {
+    0%,
+    35% {
+      background-color: hsl(var(--primary) / 0.14);
+      box-shadow: 0 0 0 0.3em hsl(var(--primary) / 0.14);
+      border-radius: 2px;
+    }
+    100% {
+      background-color: transparent;
+      box-shadow: 0 0 0 0.3em transparent;
+    }
+  }
+}

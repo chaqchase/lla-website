@@ -1,73 +1,93 @@
 ---
-title: "File Hash"
-description: "A high-performance file hashing plugin for `lla` that calculates secure cryptographic hashes (SHA-1 and SHA-256)."
+title: "file_hash"
+description: "Adds SHA-1 and SHA-256 hashes for each file to default and long listings."
 order: 11
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/file_hash]
 ---
 
-# lla File Hash Plugin
+`file_hash` adds the SHA-1 and SHA-256 of each file to a listing. Turn it on when you need to compare files or check a download against a published hash. Directories stay bare.
 
-A high-performance file hashing plugin for `lla` that calculates secure cryptographic hashes (SHA-1 and SHA-256).
+<Shot name="plugin-file-hash" alt="A long listing in which each file also shows its SHA-1 and SHA-256 hashes." caption="`lla -l --hide-group <dir>` with only `file_hash` enabled." />
 
-## Features
+## Turn it on
 
-- SHA-1 and SHA-256 hash calculation
-- One native decoration and formatting call per listing batch
-- Persistent metadata-keyed digest cache
-- Efficient 64 KiB buffered reads on cache misses
-- Rich display formatting
-- Native Plugin Platform v3 execution
-- Structured text output for plugin actions
+```toml
+# ~/.config/lla/config.toml
+enabled_plugins = ["file_hash"]
+```
 
-## Configuration
+Or run this once. It saves the same setting, so the plugin stays on until you run `lla --disable-plugin file_hash`.
 
-Located at `~/.config/lla/plugins/file_hash/config.toml`:
+```bash
+lla --enable-plugin file_hash
+```
+
+Output appears in the default and long views (`formats = ["default", "long"]`), and in the table view, which uses the long format. The default view prints the first 8 characters of each hash, and the long view prints all of them.
+
+The plugin adds two string fields, `sha1` and `sha256`. They always hold the full hash. Use JSON in scripts, because the labels stay colored even with `--no-color`.
+
+```bash
+lla --json | jq -r '.[] | select(.name=="README.md") | .plugin.sha256'
+```
+
+You can also add them as [columns](/docs/usage/views#choose-the-columns). The plugin's block still prints with each row.
+
+```toml
+[formatters.table]
+columns = ["name", "size", "field:sha256"]
+```
+
+## Actions
+
+| Action | What it does |
+| --- | --- |
+| `help` | Prints usage. |
+
+```bash
+lla plugin run file_hash help
+```
+
+`help` isn't interactive, so it works without a TTY. Running it also enables the plugin and saves that setting.
+
+## Example
+
+```bash
+lla
+```
+
+```text
+.gitignore 
+┌─
+│ SHA1 61bb15bc
+│ SHA256 bd326839
+└─
+```
+
+```bash
+lla -l --hide-group
+```
+
+```text
+-rw-r--r--  17B Aug 13 05:21 you .gitignore 
+┌─
+│ SHA1 61bb15bcba8a888753fcbe9f9b8511252582e25d
+│ SHA256 bd326839f62a577e3e3b33089581b586fc3f4b8770f6ba5f1f8a491bdf36cd12
+└─
+```
+
+## Settings
+
+The plugin reads `~/.config/lla/plugins/file_hash/config.toml`.
 
 ```toml
 [colors]
-sha1 = "bright_green"     # SHA-1 hash color
-sha256 = "bright_yellow"  # SHA-256 hash color
-success = "bright_green"  # Success messages
-info = "bright_blue"     # Information messages
-name = "bright_yellow"   # Name highlighting
+sha1 = "bright_green"
+sha256 = "bright_yellow"
 
 [cache]
-enabled = true            # Reuse hashes when size and modification time match
-max_entries = 10000       # Retain the most recently used entries
+enabled = true
+max_entries = 10000
 ```
 
-The cache is stored at `~/.config/lla/plugins/file_hash/cache.toml`. A file is
-hashed again when its size or nanosecond modification timestamp changes. Delete
-that cache file to force a complete rebuild; it is recreated automatically.
-
-## Usage
-
-```bash
-# View help information
-lla plugin run file_hash help
-
-# First run populates the digest cache
-lla -l ./directory
-
-# The same listing should reuse cached hashes when file metadata is unchanged
-lla -l ./directory
-```
-
-## Display Formats
-
-### Default Format
-
-```
-document.pdf
-SHA1:   a1b2c3d4
-SHA256: e5f6g7h8
-```
-
-### Long Format
-
-```
-document.pdf
-SHA1:   a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0
-SHA256: u1v2w3x4y5z6a7b8c9d0e1f2g3h4i5j6k7l8m9n0p1q2r3s4t5u6v7w8x9y0
-```
+The `[colors]` table also takes `success`, `info` and `name`. Hashes are cached in `cache.toml` in the same directory, keyed by path, size and modified time, so a changed file gets a new hash.

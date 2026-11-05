@@ -1,127 +1,48 @@
 ---
-title: "File Copier"
-description: "A plugin for `lla` that provides an intuitive clipboard-based interface for copying files and directories."
+title: "file_copier"
+description: "Collects files and directories on a clipboard, then copies them to a target directory."
 order: 10
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/file_copier]
 ---
 
-# lla File Copier Plugin
+`file_copier` collects files and directories on a clipboard, then copies them to a target directory. Reach for it when you're gathering items from several places into one. It adds nothing to listings.
 
-A plugin for `lla` that provides an intuitive clipboard-based interface for copying files and directories.
+The clipboard is a JSON file, separate from your system clipboard: `cp_clipboard.json` in `~/Library/Application Support/lla/` on macOS and `~/.config/lla/` on Linux.
 
-## Features
+## Actions
 
-- **Clipboard Management**: Persistent clipboard for files and directories
-- **Interactive Selection**: Multi-select interface for files and operations
-- **Flexible Copying**: Copy all or selected items from clipboard
-- **Path Flexibility**: Support for both current and specified directories
-- **Safe Operations**: Validation and error handling for copy operations
-- **User Interface**: Colored output and interactive menus
+Run an action with `lla plugin run file_copier <action> -- <args>`. Every action is interactive, so it needs a TTY and the default `--output human`.
 
-## Configuration
+| Action | Arguments | What it does |
+| --- | --- | --- |
+| `add` | `[dir]` | Opens a multi-select for one directory and adds your picks to the clipboard. Space selects, `a` toggles all, Enter confirms. |
+| `copy-all` | `[target]` | Copies every clipboard item to the target. Directories copy recursively, and the clipboard keeps its items. |
+| `copy-partial` | `[target]` | Lets you pick which clipboard items to copy. |
+| `show` | | Shows the clipboard in a selector, where you can remove items. |
+| `clear` | | Empties the clipboard. |
+| `help` | | Prints usage. |
 
-Config file: `~/.config/lla/cp_clipboard.json`
+`dir` and `target` default to the current directory.
 
-```toml
-[colors]
-success = "bright_green"
-info = "bright_blue"
-error = "bright_red"
-path = "bright_yellow"
-```
+<Callout type="warning">
+A file already at the destination is overwritten with no prompt.
+</Callout>
 
-## Usage
-
-### Basic Operations
+## Example
 
 ```bash
-# Add files from current directory to clipboard
-lla plugin run file_copier add
-
-# Add files from a specific directory to clipboard
-lla plugin run file_copier add -- /path/to/source
-
-# Copy all files from clipboard to current directory
-lla plugin run file_copier copy-all
-
-# Copy all files from clipboard to specific directory
-lla plugin run file_copier copy-all -- /path/to/destination
-
-# Copy selected files from clipboard to current directory
-lla plugin run file_copier copy-partial
-
-# Copy selected files from clipboard to specific directory
-lla plugin run file_copier copy-partial -- /path/to/destination
-```
-
-### Clipboard Management
-
-```bash
-# View clipboard contents with option to remove items
-lla plugin run file_copier show
-
-# Clear the clipboard
+lla plugin run file_copier add -- ~/project/src
+lla plugin run file_copier copy-all -- ~/project/dst
 lla plugin run file_copier clear
-
-# Show help information
-lla plugin run file_copier help
 ```
 
-## Common Workflows
-
-### 1. Copying Files Between Directories (Using Explicit Paths)
-
-```bash
-# Add files from source directory
-lla plugin run file_copier add -- /path/to/source
-# Select files to copy using space, confirm with enter
-
-# Copy all files to target directory
-lla plugin run file_copier copy-all -- /path/to/target
+```text
+Success: Added 3 items to clipboard from ~/project/src
+Success: Copied all items to ~/project/dst
+Success: Clipboard cleared
 ```
 
-### 2. Copying Files Using Current Directory Navigation
+## Permissions
 
-```bash
-# In source directory
-cd /path/to/source
-lla plugin run file_copier add
-# Select files to add to clipboard
-
-# Navigate to first target
-cd /path/to/target1
-lla plugin run file_copier copy-partial
-# Select subset of files to copy here
-
-# Navigate to second target
-cd /path/to/target2
-lla plugin run file_copier copy-partial
-# Select another subset of files to copy here
-```
-
-### 3. Mixed Workflow (Current and Explicit Paths)
-
-```bash
-# Add files from current directory
-lla plugin run file_copier add
-# Select files to add to clipboard
-
-# Copy selected files to a specific directory without changing location
-lla plugin run file_copier copy-partial -- /path/to/target
-```
-
-## Display Format
-
-```
-─────────────────────────────────────
- File Copier Clipboard
-─────────────────────────────────────
- Current Items:
-   → /path/to/file1.txt
-   → /path/to/directory1
-   → /path/to/file2.rs
-─────────────────────────────────────
- Use Space to select, Enter to confirm
-─────────────────────────────────────
-```
+`filesystem = ["read:tree", "write:selected-destination"]`: it reads the source tree and writes to the target. It also declares `clipboard = true`, though its clipboard is the JSON file above.

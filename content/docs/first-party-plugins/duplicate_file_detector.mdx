@@ -1,74 +1,94 @@
 ---
-title: "Duplicate File Detector"
-description: "A plugin for `lla` that identifies identical files using secure hash comparison."
+title: "duplicate_file_detector"
+description: "Marks files with identical contents in a listing and names the original and its other copies."
 order: 9
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/duplicate_file_detector]
 ---
 
-# lla Duplicate File Detector Plugin
+`duplicate_file_detector` marks files with identical contents in a listing and names the other copies. Turn it on when you're clearing out a directory that has collected copies. It compares by size, then SHA-256, and treats the file with the oldest modified time as the original.
 
-A plugin for `lla` that identifies identical files using secure hash comparison.
-
-## Features
-
-- SHA-256 content hashing with intelligent caching
-- Original file and duplicate chain tracking
-- Color-coded status display
-- Performance optimized with chunk-based processing
-
-## Configuration
-
-Located at `~/.config/lla/duplicate_file_detector/config.toml`:
+## Turn it on
 
 ```toml
-[colors]
-duplicate = "bright_red"        # Duplicate file indicator
-has_duplicates = "bright_yellow"# Original file with duplicates
-path = "bright_cyan"           # File path display
-success = "bright_green"       # Success messages
-info = "bright_blue"          # Information messages
-name = "bright_yellow"        # Name highlighting
+# ~/.config/lla/config.toml
+enabled_plugins = ["duplicate_file_detector"]
 ```
 
-## Usage
+Or run this once. It saves the same setting, so the plugin stays on until you run `lla --disable-plugin duplicate_file_detector`.
 
 ```bash
-# Clear the detection cache
-lla plugin run duplicate_file_detector clear-cache
-
-# View help information
-lla plugin run duplicate_file_detector help
+lla --enable-plugin duplicate_file_detector
 ```
 
-## Display Formats
+Output appears in the default and long views (`formats = ["default", "long"]`), and in the table view, which uses the long format.
 
-### Default Format
+The plugin compares only the entries in the current listing. `lla` and `lla -l` compare one directory. To compare across subdirectories, use `lla -l -R`. `lla -R` on its own shows no duplicate data.
 
-```
-file.txt
-Status: DUPLICATE of /path/to/original.txt
+| Field | Type | Holds |
+| --- | --- | --- |
+| `is_duplicate` | boolean | The file is a copy of an older file |
+| `original_path` | path | The older file it copies |
+| `has_duplicates` | boolean | Newer copies of this file exist |
 
-other.txt
-Status: HAS DUPLICATES: /path/to/copy1.txt, /path/to/copy2.txt
-```
+JSON also carries an untyped `duplicate_paths` string on files that have copies.
 
-### Long Format
-
-```
-file.txt
-Status:       DUPLICATE
-Original File: /path/to/original.txt
-
-other.txt
-Status:          HAS DUPLICATES
-Duplicate Copies: /path/to/copy1.txt
-                 /path/to/copy2.txt
+```bash
+lla --json docs | jq '.[] | select(.name=="notes-copy.txt") | .plugin'
 ```
 
-## Technical Details
+```text
+{
+  "is_duplicate": true,
+  "original_path": "docs/notes.txt"
+}
+```
 
-- Uses SHA-256 hashing with 8KB chunk-based reading
-- Implements efficient caching with automatic invalidation
-- Thread-safe operations
-- Color-coded status indicators for duplicates and originals
+## Actions
+
+Run an action with `lla plugin run duplicate_file_detector <action>`. Both actions are interactive, so they need a TTY and the default `--output human`. Running one also enables the plugin and saves that setting.
+
+| Action | What it does |
+| --- | --- |
+| `clear-cache` | Clears the hash cache and prints `Cache cleared successfully`. |
+| `help` | Prints usage. |
+
+## Example
+
+```bash
+lla docs
+```
+
+```text
+new.txt
+notes-copy.txt 
+┌─
+│ Status          DUPLICATE of docs/notes.txt
+└─
+
+notes.txt 
+┌─
+│ Status          HAS DUPLICATES: docs/notes-copy.txt
+└─
+```
+
+```bash
+lla -l --hide-group docs
+```
+
+```text
+-rw-r--r-- 6B Nov 04 22:53 you notes-copy.txt 
+┌─
+│ Status          DUPLICATE
+│ Original File   docs/notes.txt
+└─
+-rw-r--r-- 6B Nov 04 22:53 you notes.txt 
+┌─
+│ Status          HAS DUPLICATES
+│ Duplicate Copies docs/notes-copy.txt
+└─
+```
+
+## Settings
+
+`~/.config/lla/plugins/duplicate_file_detector/config.toml` sets colors in a `[colors]` table: `info`, `has_duplicates`, `duplicate` and `path`.

@@ -1,63 +1,62 @@
 ---
-title: "Views and Display"
-description: "Choose a listing format: default, long, tree, table, grid, Git, timeline, sizemap, recursive, fuzzy, archives, and diff."
+title: "Views"
+description: "Every way lla can draw a listing, from a plain list of names to trees, timelines, size maps and diffs."
 order: 1
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/views.md]
 ---
 
-# Views and display
+A view changes how a listing is drawn. It doesn't change what's selected, so you can combine any view below with the [filters and sorting](/docs/usage/filtering-search).
 
-`lla` can list a directory, archive, or individual file. A view changes how the
-same selected entries are presented; filters and sorting can be combined with
-these views unless a command documents a narrower behavior.
+<ViewIndex />
 
-## Choose a view
-
-| View | Best for |
-| --- | --- |
-| Default | Fast, compact directory scans. |
-| Long | Permissions, ownership, dates, and filesystem metadata. |
-| Tree | Directory hierarchy. |
-| Table | Comparing selected columns across entries. |
-| Grid | Dense directories with short names. |
-| Git | Repository status and Git metadata. |
-| Timeline | Grouping entries by age. |
-| Sizemap | Comparing file and optional directory sizes. |
-| Recursive | Walking nested directories as a flat recursive listing. |
-| Fuzzy | Interactive discovery and file actions; see [Navigation](/docs/usage/navigation#fuzzy-view). |
+To stop passing a flag every time, set your usual view with [`default_format`](/docs/usage/configuration#defaults).
 
 ## Default view
 
+Names only, one per line. This is the view to use for a quick look.
+
 ```bash
 lla
+lla src
 ```
 
-<img src="https://github.com/user-attachments/assets/3517c63c-f4ec-4a51-ab6d-46a0ed7918f8" className="rounded-2xl" alt="default" />
+<Shot name="view-default" alt="The default view, a plain list of file and directory names with icons." caption="`lla`" />
 
 ## Long view
 
-Use long view for permissions, size, dates, ownership, and optional filesystem
-metadata:
+Permissions, size, modification date, owner and group, plus any metadata you ask for. Use it when the details of each file matter.
 
 ```bash
 lla -l
 lla -l --hide-group --relative-dates
 lla -l --date-format "%Y-%m-%d %H:%M"
-lla --inode --links --allocated-size
-lla --extended --context --mounts
+lla -l --permission-format octal
 ```
 
-<img src="https://github.com/user-attachments/assets/2a8d95e4-efd2-4bff-a905-9d9a892dc794" className="rounded-2xl" alt="long" />
+<Shot name="view-long" alt="The long view, with permissions, size, date, owner and group columns beside each name." caption="`lla -l`" />
 
-`--include-dirs` calculates recursive directory sizes and can be expensive on
-large trees. `--dereference` uses symlink-target metadata while retaining link
-identity; `--no-symlink-target` hides the rendered `-> target` suffix.
+These flags add more metadata:
 
-Long-view columns are configurable. Built-in column keys are `permissions`,
-`inode`, `links`, `size`, `allocated`, `modified`, `created`, `accessed`, `user`,
-`group`, `xattrs`, `context`, `mount`, `name`, `path`, and `plugins`. A plugin
-field uses `field:<name>`.
+| Flag | Adds |
+| --- | --- |
+| `-i`, `--inode` | Inode number |
+| `-H`, `--links` | Hard-link count |
+| `--allocated-size` | Disk space actually allocated |
+| `-@`, `--extended` | Extended attribute names and sizes |
+| `-Z`, `--context` | ACL or SELinux context |
+| `-M`, `--mounts` | Mount source, mount point and filesystem |
+| `--include-dirs` | Recursive directory sizes, which can be slow on large trees |
+
+Symlinks show their target after the name. `--no-symlink-target` hides it, and `-X`, `--dereference` reports the target's metadata instead of the link's.
+
+`--permission-format` accepts `symbolic`, `octal`, `binary`, `verbose` or `compact`.
+
+<Shot name="long-octal" alt="The long view with octal permissions and relative dates." caption="`lla -l --permission-format octal --relative-dates --hide-group lla/src/formatter`" />
+
+### Choose the columns
+
+Set the columns and their order in your config:
 
 ```toml
 [formatters.long]
@@ -67,123 +66,140 @@ date_format = "%Y-%m-%d %H:%M"
 columns = ["permissions", "size", "modified", "name", "field:git_status"]
 ```
 
+The built-in keys are `permissions`, `inode`, `links`, `size`, `allocated`, `modified`, `created`, `accessed`, `user`, `group`, `xattrs`, `context`, `mount`, `name`, `path` and `plugins`. Use `field:<name>` for a field added by a plugin.
+
 ## Tree view
+
+The directory hierarchy, to the depth you choose. The default depth is 3, and `default_depth` in your config changes it.
 
 ```bash
 lla -t
-lla -t -d 3
+lla -t -d 2 docs
 ```
 
-<img src="https://github.com/user-attachments/assets/cb32bfbb-eeb1-4701-889d-f3d42c7d4896" className="rounded-2xl" alt="tree" />
+<Shot name="view-tree" alt="The tree view, with nested directories drawn using branch lines." caption="`lla -t -d 2 docs`" />
 
 ## Table view
+
+The long view's data in aligned, bordered columns. It's easier to scan down a single column, which helps when you're comparing files.
 
 ```bash
 lla -T
 ```
 
-<img src="https://github.com/user-attachments/assets/9f1d6d97-4074-4480-b242-a6a2eace4b38" className="rounded-2xl" alt="table" />
+<Shot name="view-table" alt="The table view, with bordered columns for permissions, size, date and name." caption="`lla -T lla/src/formatter`" />
 
-Table columns accept the same built-in and `field:<name>` syntax as long view:
+It takes the same column keys as the long view:
 
 ```toml
 [formatters.table]
-columns = ["permissions", "size", "modified", "name", "field:git_branch"]
+columns = ["permissions", "size", "modified", "name"]
 ```
 
 ## Grid view
+
+Names in as many columns as your terminal fits. Use it for directories with many short names.
 
 ```bash
 lla -g
 lla -g --grid-ignore
 ```
 
-`--grid-ignore` ignores terminal width, so output may extend beyond the screen.
+`--grid-ignore` ignores the terminal width, so lines can run off the screen.
 
-<img src="https://github.com/user-attachments/assets/b81d01ea-b830-4833-8791-7b62ff9137df" className="rounded-2xl" alt="grid" />
+<Shot name="view-grid" alt="The grid view, with theme file names arranged in several columns." caption="`lla -g themes`" />
 
 ## Git view
 
+Each entry's Git status with its last commit, subject, age and author. A header shows the branch, its upstream, and how many files are staged or changed. Run it inside a repository. For a subdirectory, include the leading `./`, because `lla -G src` reports `Not a git repository` in lla 0.6.6.
+
 ```bash
 lla -G
+lla -G ./src
 ```
 
-<img src="https://github.com/user-attachments/assets/b0654b20-c37d-45c2-9fd0-f3399fce385e" className="rounded-2xl" alt="git" />
+<Shot name="view-git" alt="The Git view, with a status column and last-commit details for each entry." caption="`lla -G`" />
 
 ## Timeline view
+
+Entries grouped by when they last changed: today, yesterday, last week, last month and older. Use it to find what you were working on.
 
 ```bash
 lla --timeline
 ```
 
-<img src="https://github.com/user-attachments/assets/06a156a7-628a-4948-b75c-a0da584c9224" className="rounded-2xl" alt="timeline" />
+<Shot name="view-timeline" alt="The timeline view, with files grouped under time-period headings." caption="`lla --timeline lla/src`" />
 
-## Sizemap view
+## Size map view
+
+Bars that compare entries by size, each with its share of the total. Add `--include-dirs` to count directories as well, which walks them recursively.
 
 ```bash
 lla -S
 lla -S --include-dirs
 ```
 
-The second form includes recursively calculated directory sizes.
-
-<img src="https://github.com/user-attachments/assets/dad703ec-ef23-460b-9b9c-b5c5d6595300" className="rounded-2xl" alt="sizemap" />
+<Shot name="view-sizemap" alt="The size map view, with proportional bars next to each file." caption="`lla -S lla/src/formatter`" />
 
 ## Recursive view
 
+Every nested directory, as a flat listing grouped by directory. `-d` limits the depth. To cap very large walks, set [`max_entries`](/docs/usage/configuration#limits).
+
 ```bash
 lla -R
-lla -R -d 3
+lla -R -d 2
 lla -R -l
 ```
 
-<img src="https://github.com/user-attachments/assets/f8fa0901-8866-4b92-a76e-3b7fd307f04e" className="rounded-2xl" alt="recursive" />
+<Shot name="view-recursive" alt="The recursive view, listing each directory's files under a path heading." caption="`lla -R -d 2 sdk`" />
 
-## Archive contents
+## Archives
 
-Archives can be listed as virtual directories without extraction. Supported
-formats are `.zip`, `.tar`, `.tar.gz`, and `.tgz`.
+lla reads `.zip`, `.tar`, `.tar.gz` and `.tgz` files as if they were directories, without extracting them. Views, filters and machine output all work.
 
 ```bash
-lla my_archive.zip -t
-lla project.tar.gz -l
-lla my_archive.tgz --json
-lla my_archive.zip -l -f ".rs"
+lla backup.tar.gz -t
+lla project.zip -l -f ".rs"
+lla bundle.tgz --json
 ```
 
-## A single file
+<Shot name="archive" alt="A tree view of the contents of a tar.gz archive." caption="`lla ../docs.tar.gz -t -d 2`" />
+
+## Single files
+
+Pass a file to see only that entry, in any view.
 
 ```bash
-lla README.md
 lla Cargo.toml -l
 lla src/main.rs --json
 ```
 
 ## Compare files and directories
 
-The `diff` command compares two local paths or one path against a Git reference:
+`lla diff` compares two paths, or one path against a Git reference.
 
 ```bash
 lla diff src ../backup/src
-lla diff apps/api --git
+lla diff src --git
 lla diff src --git --git-ref HEAD~1
 lla diff Cargo.lock ../backup/Cargo.lock
 lla diff Cargo.lock --git --git-ref HEAD~1
 ```
 
-Directory comparisons show status and size deltas. File comparisons show size
-and line-count changes plus a unified diff; binary content is detected and is not
-dumped to the terminal.
+`--git` compares against `HEAD` unless you set `--git-ref`.
 
-## Presentation modifiers
+For directories, you get each entry's status and size change.
 
-| Option | Purpose |
+<Shot name="diff-dir" alt="A directory diff, listing added and modified files with size changes." caption="`lla diff lla/src --git`" />
+
+For files, you get the size and line-count changes followed by a unified diff. Binary files are detected and their content isn't printed.
+
+<Shot name="diff-file" alt="A file diff, with a size summary followed by a unified diff." caption="`lla diff lla/src/main.rs --git`" />
+
+## Options for any view
+
+| Option | Effect |
 | --- | --- |
-| `--icons`, `--no-icons` | Override icon display for one invocation. |
-| `--hyperlink always\|auto\|never` | Control OSC 8 links. |
-| `--no-color` | Disable color output. |
-| `--permission-format <format>` | Use `symbolic`, `octal`, `binary`, `verbose`, or `compact`. |
-| `--date-format <format>` | Use a Chrono strftime format for long-view dates. |
-
-For selection and ordering, see [Filtering and search](/docs/usage/filtering-search).
-For stable script output, see [Machine output](/docs/usage/machine-output).
+| `--icons`, `--no-icons` | Turn icons on or off for this run |
+| `--no-color` | Print without color |
+| `--hyperlink always\|auto\|never` | Make names clickable with OSC 8 links |

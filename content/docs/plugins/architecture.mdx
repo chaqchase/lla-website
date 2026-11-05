@@ -1,86 +1,236 @@
 ---
-title: "Platform Architecture"
-description: "How Plugin Platform v3 separates authoring, wire contract, runtimes, and packaging, and how the host verifies contracts."
+title: "Platform architecture"
+description: "How the lla host loads plugins: crates, the native ABI, the WebAssembly runtime, permissions and contract checks."
 order: 4
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/plugins/architecture.md]
 ---
 
-# Plugin Platform v3 architecture
+Plugin Platform v3 is the contract between the lla host and plugin code. A plugin is a package holding a manifest, a compiled entrypoint and checksums. The host speaks one protobuf protocol to it, through either of two runtimes.
 
-For the full host execution architecture, plugin lifecycle, creation tutorial,
-security model, and release flow, see the
-[architecture and Plugin Platform handbook](/docs/about/architecture).
+Read this page when you need to know what the host guarantees, for example when you debug a load failure or write a binding for another language. To write a plugin, use [Developing plugins](/docs/plugins/developing).
 
-Plugin Platform v3 separates the authoring API, wire contract, runtime, and
-packaging responsibilities.
+<Diagram caption="The host runs walk, filter, decorate and format. Native plugins attach in-process, and components attach through approved grants."><PluginPlatform /></Diagram>
 
-```text
-plugin source
-    │
-    ├── lla_plugin_sdk ── high-level Rust trait and exports
-    │       └── lla_plugin_sdk_macros ── native/component exports
-    │
-    ├── plugin.toml ── identity, handlers, schemas, permissions
-    │
-    └── native library or WASM component
-            │
-            └── lla_plugin_interface ── protobuf + ABI v3 wire contract
-                    │
-                    └── lla host ── validation, grants, limits, rendering
-```
+## Crates
 
-## Crate responsibilities
+The directories in the repository are short, and the published crate names are longer. All four crates share the lla version.
 
-Repository directories are intentionally short; published crate names remain
-stable:
-
-| Directory | Published crate | Responsibility |
+| Directory | Crate | What it holds |
 | --- | --- | --- |
-| `interface/` | `lla_plugin_interface` | Protobuf messages, manifests, constants, and the native ABI |
-| `macros/` | `lla_plugin_sdk_macros` | Native/component exports and manifest embedding |
-| `sdk/` | `lla_plugin_sdk` | Public high-level Rust authoring API and WIT world |
-| `utils/` | `lla_plugin_utils` | Optional UI, configuration, formatting, and compatibility helpers |
+| `interface/` | `lla_plugin_interface` | Protobuf messages, manifest types and validation, ABI types and limits. |
+| `macros/` | `lla_plugin_sdk_macros` | `export_plugin!` and `export_component!`. They validate `plugin.toml` at compile time. |
+| `sdk/` | `lla_plugin_sdk` | The `Plugin` trait, typed argument and response helpers, and the WIT world. Re-exports the macros. |
+| `utils/` | `lla_plugin_utils` | Optional configuration, caching, formatting, syntax highlighting and terminal UI helpers. |
 
-Plugin authors use the macros through the SDK re-exports rather than depending
-on the macro implementation crate directly. The interface crate is
-intentionally low-level.
+Plugin authors depend on `lla_plugin_sdk`. The host's implementation lives in `lla/src/plugin/`.
 
-All four crates are workspace members and share the lla product version.
+## How a listing calls a plugin
+
+1. The host reads `enabled_plugins`, adds any `--enable-plugin` names, and discovers those packages.
+2. It walks and filters the entries, then maps the current view to a format name.
+3. It sends each enabled plugin that declares the format a `BatchDecorateRequest`, in chunks of at most 512 entries.
+4. It fills in typed values for declared fields that have only a display string.
+5. If the view prints plugin text, it sends a `BatchFormatRequest` and places the returned strings on each row.
+
+A single-file target and archive members go through `Decorate` and `FormatField` instead of the batch messages. The fuzzy view decorates and never formats. Machine output decorates and reads `typed_fields`, and CSV has fixed columns without plugin fields.
+
+[Manifest reference](/docs/plugins/manifest#capabilities) lists the format name for each view.
+
+## Discovery and loading
+
+The host searches these directories in order. The first package with a given name wins, and later ones are reported as shadowed.
+
+| Order | Directory |
+| --- | --- |
+| 1 | `--plugins-dir`, or `plugins_dir` from config. Default `~/.config/lla/plugins`. |
+| 2 | Each entry in `plugin_dirs` from config. |
+| 3 | Linux: `/usr/local/lib/lla/plugins`, `/usr/lib/lla/plugins`. |
+| 3 | macOS: `/opt/homebrew/lib/lla/plugins`, `/usr/local/lib/lla/plugins`. |
+| 3 | Windows: `%PROGRAMDATA%/lla/plugins`. |
+
+An ordinary listing only loads enabled plugins and those named on the command line. `lla list-plugins` and `lla use` load everything. `lla plugin run` and `lla plugin info` load the named plugin, and accept names from `[plugin_aliases]`.
+
+Each package goes through these checks before the host uses it:
+
+1. Parse and validate `plugin.toml`.
+2. Check that the API range includes 3.
+3. Verify `checksums.toml`, which must exist and cover the entrypoint and manifest.
+4. Load the entrypoint. A component also needs its permissions approved.
+5. Compare the embedded manifest with the packaged file.
+6. Compare the runtime's registered actions with the declared ones. No action may have a blank name, usage or description.
+
+A package that fails prints a `⚠️` line on stderr and stays unavailable. The listing carries on.
 
 ## Native ABI
 
-Native plugins export only `_plugin_create_v3`, which returns `PluginApiV3`.
-Requests and responses are protobuf byte buffers. The plugin frees the response
-memory it allocated and destroys its own API context. Rust-owned layout does not
-cross the dynamic-library boundary.
+A native plugin exports one symbol, `_plugin_create_v3`, which returns a pointer to a `PluginApiV3` struct:
 
-The loader scans v1/v2 symbols without calling their constructors. Older
-libraries are reported as disabled and never executed by lla 0.6.0.
+```rust
+#[repr(C)]
+pub struct PluginApiV3 {
+    pub abi_version: u32,
+    pub min_host_api: u32,
+    pub max_host_api: u32,
+    pub manifest_ptr: *const u8,
+    pub manifest_len: usize,
+    pub handle_request: extern "C" fn(*mut std::ffi::c_void, *const u8, usize) -> PluginBufferV3,
+    pub free_response: extern "C" fn(PluginBufferV3),
+    pub destroy: extern "C" fn(*mut PluginApiV3),
+    pub context: *mut std::ffi::c_void,
+}
+```
 
-## Component Model runtime
+Requests and responses are protobuf byte buffers, so no Rust layout crosses the library boundary. The plugin owns each response buffer until the host hands it back through `free_response`. `export_plugin!` generates all of this, holds the plugin in a `Mutex`, and catches panics so they return an error to the host.
 
-When the host is compiled with the non-default `wasm-plugins` feature,
-WebAssembly packages run through embedded Wasmtime with WASI Preview 2 and the
-Component Model. Official Linux, macOS, and Windows release binaries enable
-this feature; the NetBSD release binary uses the default native-only runtime.
-The host exposes scoped filesystem preopens, exact-domain WASI HTTP, and
-permission-gated clipboard and URL calls. It does not expose raw sockets or
-subprocess execution.
+The loader inspects a library's symbols without calling them. A library with `_plugin_create_v2` or `_plugin_create` is reported as `uses API vN and is disabled; migrate it to API v3`, and none of its code runs. See [Migrating to v3](/docs/plugins/migration-v3).
 
-The host limits each instance to 128 MiB of memory, responses to 16 MiB, batches
-to 512 entries, decoration calls to 5 seconds, and actions to 60 seconds. Traps,
-timeouts, permission failures, and limit violations become structured plugin
-errors rather than process crashes.
+## Wire protocol
 
-## Contract verification
+Every request and response is a `PluginMessage` from [`interface/src/plugin.proto`](https://github.com/chaqchase/lla/blob/main/interface/src/plugin.proto).
 
-The package manifest is the source of truth. At installation and during
-`plugin doctor`, the host verifies:
+| Request | Response | Used for |
+| --- | --- | --- |
+| `Decorate` | `DecoratedResponse` | One entry. |
+| `DecorateBatch` | `DecorateBatchResponse` | Up to 512 entries. Same count, same order. |
+| `FormatField` | `FieldResponse` | Text for one entry in one format. |
+| `FormatBatch` | `FormatBatchResponse` | Text for up to 512 entries. |
+| `Action` | `ActionResponse` | Typed arguments in, typed output or an error out. |
+| `ListActions` | `ListActionsResponse` | The registered action inventory. |
 
-1. Package checksums.
-2. Schema and API compatibility.
-3. Packaged versus embedded manifest equality.
-4. Registered action handlers.
-5. Declared fields and action output schemas.
-6. Runtime and permission constraints.
+`StructuredErrorResponse` carries a code and a message. `ErrorResponse` carries a plain string.
+
+Typed values have these variants: null, string, integer, float, boolean, bytes, timestamp, path, list and object. The SDK's `dispatch` function decodes requests, so plugin code using the `Plugin` trait never touches the protocol.
+
+## WebAssembly runtime
+
+A build with the `wasm-plugins` feature embeds Wasmtime and runs components against WASI Preview 2 and the `lla:plugin@0.3.0` world:
+
+```text
+package lla:plugin@0.3.0;
+
+interface host {
+    clipboard-write: func(text: string) -> result<_, string>;
+    open-url: func(url: string) -> result<_, string>;
+}
+
+world plugin {
+    import host;
+    export manifest: func() -> string;
+    export handle: func(request: list<u8>) -> result<list<u8>, string>;
+}
+```
+
+`manifest` returns the embedded `plugin.toml`. `handle` takes and returns the same protobuf bytes as the native ABI.
+
+The runtime only exists on x86_64 and ARM64. Official Linux, macOS and Windows binaries for those architectures include it. The i686 Linux binaries report components as unsupported, and the NetBSD binary leaves Wasmtime out.
+
+Each request builds a new store and instantiates the component, so values in `self` or in statics don't survive between calls. Keep state in `/data`. Compiled code is cached in `<cache dir>/lla/wasmtime`, or in `LLA_WASMTIME_CACHE_DIR` when set.
+
+A component gets these resources:
+
+| Resource | Rule |
+| --- | --- |
+| `/data` | Always preopened read and write. Maps to `$LLA_PLUGIN_DATA_DIR/<name>`, or `~/.config/lla/plugins/<name>`. The guest sees `LLA_PLUGIN_DATA_DIR=/data`. |
+| Selected entries | Preopened per request according to the filesystem scopes. |
+| User paths | `path` values in action arguments, preopened per request when a `:user-path` or `write:selected-destination` scope is declared. |
+| HTTP | WASI HTTP only. A request's host must exactly match a `network` entry. |
+| Clipboard, URLs | The `host` imports, which fail unless `clipboard` or `open_url` is `true`. |
+| Subprocesses, raw sockets | Not available. |
+
+The [scope table](/docs/plugins/manifest#permissions) shows what each filesystem scope opens.
+
+## Limits
+
+| Limit | Value | Applies to |
+| --- | --- | --- |
+| Entries per batch | 512 | Both runtimes. The host chunks, and the SDK rejects anything larger with `batch-limit-exceeded`. |
+| Response size | 16 MiB | Both runtimes. |
+| Memory per instance | 128 MiB | Components. |
+| Decorate and format timeout | 5 seconds | Components. |
+| Action timeout | 60 seconds | Components. |
+
+Native plugins have no timeout, so a slow native plugin slows the listing it runs in.
+
+A component that hits a limit or fails produces an error with a tag instead of crashing lla:
+
+| Tag | Meaning |
+| --- | --- |
+| `[wasm-timeout]` | The request passed its deadline. |
+| `[wasm-trap]` | The guest trapped, for example by running out of memory. |
+| `[wasm-plugin-error]` | `handle` returned an error string. |
+| `[wasm-response-too-large]` | The response is over 16 MiB. |
+| `[wasm-invalid-component]` | The file failed to compile. |
+| `[wasm-instantiation-failed]` | The component failed to instantiate. |
+| `[wasm-manifest-trap]` | The `manifest` export trapped. |
+
+## Permission model
+
+Native and WebAssembly plugins have different trust models. Read the runtime line in `lla plugin info` before you trust the permission list.
+
+| | Native | WebAssembly component |
+| --- | --- | --- |
+| Isolation | None. The code runs inside the `lla` process with your user's rights. | Wasmtime sandbox. |
+| Declared permissions | Displayed by `lla plugin info`. | Approved at install and enforced at run time. |
+| Stored grant | None. | `<plugins_dir>/plugin-grants.toml`. |
+
+`lla plugin permissions NAME` prints the declared permissions alone. For native plugins, it ends with `native permissions are declarations; native code is fully trusted`.
+
+The grant flow for a component works like this:
+
+1. `lla install` compares the manifest with any stored grant for the same `id`, and lists the new permissions.
+2. It asks `Approve these WASM sandbox permissions? [y/N]`. Without a terminal it fails closed.
+3. On approval it records the plugin's version and full permission set.
+4. At load the host checks that the stored grant covers the manifest. If it doesn't, loading fails with `is missing approved permissions in`.
+
+A manifest with no permissions needs no grant. An update that adds a permission prompts again, while one that removes a permission doesn't.
+
+## Contract checks by stage
+
+Each stage checks different things, which is why a source install can succeed for a plugin the doctor rejects.
+
+| Check | Compile | `install --dir`, `--git` | `install --prebuilt` | Load | `plugin doctor`, `clean` |
+| --- | --- | --- | --- | --- | --- |
+| Manifest validation | yes | yes | yes | yes | yes |
+| API range includes 3 | | | yes | yes | yes |
+| Release archive `SHA256SUMS` | | | yes, if published | | |
+| Package checksums | | writes them | yes | yes | yes |
+| Component runtime available | | yes | yes | yes | yes |
+| Permission grant | | prompts | prompts | yes | yes |
+| Embedded equals packaged manifest | | | | yes | yes |
+| Registered actions equal declared | | | | yes | yes |
+| Single and batch decoration agree | | | | | yes |
+| Declared fields convert to their types | | | | | yes |
+| Declared formats return text | | | | | yes |
+| Unknown action is rejected | | | | | yes |
+
+The doctor's functional checks use a temporary text file and a temporary directory, and they point `LLA_PLUGIN_DATA_DIR` at a temporary location. `lla clean` moves packages that fail to `<plugins_dir>/.quarantine/<timestamp>`.
+
+Output type and table schema are checked each time an action runs.
+
+## Package layout
+
+```text
+~/.config/lla/plugins/
+├── metadata.toml             Source of each plugin, used by lla update
+├── plugin-grants.toml        Approved component permissions
+├── file_score/
+│   ├── checksums.toml
+│   ├── libfile_score.dylib   or .so, .dll, .wasm
+│   └── plugin.toml
+└── .quarantine/              Packages removed by lla clean
+```
+
+A plugin's private data shares the `<name>` directory by default, for example `config.toml` from `ConfigManager`. Only the files in `checksums.toml` are verified, so private data doesn't affect the package check.
+
+## Builds without plugins
+
+Cargo features decide what the host can load.
+
+| Build | Native plugins | Components |
+| --- | --- | --- |
+| Default, `dynamic-plugins` | yes | no |
+| `--features wasm-plugins` | yes | yes, on x86_64 and ARM64 |
+| `--no-default-features` | no | no |
+
+Without `dynamic-plugins`, a static stub replaces the plugin manager and reports `Dynamic plugins are unavailable in this build; install a full-featured lla binary.`

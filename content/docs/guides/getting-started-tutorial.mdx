@@ -1,620 +1,216 @@
 ---
-title: "Getting Started Tutorial"
-description: "A hands-on 15-minute tutorial to learn lla from scratch. Master essential commands, views, filtering, and customization through practical examples."
+title: "Getting started tutorial"
+description: "A 15-minute walkthrough on your own project: views, Git, filters, search, a config default, a plugin and a bookmark."
 order: 2
 published: true
 references: []
 ---
 
-# Getting Started Tutorial
+This walkthrough takes about 15 minutes. Run it in a project of your own, ideally a Git repository, and type each command as you go. Your project files stay untouched.
 
-Welcome to lla! This 15-minute hands-on tutorial will teach you everything you need to become productive with lla. We'll use practical examples and build on each concept progressively.
+You need lla installed. `lla --version` should print `lla 0.6.6`. If it doesn't, start with [Installation](/docs/about/installation).
 
-## What You'll Learn
+## First listing
 
-- Installing and setting up lla
-- Navigating directories with different views
-- Filtering and searching for files
-- Customizing appearance with themes
-- Using plugins to extend functionality
-- Creating useful aliases and shortcuts
-
-## Prerequisites
-
-- A terminal/command line interface
-- Basic familiarity with command-line navigation
-- 15 minutes of your time
-
-## Learning Path
-
-Here's your journey through this tutorial:
-
-```mermaid
-graph LR
-    A[Install lla] --> B[First Listing]
-    B --> C[Explore Views]
-    C --> D[Sort & Filter]
-    D --> E[Advanced Filtering]
-    E --> F[Customize]
-    F --> G[Git Integration]
-    G --> H[Try Plugins]
-    H --> I[Create Aliases]
-    I --> J[Master lla! 🎉]
-```
-
-Let's get started!
-
-## Step 1: Installation (2 minutes)
-
-First, let's install lla:
+Run `lla` with no arguments to list the current directory.
 
 ```bash
-# Quick install (recommended)
-curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
-
-# Or using cargo
-cargo install lla
-```
-
-Verify installation:
-
-```bash
-lla --version
-```
-
-You should see output like `lla 0.6.5`.
-
-**Can't find lla?** Add it to your PATH:
-```bash
-export PATH="/usr/local/bin:$PATH"
-```
-
-## Step 2: Your First Listing (1 minute)
-
-Let's start simple. Navigate to any directory and run:
-
-```bash
+cd ~/project
 lla
 ```
 
-You should see a clean, color-coded list of files and directories. Notice:
-- Different colors for different file types
-- Icons next to files (if your terminal supports them)
-- Alphabetical sorting
-- Hidden files (dotfiles) are shown
-
-Try it in different directories:
-
-```bash
-lla ~              # Your home directory
-lla /tmp           # System temp directory
-lla ~/Documents    # Your documents
+```text
+.envrc
+.git/
+CHANGELOG.md
+README.md
+docs/
 ```
 
-## Step 3: Understanding Views (3 minutes)
+Directories end in `/`, and dotfiles are included by default. To list somewhere else, pass a directory, one file, or a `.zip`, `.tar`, `.tar.gz` or `.tgz` archive, as in `lla docs`.
 
-lla offers multiple ways to view your files. Let's try them:
+The first run also creates `~/.config/lla/config.toml`. You'll change a setting in it later.
 
-### Long Format: Detailed Information
+## Long view
+
+Use `-l` when you care about size, date or permissions.
 
 ```bash
 lla -l
 ```
 
-You now see:
-- Permissions (rwxr-xr-x)
-- Owner and group
-- File sizes
-- Modification times
-- File names
-
-### Tree View: See Directory Structure
-
-```bash
-lla -t
+```text
+-rw-r--r--    10B Dec 09 05:37 you staff .envrc
+drwxr-xr-x   416B Nov 04 22:52 you staff .git/
+-rw-r--r--  43.8K Oct 07 15:26 you staff CHANGELOG.md
 ```
 
-This shows a hierarchical view of your directory structure. Perfect for understanding project layout!
+<Shot name="view-long" alt="lla -l listing a project with permissions, size, modified time, owner, group and name." />
 
-Limit the depth:
+Add `-s` to sort. Size sorts largest first and date sorts oldest first, and `-r` reverses either one. The second command here puts your most recent changes at the top.
+
 ```bash
-lla -t -d 2    # Only 2 levels deep
+lla -l -s size
+lla -l -s date -r
 ```
 
-### Grid View: Space-Efficient
+## Tree
+
+Use `-t` to see how a project is laid out. `-d` limits the depth, and the default is 3.
 
 ```bash
-lla -g
+lla -t -d 2 docs
 ```
 
-Files arranged in columns, perfect for directories with many files.
-
-### Try This Exercise
-
-Navigate to a project directory and compare views:
-
-```bash
-cd ~/projects/your-project  # Or any directory with subdirectories
-
-lla           # Default view
-lla -l        # Detailed view
-lla -t -d 3   # Tree view, 3 levels
-lla -g        # Grid view
+```text
+└── docs/
+    ├── README.md
+    ├── maintainers/
+    │   └── releasing.md
+    ├── plugins/
+    │   └── migration-v3.md
+    └── views.md
 ```
 
-**Which view do you prefer for different tasks?**
+<Shot name="view-tree" alt="lla -t drawing a project's directories and files as a tree." />
 
-## Step 4: Sorting and Filtering (3 minutes)
+Tree view leaves out dot-named files, and `-a` doesn't bring them back. Use `lla --dotfiles-only` to see them.
 
-### Sort by Size
+## Git
 
-Find the largest files:
+Use `-G` to see what changed and who last touched each file.
 
 ```bash
-lla -s size
+lla -G
 ```
 
-Largest files appear first. Reverse it:
-
-```bash
-lla -s size -r
+```text
+⎇ main ↥origin/main @2daeae36
+stage 1  worktree 2  untracked 5
+────────────────────────────────────────────────────────────────────────────────────────────────
+Status   Name          Commit    Subject                                           Time
+────────────────────────────────────────────────────────────────────────────────────────────────
+[new]    bookmarks.rs  -         (uncommitted)                                     pending
+[clean]  commands/     @b32fdb4  fix: embed MIT license in the CLI                 4 weeks ago
+[S:mod]  installer.rs  @32c6cc4  fix(ci): resolve Windows validation failures      3 months ago
+[W:mod]  main.rs       @ad7260c  feat(plugins): add batching and persistent ca...  3 months ago
 ```
 
-### Sort by Date
+<Shot name="view-git" alt="lla -G showing the branch, change counts, and a status, commit, subject, time and author for each entry." />
 
-See what's new:
+`[new]` is untracked, `[S:mod]` is modified and staged, and `[W:mod]` is modified in the work tree.
+
+The counts in the header cover the whole repository. A directory row shows `[clean]` even when a file inside it changed, so `cd` into the directory to see that file's status.
+
+## Filtering and search
+
+Use `-f` to narrow a listing by name. A pattern starting with `.` matches an extension, and any other pattern matches part of the name. Use `OR` for alternatives.
 
 ```bash
-lla -s date
+lla -f ".toml OR .md"
 ```
 
-Newest files first!
-
-### Filter by Name
-
-Find all test files:
-
-```bash
-lla -f "test"
+```text
+CHANGELOG.md
+Cargo.toml
+README.md
+rust-toolchain.toml
 ```
 
-This shows only files containing "test" in their name.
+Write patterns in lowercase. Filtering lowercases file names before comparing, so `lla -f readme` finds `README.md` and `lla -f README` finds nothing. Add `-c` to match exact case.
 
-Find by extension:
+You can also filter by size, as in `lla --size ">10K" --files-only`, or by age. For `--modified`, `">7d"` means changed within the last 7 days.
+
+Use `--search` to look inside files. It needs [ripgrep](https://github.com/BurntSushi/ripgrep) on your `PATH`, and it matches literal text regardless of case. `--no-dotfiles` keeps `.git/` out of the results.
 
 ```bash
-lla -f ".rs"     # All Rust files
-lla -f ".py"     # All Python files
-lla -f ".json"   # All JSON files
+lla --search "TODO" --no-dotfiles --search-context 0
 ```
 
-### Combine Techniques
-
-Most powerful: combine sorting and filtering:
-
-```bash
-lla -f "test" -s size -l
+```text
+File: README.md [./README.md]
+  70 │ lla --search "TODO"     # search file contents
+  70 │               ^^^^
 ```
 
-This finds all test files, sorts by size, and shows detailed info!
+<Shot name="search" alt="lla --search showing matching lines grouped by file, with the match underlined." />
 
-### Try This Exercise
+Run search from the directory you want to search, because a relative directory argument returns nothing in 0.6.6. See [Search file contents](/docs/usage/filtering-search#search-file-contents) for regex patterns.
 
-In a project directory:
+## A config default
 
-```bash
-# Find all config files
-lla -f "config"
-
-# Find largest JavaScript files
-lla -f ".js" -s size
-
-# Find recently modified Python files
-lla -f ".py" -s date
-
-# Show detailed info about test files
-lla -f "test" -l
-```
-
-## Step 5: Advanced Filtering (2 minutes)
-
-### Show Only Specific Types
+Set a default when you keep typing the same flag. The first command here lists directories first from now on, and the second shows what you've changed from the built-in defaults.
 
 ```bash
-lla --files-only      # No directories
-lla --dirs-only       # Only directories
-lla --no-dotfiles     # Hide hidden files
-```
-
-### Combine Filters
-
-```bash
-# Only regular files, no hidden files
-lla --files-only --no-dotfiles
-
-# Only hidden directories
-lla --dirs-only --dotfiles-only
-```
-
-### Try This Exercise
-
-```bash
-# Create a test directory
-mkdir ~/lla-practice
-cd ~/lla-practice
-
-# Create some test files
-touch file1.txt file2.txt test.txt
-touch .hidden .config
-mkdir subdir1 subdir2 .hidden-dir
-
-# Now try different filters
-lla --files-only
-lla --dirs-only
-lla --no-dotfiles
-lla --dotfiles-only
-```
-
-## Step 6: Customization (2 minutes)
-
-### Initialize Configuration
-
-Create your config file:
-
-```bash
-lla init
-```
-
-This creates `~/.config/lla/config.toml` with default settings.
-
-### View Current Config
-
-```bash
-lla config
-```
-
-### Change Settings
-
-```bash
-# Enable icons by default
-lla config --set show_icons true
-
-# Set default sorting
-lla config --set default_sort size
-
-# Directories first
 lla config --set sort.dirs_first true
+lla config diff --default
 ```
 
-### Try Different Themes
+```text
+Effective overrides compared to built-in defaults:
 
-```bash
-# Interactive theme selector
-lla theme
-
-# Install all built-in themes
-lla theme pull
-
-# Try a specific theme
-lla config --set theme dark
-lla config --set theme dracula
-lla config --set theme nord
+sort.dirs_first
+  default : false
+  current : true
+  source  : global config
 ```
 
-### Try This Exercise
+For a setting that applies to one project, add a `.lla.toml` file to it with a line such as `default_format = "tree"`. lla uses the nearest one, looking up from the current directory. See [Configuration](/docs/usage/configuration) for every key.
 
-Customize lla to your preferences:
+## A first plugin
+
+Plugins add fields to listings, new actions, or both. This command downloads the prebuilt bundle for your platform and asks which plugins to install, with all of them selected. Press Enter to accept.
 
 ```bash
-# What do you want as defaults?
-lla config --set show_icons true
-lla config --set default_sort name
-lla config --set default_format long  # or default, tree, etc.
-
-# Choose a theme you like
-lla theme
+lla install
 ```
 
-## Step 7: Git Integration (2 minutes)
-
-If you're in a Git repository, lla can show you file status!
-
-Navigate to a Git repo and try:
+Installed plugins stay off until you turn them on. Open the plugin manager, move to `file_hash`, press Space to toggle it, and press Enter to save.
 
 ```bash
-lla -G
-```
-
-You'll see:
-- Modified files (M)
-- Untracked files (?)
-- Staged files
-- Branch name
-- Commit information
-
-Make a change to see it:
-
-```bash
-# In a Git repo
-echo "test" >> README.md
-lla -G
-```
-
-README.md should show as modified!
-
-## Step 8: Plugins (Optional, 3 minutes)
-
-Extend lla's functionality with plugins.
-
-### Install First-Party Plugins
-
-```bash
-# Install all official plugins
-lla install --prebuilt
-```
-
-Prebuilt packages need no toolchain. Only `--git` and `--dir` source installs compile from source and require Rust.
-
-### Enable/Disable Plugins
-
-```bash
-# Interactive plugin manager
 lla use
 ```
 
-Navigate with arrow keys, toggle with spacebar.
+<Shot name="plugin-manager" alt="lla use listing installed plugins with a checkbox, version and description for each." />
 
-### Try a Plugin
+Your listings now include short hashes for each file. Here's `lla -f .toml`:
 
-Enable the `git_status` plugin and list files:
-
-```bash
-lla --enable-plugin git_status
-lla
+```text
+Cargo.toml
+┌─
+│ SHA1 b18c9b51
+│ SHA256 8a3cd5a8
+└─
 ```
 
-You should see Git status information for each file!
+The plugin stays on until you turn it off with `lla --disable-plugin file_hash`. The [first-party plugin catalog](/docs/first-party-plugins/overview) lists the rest.
 
-### Popular Plugins to Try
+## A jump bookmark
 
-- **file_meta**: Show detailed file metadata
-- **git_status**: Git status for each file
-- **file_hash**: Display file hashes
-- **code_complexity**: Analyze code complexity
-
-## Step 9: Create Useful Aliases (1 minute)
-
-Make lla even faster with aliases!
-
-Add to your `~/.bashrc` or `~/.zshrc`:
+Bookmark a directory you return to often.
 
 ```bash
-# Quick aliases
-alias ll='lla -l'
-alias lt='lla -t'
-alias lg='lla -G'
-alias lf='lla --fuzzy'
-
-# Sorted views
-alias lls='lla -l -s size'
-alias llt='lla -l -s date'
-
-# Project exploration
-alias tree='lla -t -d 3'
+lla jump --add .
+lla jump --list
 ```
 
-Reload your shell:
-
-```bash
-source ~/.bashrc  # or ~/.zshrc
+```text
+★ ~/project
+  ~/project/docs
 ```
 
-Now you can use:
+A star marks a bookmark. The other rows are history, which lla records each time you list a directory.
 
-```bash
-ll        # Long format
-lt        # Tree view
-lls       # Sort by size
-```
+A program can't change your shell's working directory, so `lla jump` only prints the path you pick. Run `lla jump --setup` to add a `j` function that does the `cd`. It goes in `~/.bashrc`, `~/.zshrc` or `~/.config/fish/config.fish`.
 
-## Quick Reference
+Open a new terminal, run `j`, and pick a directory with the arrow keys and Enter.
 
-Here's everything you learned:
+<Shot name="jump" alt="The lla jump selector with bookmarks marked by a star, followed by recent directories." />
 
-```bash
-# Views
-lla                 # Default view
-lla -l              # Long format (detailed)
-lla -t              # Tree view
-lla -t -d 3         # Tree view, 3 levels
-lla -g              # Grid view
-lla -G              # Git view
+You've now used each part of lla once. These pages cover each one in full.
 
-# Sorting
-lla -s name         # Sort by name (default)
-lla -s size         # Sort by size
-lla -s date         # Sort by date
-lla -r              # Reverse order
-
-# Filtering
-lla -f "pattern"    # Filter by pattern
-lla -f ".rs"        # Filter by extension
-lla --files-only    # Only files
-lla --dirs-only     # Only directories
-lla --no-dotfiles   # Hide hidden files
-
-# Combination
-lla -f "test" -s size -l     # Filter, sort, detailed view
-
-# Customization
-lla init            # Create config
-lla config          # View config
-lla theme           # Choose theme
-
-# Plugins
-lla install --prebuilt  # Install plugins
-lla use             # Manage plugins
-
-# Help
-lla -h              # Quick help
-lla --help          # Detailed help
-```
-
-## Real-World Workflows
-
-Now that you know the basics, here are some practical workflows:
-
-### Workflow 1: Exploring a New Codebase
-
-```bash
-# Get an overview
-lla -t -d 2
-
-# Find the main entry points
-lla -f "main"
-
-# See what was changed recently
-lla -s date | head -10
-
-# Find all test files
-lla -R -f "test"
-```
-
-### Workflow 2: Disk Space Investigation
-
-```bash
-# Find largest files
-lla -s size -l | head -20
-
-# Visualize space usage
-lla -S --include-dirs
-
-# Find large files recursively
-lla -R -s size | head -30
-```
-
-### Workflow 3: Quick File Discovery
-
-```bash
-# Interactive search
-lla --fuzzy
-
-# Find all JSON configs
-lla -f ".json"
-
-# Find recently modified configs
-lla -f "config" -s date
-```
-
-### Workflow 4: Git-Aware Development
-
-```bash
-# See what you've modified
-lla -G --files-only
-
-# Compare directories
-lla src/ -G
-lla tests/ -G
-
-# Check for untracked files
-lla -G | grep "?"
-```
-
-## Common Pitfalls to Avoid
-
-1. **Forgetting depth limits in tree view**: `lla -t` in a large project can be slow
-   - Solution: `lla -t -d 3`
-
-2. **Not using filters**: Listing everything when you need specific files
-   - Solution: `lla -f "pattern"`
-
-3. **Ignoring machine output**: lla works great in scripts!
-   - Solution: `lla --json | jq` for processing
-
-4. **Not customizing**: Using default settings when you have preferences
-   - Solution: `lla init` and customize `~/.config/lla/config.toml`
-
-## Next Steps
-
-Congratulations! You now know the fundamentals of lla. Here's what to explore next:
-
-- **[Views and Display](/docs/usage/views)**: Learn about timeline, sizemap, and table views
-- **[Filtering and Search](/docs/usage/filtering-search)**: Master regex and logic operators
-- **[Plugin Development](/docs/guides/plugin-development-tutorial)**: Create your own plugins
-- **[Configuration Guide](/docs/usage/configuration)**: Deep dive into customization
-
-## Practice Exercises
-
-Reinforce your learning:
-
-### Exercise 1: File Discovery
-
-```bash
-# Create a practice directory
-mkdir ~/lla-exercises
-cd ~/lla-exercises
-
-# Create various files
-touch app.js app.test.js config.json README.md
-touch main.py test_main.py requirements.txt
-mkdir src tests docs
-
-# Now practice:
-# 1. List only Python files
-# 2. Find all test files
-# 3. Show a tree view 2 levels deep
-# 4. Sort by name with directories first
-```
-
-### Exercise 2: Customization Challenge
-
-```bash
-# Customize lla to have these defaults:
-# - Long format
-# - Icons enabled
-# - Directories first
-# - Use the "dark" theme
-# - Sort by size
-
-# Hint: Use lla config --set ...
-```
-
-### Exercise 3: Create Workflow Aliases
-
-Create aliases for these common tasks:
-- List all test files sorted by date
-- Show Git status in long format
-- Interactive file search
-- Tree view 3 levels deep
-
-## Getting Help
-
-Remember these resources:
-
-- `lla -h`: Quick help
-- `lla --help`: Detailed help
-- `lla config`: View your configuration
-- [Documentation](https://lla.chaqchase.com): Full guides
-- [FAQ](/docs/support/faq): Common questions
-- [GitHub Issues](https://github.com/chaqchase/lla/issues): Report problems
-
-## Conclusion
-
-You've learned:
-- ✅ Installing and verifying lla
-- ✅ Using different views (default, long, tree, grid, Git)
-- ✅ Sorting and filtering files
-- ✅ Customizing with themes and config
-- ✅ Using plugins
-- ✅ Creating useful aliases
-- ✅ Real-world workflows
-
-**Now go explore your file system with your new superpower!** 🚀
-
-Share what you've learned:
-- Tweet your favorite lla command
-- Share your custom theme
-- Create a useful plugin
-- Help others in the community
-
-Happy exploring!
+<Cards>
+  <Card href="/docs/usage/views" title="Views">Every view with a screenshot and when to use it.</Card>
+  <Card href="/docs/plugins/overview" title="Plugins">How plugins install, run and declare permissions.</Card>
+  <Card href="/docs/reference/cli-reference" title="CLI reference">Every flag and subcommand in lla 0.6.6.</Card>
+</Cards>

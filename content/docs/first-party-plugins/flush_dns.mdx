@@ -1,84 +1,57 @@
 ---
-title: "Flush DNS"
-description: "DNS cache flushing plugin for `lla` with history tracking and cross-platform support."
+title: "flush_dns"
+description: "Flushes the DNS cache on macOS, Linux or Windows and keeps a history of each flush."
 order: 17
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/flush_dns]
 ---
 
-# lla Flush DNS Plugin
+`flush_dns` runs your system's DNS flush commands and keeps a history of each flush. Reach for it after a DNS change that hasn't reached your machine, when you don't want to look up the command for your OS. It adds nothing to listings.
 
-DNS cache flushing plugin for `lla` with history tracking and cross-platform support.
+## Actions
 
-## Features
+Run an action with `lla plugin run flush_dns <action>`. Every action is interactive, so it needs a TTY and the default `--output human`.
 
-- **Cross-Platform**: Works on macOS, Linux, and Windows
-- **History Tracking**: Track all flush operations with timestamps
-- **Confirmation Prompts**: Optional confirmation before flushing
-- **Statistics**: View flush history and success rates
+| Action | What it does |
+| --- | --- |
+| `flush` | Flushes the DNS cache, after a confirmation that defaults to yes. |
+| `history` | Prints the latest 20 flushes and the counts. |
+| `clear-history` | Clears the history, after a confirmation that defaults to no. |
+| `preferences` | Opens a menu for the settings below. |
+| `help` | Prints usage. |
 
-## Usage
+`flush` runs these commands:
+
+| System | Commands |
+| --- | --- |
+| macOS | `sudo dscacheutil -flushcache`, then `sudo killall -HUP mDNSResponder` |
+| Linux | `sudo systemd-resolve --flush-caches`, falling back to `sudo systemctl restart nscd` |
+| Windows | `ipconfig /flushdns` |
+
+`sudo` may ask for your password.
+
+## Example
 
 ```bash
-# Flush DNS cache
-lla plugin run flush_dns flush
-
-# View flush history
 lla plugin run flush_dns history
-
-# Clear history
-lla plugin run flush_dns clear-history
-
-# Configure preferences
-lla plugin run flush_dns preferences
-
-# Show help
-lla plugin run flush_dns help
 ```
 
-## Configuration
+```text
+Info: No flush history available
+```
 
-Config location: `~/.config/lla/plugins/flush_dns/config.toml`
+## Settings
+
+The plugin reads `~/.config/lla/plugins/flush_dns/config.toml`, which also stores the history as `flush_history`.
 
 ```toml
-confirm_before_flush = true      # Show confirmation prompt
-show_verbose_output = true       # Display command output
-max_history_size = 50           # Maximum history entries
-
-[colors]
-success = "bright_green"
-info = "bright_cyan"
-warning = "bright_yellow"
-error = "bright_red"
+confirm_before_flush = true
+show_verbose_output = true
+max_history_size = 50
 ```
 
-## Display Examples
+A `[colors]` table sets `success`, `info`, `warning` and `error`.
 
-Flushing DNS:
+## Permissions
 
-```
-ℹ Info: Flushing DNS cache on macOS...
-✓ Success: DNS cache flushed successfully!
-```
-
-History View:
-
-```
-📜 DNS Flush History:
-──────────────────────────────────────────────────────────────────────
- ✓ 2025-10-20 16:30:45 [macOS] Success
- ✓ 2025-10-20 15:20:30 [macOS] Success
- ✗ 2025-10-20 14:15:22 [macOS] Failed
-──────────────────────────────────────────────────────────────────────
-
-📊 Statistics:
- • Total flushes: 25
- • Successful: 24
- • Failed: 1
-```
-
-## Platform Commands
-
-- **macOS**: `sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder`
-- **Linux**: `sudo systemd-resolve --flush-caches` or `sudo systemctl restart nscd`
-- **Windows**: `ipconfig /flushdns`
+`process = true`, because it runs the flush commands above.

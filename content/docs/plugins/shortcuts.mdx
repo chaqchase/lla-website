@@ -1,249 +1,184 @@
 ---
 title: "Shortcuts"
-description: "Learn how to create and manage shortcuts for lla plugins to simplify common operations. Shortcuts allow you to create intuitive aliases for frequently used plugin actions, reducing typing and improving workflow efficiency."
+description: "Run a plugin action under a short name, and move your shortcuts between machines with export and import."
 order: 6
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/configuration.md]
 ---
 
-# Shortcuts for Faster Commands
+A shortcut runs a plugin action under a short name. With a shortcut called `inspect`, `lla inspect .` does the same work as `lla plugin run project_context inspect -- .`. Add one for any action you run often.
 
-Shortcuts turn long plugin commands into short aliases. For the configuration behind them, see [Shortcuts](/docs/usage/configuration#shortcuts).
+## Add a shortcut
 
-## Creating Shortcuts
-
-### Interactive Builder (Recommended)
-
-The easiest way to create shortcuts is using the interactive builder:
+Give the name, the plugin and the action. `-d` adds an optional description.
 
 ```bash
-lla shortcut create
+lla shortcut add inspect project_context inspect -d "Summarize this project"
 ```
 
-The interactive builder provides:
-- **Plugin Discovery** - Browse all installed plugins with arrow keys
-- **Action Selection** - See available actions with descriptions
-- **Auto-Fill** - Descriptions automatically populated from plugin metadata
-- **Validation** - Real-time checking for duplicate names and conflicts
-- **Beautiful UI** - Themed prompts with intuitive navigation
-
-**Example Session:**
-
-```bash
-$ lla shortcut create
-
-? Select a plugin:
-  ❯ jwt - JWT token decoder and analyzer
-    google_search - Search Google from command line
-    npm - NPM package search with bundle size info
-    kill_process - Interactive process manager
-    ...
-
-? Select an action:
-  ❯ decode - Decode and analyze JWT tokens
-    search - Search through saved tokens
-    help - Show help information
-
-? Enter shortcut name: decode-jwt
-
-? Description: Decode JWT tokens
-
-✓ Shortcut 'decode-jwt' created successfully!
+```text
+✓ Added shortcut 'inspect' -> project_context inspect
+  Description: Summarize this project
 ```
 
-### Manual Creation
-
-You can also create shortcuts manually:
+lla doesn't check the plugin or action when you add a shortcut. A wrong name shows up as an error when you run it. To see a plugin's actions, run its `help` action.
 
 ```bash
-lla shortcut add NAME PLUGIN ACTION [-d DESCRIPTION]
+lla plugin run project_context help
 ```
 
-Example with Code Snippet Extractor:
-
-```bash
-# Create an intuitive snippet extraction command
-lla shortcut add snip code_snippet_extractor extract -d "Extract code snippet"
-
-# Add a quick way to search your snippets
-lla shortcut add search code_snippet_extractor search -d "Search snippets"
-
-# Add a quick way to list your snippets
-lla shortcut add snippets code_snippet_extractor list -d "List all snippets"
-
-# Simple snippet viewing
-lla shortcut add view code_snippet_extractor get -d "View snippet details"
+```text
+project_context
+  inspect [path]  Detect Rust, Node, Python, and Go context
+  refresh         Clear cached project state
+  help            Show this help
 ```
 
-## Shortcuts in Action
+To pick from menus instead, run `lla shortcut create`. It asks for the plugin, action, name and description. If you leave the description empty, it uses the action's own description.
 
-Replace long commands with short ones:
+## Run a shortcut
+
+Use the shortcut's name as the first argument. Everything after it goes to the action unchanged, with no `--` separator.
 
 ```bash
-# Instead of this lengthy command:
-lla plugin run code_snippet_extractor extract -- "file.rs" "function_name" 10 20 3
-
-# Simply use:
-lla snip "file.rs" "function_name" 10 20 3
-
-# Replace this:
-lla plugin run code_snippet_extractor list
-
-# With this:
-lla snippets
-
-# Instead of:
-lla plugin run code_snippet_extractor search -- "query"
-
-# Just type:
-lla search "query"
+lla inspect .
 ```
 
-## Shortcut Management
+```text
+warning: 'lla plugin <plugin> <action>' is deprecated; use 'lla plugin run <plugin> <action> -- <arguments>'
+Root: .
+Project types: rust
+Health: warning (1 issues)
+Locks: rust:missing
+Artifacts: target
+Repository: not-a-repository
+```
 
-Manage shortcuts:
+lla 0.6.6 prints that warning on every shortcut run. It goes to stderr and you can ignore it.
+
+Three rules follow from how lla matches the name:
+
+| Rule | Example |
+| --- | --- |
+| The name must come first. Anything before it turns it into a directory argument. | `lla --no-color inspect` tries to list a directory called `inspect`. |
+| A shortcut wins over a subcommand or directory with the same name. | A shortcut called `config` hides `lla config`. To list a directory called `inspect`, run `lla ./inspect`. |
+| Flags go to the action, including `--help`. | `lla hash --help` fails with `unknown option '--help' for action 'help'`. |
+
+Running a shortcut for a disabled plugin turns that plugin on, and it stays on for your later listings. Run `lla --disable-plugin NAME` to turn it off again.
+
+## List shortcuts
 
 ```bash
-# View all shortcuts
 lla shortcut list
-
-# Remove unused shortcuts
-lla shortcut remove snip
 ```
 
-## Import and Export
+```text
+Configured Shortcuts:
 
-Share shortcuts across machines or with your team using import/export.
+audit → security_audit audit
+  Description: Audit permissions and secrets
 
-### Exporting Shortcuts
+hash → file_hash help
+  Description: Show file_hash usage
 
-Export all shortcuts and plugin aliases to a TOML file:
+inspect → project_context inspect
+  Description: Summarize this project
+```
+
+<Shot name="shortcuts" alt="lla shortcut list showing the hash, inspect and audit shortcuts with the plugin action and description for each." />
+
+The order can change between runs. With nothing configured, the command prints `No shortcuts configured`.
+
+## Remove a shortcut
 
 ```bash
-# Export to file
-lla shortcut export shortcuts.toml
-
-# Export to stdout (for piping)
-lla shortcut export
+lla shortcut remove inspect
 ```
 
-The exported file includes:
-- All configured shortcuts
-- Plugin aliases
-- Descriptions and metadata
-- Portable TOML format
+```text
+✓ Removed shortcut 'inspect'
+```
 
-**Example export file:**
+An unknown name prints `✗ Shortcut 'inspect' not found` and still exits with status 0.
+
+## Where shortcuts live
+
+Shortcuts are saved under `[shortcuts]` in `~/.config/lla/config.toml`, with one inline table for each.
 
 ```toml
-# shortcuts.toml
 [shortcuts]
-decode-jwt = { plugin = "jwt", action = "decode", description = "Decode JWT tokens" }
-snip = { plugin = "code_snippet_extractor", action = "extract", description = "Extract code snippet" }
-kill = { plugin = "kill_process", action = "interactive", description = "Kill processes" }
+hash={ plugin_name = "file_hash", action = "help", description = "Show file_hash usage"}
+```
+
+<Callout type="warning" title="Characters that break your config">
+lla writes these lines without escaping them. A `"` in a description or a `.` in a name makes the file invalid TOML. lla then prints `Warning: TOML parse error` on every run and ignores your whole config until you fix or remove that line.
+</Callout>
+
+## Export
+
+Export writes your shortcuts as TOML. Give it a path, or leave the path off to print to stdout.
+
+```bash
+lla shortcut export shortcuts.toml
+```
+
+```text
+✓ Exported 3 shortcuts to shortcuts.toml
+```
+
+The file has one table for each shortcut, followed by a `[plugin_aliases]` table.
+
+```toml
+[shortcuts.audit]
+plugin_name = "security_audit"
+action = "audit"
+description = "Audit permissions and secrets"
+
+[shortcuts.hash]
+plugin_name = "file_hash"
+action = "help"
+description = "Show file_hash usage"
+
+[shortcuts.inspect]
+plugin_name = "project_context"
+action = "inspect"
+description = "Summarize this project"
 
 [plugin_aliases]
-j = "jwt"
-k = "kill_process"
-n = "npm"
 ```
 
-### Importing Shortcuts
+## Import
 
-Import shortcuts from a TOML file:
+Import takes a required file path and has two modes.
 
-```bash
-# Replace all existing shortcuts
-lla shortcut import shortcuts.toml
+| Command | Effect on existing shortcuts | Output |
+| --- | --- | --- |
+| `lla shortcut import shortcuts.toml` | Removes every shortcut that isn't in the file. | `✓ Imported 3 shortcuts (replaced existing)` |
+| `lla shortcut import shortcuts.toml --merge` | Keeps them. When a name is in both, your existing shortcut wins. | `✓ Imported 1 shortcuts, skipped 1 conflicts` |
 
-# Merge with existing shortcuts (skip conflicts)
-lla shortcut import shortcuts.toml --merge
+Each shortcut needs `plugin_name` and `action`, and `description` is optional. You can write the inline form from `config.toml` too. Both top-level tables are optional, so a replace import from a file with no `[shortcuts]` table removes all your shortcuts.
+
+A file with the wrong key fails and changes nothing:
+
+```text
+✗ Error
+
+  Failed to parse TOML file: TOML parse error at line 2, column 8
+    |
+  2 | snip = { plugin = "code_snippet_extractor", action = "extract" }
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  missing field `plugin_name`
 ```
 
-**Import modes:**
+<Callout type="note" title="Plugin aliases don't survive an import">
+lla 0.6.6 reads `[plugin_aliases]` from the file but drops all aliases when it saves the config, so they're gone after the import.
+</Callout>
 
-- **Replace** (default): Replaces all existing shortcuts with imported ones
-- **Merge** (`--merge`): Adds new shortcuts, skips conflicts, keeps existing
-
-### Sharing Workflows
-
-**Team Setup:**
+To carry shortcuts to another machine, keep the file with your dotfiles:
 
 ```bash
-# Create team shortcuts
-lla shortcut create  # Build your collection
-
-# Export for team
-lla shortcut export team-shortcuts.toml
-
-# Share file via Git
-git add team-shortcuts.toml
-git commit -m "Add team lla shortcuts"
-git push
-
-# Team members import
-git pull
-lla shortcut import team-shortcuts.toml --merge
-```
-
-**Personal Backup:**
-
-```bash
-# Backup shortcuts
 lla shortcut export ~/dotfiles/lla-shortcuts.toml
-
-# Restore on new machine
-lla shortcut import ~/dotfiles/lla-shortcuts.toml
+lla shortcut import ~/dotfiles/lla-shortcuts.toml --merge
 ```
 
-**Cross-Machine Sync:**
-
-```bash
-# On machine 1
-lla shortcut export ~/Dropbox/lla-shortcuts.toml
-
-# On machine 2
-lla shortcut import ~/Dropbox/lla-shortcuts.toml --merge
-```
-
-## Suggested Shortcut Set
-
-A compact set for Code Snippet Extractor:
-
-```bash
-# Snippet Creation and Management
-lla shortcut add snip code_snippet_extractor extract -d "Extract code snippet"
-lla shortcut add tags code_snippet_extractor add-tags -d "Add tags to snippet"
-lla shortcut add cat code_snippet_extractor set-category -d "Set snippet category"
-
-# Viewing and Navigation
-lla shortcut add snippets code_snippet_extractor list -d "List all snippets"
-lla shortcut add view code_snippet_extractor get -d "View snippet details"
-
-# Data Portability
-lla shortcut add export code_snippet_extractor export -d "Export snippets"
-lla shortcut add import code_snippet_extractor import -d "Import snippets"
-```
-
-## Usage Examples
-
-Examples:
-
-```bash
-# Quick snippet extraction
-lla snip "main.rs" "process_data" 10 20 3
-
-# Effortless organization
-lla tags "abc123" "rust" "algorithm"
-lla cat "abc123" "Algorithms"
-
-# Simple navigation
-lla snippets
-lla view "abc123"
-
-# Search snippets
-lla search "abc123"
-
-# Data management
-lla export "my_snippets.json"
-```
+Importing doesn't install plugins. On a machine without the plugin, the shortcut fails with `Plugin 'NAME' not found` until you install it. See [Plugins](/docs/plugins/overview).

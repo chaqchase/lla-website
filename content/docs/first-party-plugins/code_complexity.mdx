@@ -1,112 +1,108 @@
 ---
-title: "Code Complexity"
-description: "A code analysis plugin for `lla` that performs real-time complexity analysis of source code."
+title: "code_complexity"
+description: "Shows a complexity score and maintainability index for source files in default and long listings."
 order: 6
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/code_complexity]
 ---
 
-# lla Code Complexity Plugin
+`code_complexity` adds a complexity score and maintainability index to each source file, plus line, function, branch and loop counts and suggestions in the long view. Turn it on for a first look at which files in a directory carry the most branching. It matches patterns line by line and doesn't parse code, and it covers Rust until you add other languages.
 
-A code analysis plugin for `lla` that performs real-time complexity analysis of source code.
+<Shot name="plugin-code-complexity" alt="A long listing in which each Rust file shows its complexity, maintainability index, line, function, branch and loop counts, and suggestions." caption="`lla -l --hide-group <dir>` with only `code_complexity` enabled." />
 
-## Features
-
-- **Multi-Metric Analysis**
-  - Cyclomatic & Cognitive Complexity
-  - Maintainability Index (0-100)
-  - Function/Class Analysis
-  - Control Flow & Volume Metrics
-- **Smart Thresholds**: Configurable with color-coding
-- **Real-Time Statistics**: Continuous metric tracking
-- **Detailed Reports**: File and language-level insights
-
-## Default Configuration
-
-### Complexity Thresholds
-
-- Low: < 10.0
-- Medium: < 20.0
-- High: < 30.0
-- Very High: ≥ 40.0
-
-### Language Support (Default: Rust)
-
-- Function: `fn`
-- Class: `struct`, `impl`, `trait`
-- Branch: `if`, `match`, `else`
-- Loop: `for`, `while`, `loop`
-- Comments: `//`, `/*`
-- Max Line Length: 100
-- Max Function Length: 50 lines
-
-## Usage
-
-```bash
-# Set complexity thresholds
-lla plugin run code_complexity set-thresholds -- 10 20 30 40
-
-# Show report
-lla plugin run code_complexity show-report
-```
-
-## Display Formats
-
-### Default
-
-```
-[Complexity: 12 (MI: 85.3)]
-```
-
-### Long
-
-```
-[Complexity: 12 (MI: 85.3)]
-├── Lines: 150
-├── Functions: 5
-├── Classes: 2
-├── Branches: 8
-├── Loops: 4
-├── Comments: 20
-└── Long functions:
-    ├── process_data (55 lines)
-    └── analyze_results (60 lines)
-```
-
-## Configuration
-
-Config file: `~/.config/lla/code_complexity/config.toml`
-
-### Language Settings
+## Turn it on
 
 ```toml
-[languages.Rust]
-extensions = ["rs"]
-function_patterns = ["fn "]
-class_patterns = ["struct ", "impl ", "trait "]
-branch_patterns = ["if ", "match ", "else"]
-loop_patterns = ["for ", "while ", "loop"]
-comment_patterns = ["//", "/*"]
+# ~/.config/lla/config.toml
+enabled_plugins = ["code_complexity"]
+```
+
+Or run this once. It saves the same setting, so the plugin stays on until you run `lla --disable-plugin code_complexity`.
+
+```bash
+lla --enable-plugin code_complexity
+```
+
+Output appears in the default and long views (`formats = ["default", "long"]`), and in the table view, which uses the long format. The default view shows only the `Complexity` row.
+
+The plugin adds one field, `complexity_metrics`, a string holding the numbers as TOML. Read it as JSON:
+
+```bash
+lla --json src | jq -r '.[] | select(.name=="main.rs") | .plugin.complexity_metrics'
+```
+
+```text
+lines = 29
+functions = 3
+classes = 2
+branches = 2
+loops = 1
+comments = 5
+long_lines = 0
+long_functions = []
+cyclomatic_complexity = 3
+cognitive_complexity = 12
+maintainability_index = 52.561866760253906
+```
+
+## Actions
+
+Run an action with `lla plugin run code_complexity <action> -- <args>`. Every action is interactive, so it needs a TTY and the default `--output human`. Running one also enables the plugin and saves that setting.
+
+| Action | Arguments | What it does |
+| --- | --- | --- |
+| `set-thresholds` | `<low> <medium> <high> <very_high>` | Saves new thresholds to the settings file, creating it if needed. |
+| `show-report` | | Prints a heading with no data in 0.6.6, because statistics don't carry over between runs. |
+| `help` | | Prints usage. |
+
+```bash
+lla plugin run code_complexity set-thresholds -- 10 20 30 40
+```
+
+## Example
+
+The number after `Complexity` is the cyclomatic count, and `MI` is the maintainability index.
+
+```bash
+lla -l --hide-group
+```
+
+```text
+-rw-r--r--  5.4K Aug 16 15:37 you grants.rs ┌──────────────────────────────────┐
+│ ┌─                               │
+│ │ Complexity      11 (MI: 25.6)  │
+│ │ Lines           179            │
+│ │ Functions       10             │
+│ │ Classes         4              │
+│ │ Branches        7              │
+│ │ Loops           4              │
+│ │ Comments        0              │
+│ │ Long lines      0              │
+│ │                                │
+│ Suggestions:                     │
+│ │   - Add more documentation     │
+│ │   - Reduce nested conditionals │
+│ │   - Simplify complex logic     │
+│ └─                               │
+└──────────────────────────────────┘
+```
+
+## Settings
+
+The plugin reads `code_complexity.toml` from your system's config directory: `~/Library/Application Support/lla/` on macOS and `~/.config/lla/` on Linux. It ignores `~/.config/lla/plugins/code_complexity/config.toml`.
+
+The file doesn't exist until you create it or run `set-thresholds`. To analyze another language, run `set-thresholds` first so the file holds the Rust rules, then add a table. A hand-written file replaces the built-in Rust rules, and each language needs all of these keys.
+
+```toml
+[languages.Python]
+extensions = ["py"]
+function_patterns = ["def "]
+class_patterns = ["class "]
+branch_patterns = ["if ", "elif ", "else"]
+loop_patterns = ["for ", "while "]
+comment_patterns = ["#"]
 max_line_length = 100
 max_function_lines = 50
 ```
 
-### Thresholds
-
-```toml
-[thresholds]
-low = 10.0
-medium = 20.0
-high = 30.0
-very_high = 40.0
-```
-
-### Colors
-
-```toml
-[colors]
-low = "bright_green"
-medium = "bright_yellow"
-high = "bright_red"
-very_high = "red"
-```
+`[thresholds]` holds `low`, `medium`, `high` and `very_high`, and `[colors]` holds a color for each. They set the color of the `Complexity` label and leave the numbers alone. The plugin computes `cyclomatic * 0.4 + cognitive * 0.3 + (100 - MI) * 0.3` and picks the first level the result is under. At or above `high` it uses the `very_high` color, so the `very_high` number has no effect.

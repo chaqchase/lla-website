@@ -1,91 +1,45 @@
 ---
-title: "Google Search"
-description: "Google search plugin for `lla` with live autosuggestions, history management, and clipboard fallback."
+title: "google_search"
+description: "Opens a Google search in your browser from a terminal prompt with live suggestions and a search history."
 order: 21
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/google_search]
 ---
 
-# lla Google Search Plugin
+`google_search` opens a Google search in your browser from a terminal prompt with live suggestions. Reach for it when you're working in the terminal and want to look something up.
 
-Google search plugin for `lla` with live autosuggestions, history management, and clipboard fallback.
+## Actions
 
-## Features
+Run an action with `lla plugin run google_search <action>`.
 
-- **Live Autocomplete**: Real-time search suggestions from Google API with loading states
-- **Smart Search**: Multiple input options (live suggestions, history, clipboard)
-- **History Management**: Persistent search history with statistics and analytics
-- **Interactive Interface**: Rich TUI with visual feedback
+| Action | What it does |
+| --- | --- |
+| `search` | Prompt for a query with live suggestions, then open the results |
+| `search-selected` | Same prompt, filled in from your clipboard |
+| `history` | Search again, copy, delete or clear past searches, or see statistics |
+| `preferences` | Change settings |
+| `help` | Show help |
 
-## Usage
+All of them are interactive, so they need a TTY. Despite its name, `search-selected` can't see selected text, so copy the text first.
+
+## Example
 
 ```bash
-# Perform a Google search (live suggestions)
 lla plugin run google_search search
-
-# Search with selected/clipboard text (prefills input; live suggestions)
-lla plugin run google_search search-selected
-
-# Manage search history
-lla plugin run google_search history
-
-# Configure preferences
-lla plugin run google_search preferences
-
-# Show help
-lla plugin run google_search help
 ```
 
-## Configuration
+Type a query, pick a suggestion with the arrow keys if you want one, and press Enter. This opens `https://www.google.com/search?q=<query>` in your default browser.
 
-Config location: `~/.config/lla/plugins/google_search/config.toml`
+## Settings
 
-```toml
-remember_search_history = true    # Enable/disable history persistence
-use_clipboard_fallback = true     # Enable/disable clipboard fallback
-max_history_size = 100           # Maximum history entries
+Edit `~/.config/lla/plugins/google_search/config.toml`, or run the `preferences` action.
 
-[colors]
-success = "bright_green"
-info = "bright_cyan"
-warning = "bright_yellow"
-error = "bright_red"
-prompt = "bright_blue"
-```
+| Key | Default | What it does |
+| --- | --- | --- |
+| `remember_search_history` | `true` | Save searches in `search_history`, in the same file |
+| `use_clipboard_fallback` | `true` | Let `search-selected` read the clipboard. When `false`, it fails with `No text available in clipboard. Copy some text first.` |
+| `max_history_size` | `100` | Searches to keep |
 
-## Display Examples
+## Permissions
 
-Live Autocomplete (use ↑/↓ to select, Enter to confirm):
-
-```
-💡 Enter a search query to see live Google suggestions
-Search query: rust programming
-
-🔄 Fetching suggestions from Google...
-⠋ Loading suggestions...
-
-✨ 10 suggestions found:
-Select a search query
-> 🔍 rust programming (your input)
-  💡 rust programming tutorial
-  💡 rust programming language
-  💡 rust programming for beginners
-  💡 rust programming projects
-  ...
-```
-
-History Statistics:
-
-```
-📊 Search History Statistics:
-──────────────────────────────────────────────────
- • Total searches: 25
- • Unique queries: 18
- • Oldest search: 2025-10-15 09:30:00
- • Most recent: 2025-10-20 14:30:45
-
-🔥 Top 5 searches:
- • rust programming tutorial (5x)
- • golang best practices (3x)
- • python async await (2x)
-```
+The plugin can reach `google.com` and `suggestqueries.google.com`, and use the clipboard and open URLs. What you type goes to `suggestqueries.google.com` over plain HTTP before you press Enter, so don't type anything private into the prompt. Suggestions are cached for an hour.

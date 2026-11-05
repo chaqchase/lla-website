@@ -1,151 +1,81 @@
 ---
-title: "Homebrew"
-description: "Homebrew package manager plugin for lla - install, uninstall, upgrade, and search packages directly from your terminal."
+title: "brew"
+description: "Lists, searches, installs, upgrades and removes Homebrew packages through lla plugin actions."
 order: 3
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/brew]
 ---
 
-# Homebrew Plugin
+`brew` runs Homebrew through `lla plugin run`: list, search, install, upgrade and remove packages, or pick from a menu. Reach for it when you want the menu or the combined formula and cask search. It adds nothing to listings and needs Homebrew installed.
 
-Homebrew package manager plugin for lla - install, uninstall, upgrade, and search packages directly from your terminal.
+## Actions
 
-## Features
+Run an action with `lla plugin run brew <action> -- <args>`. Every action is interactive, so it needs a TTY and the default `--output human`.
 
-- **List Installed Packages**: View all installed formulae and casks
-- **Search Packages**: Fuzzy search through all available Homebrew packages
-- **Check for Updates**: See which packages have available updates
-- **Install/Uninstall**: Install or remove packages with a single command
-- **Upgrade**: Upgrade individual packages or all outdated packages
-- **Package Info**: View detailed information about any package
-- **Cleanup**: Remove old versions and clear Homebrew cache
-- **Doctor**: Run Homebrew diagnostics
-
-## Installation
+| Action | Arguments | What it does |
+| --- | --- | --- |
+| `list` | | Lists installed packages. |
+| `search` | `[query]` | Searches formulae and casks, and prompts for a query if you omit it. |
+| `outdated` | | Lists outdated packages. |
+| `install` | `<package> [--cask]` | Installs a package. |
+| `uninstall` | `<package> [--cask]` | Uninstalls a package. |
+| `remove` | `<package> [--cask]` | Alias for `uninstall`. |
+| `upgrade` | `[package]` | Runs `brew update`, then upgrades one package, or all of them if you name none. |
+| `info` | `<package>` | Shows package details. |
+| `cleanup` | | Runs `brew cleanup --prune=all`. |
+| `doctor` | | Runs `brew doctor`. |
+| `menu` | | Opens an interactive menu. |
+| `help` | | Prints usage. |
 
 ```bash
-lla install
-# Then enable the plugin
-lla use  # Select brew
+lla plugin run brew search -- ripgrep
+lla plugin run brew install -- firefox --cask
 ```
 
-## Requirements
+<Callout type="warning">
+`install`, `uninstall`, `upgrade` and `cleanup` change your system right away. None of them asks for confirmation.
+</Callout>
 
-- Homebrew must be installed on your system
-- Works on macOS and Linux
+## Example
 
-## Usage
-
-### List Installed Packages
-```bash
-lla plugin run brew list
-```
-
-### Search for Packages
-```bash
-lla plugin run brew search -- git
-lla plugin run brew search -- firefox
-```
-
-### Check for Updates
-```bash
-lla plugin run brew outdated
-```
-
-### Install a Package
-```bash
-lla plugin run brew install -- wget
-lla plugin run brew install -- firefox --cask   # For cask applications
-```
-
-### Uninstall a Package
-```bash
-lla plugin run brew uninstall -- wget
-```
-
-### Upgrade Packages
-```bash
-lla plugin run brew upgrade --           # Upgrade all packages
-lla plugin run brew upgrade -- wget      # Upgrade specific package
-```
-
-### View Package Info
-```bash
-lla plugin run brew info -- git
-lla plugin run brew info -- visual-studio-code
-```
-
-### Cleanup Old Versions
-```bash
-lla plugin run brew cleanup
-```
-
-### Run Diagnostics
-```bash
-lla plugin run brew doctor
-```
-
-### Interactive Menu
-```bash
-lla plugin run brew menu
-```
-
-### Show Help
 ```bash
 lla plugin run brew help
 ```
 
-## Configuration
+```text
+│ Homebrew Plugin                                                                  │
+│     Manage Homebrew packages - install, uninstall, upgrade, and search packages. │
+│ Actions                                                                          │
+│   list                                                                           │
+│     List installed packages                                                      │
+│     Examples:                                                                    │
+│       • lla plugin run brew list                                                 │
+│   search <query>                                                                 │
+│     Search for packages                                                          │
+│       • lla plugin run brew search -- git                                        │
+│   install <package>                                                              │
+│       • lla plugin run brew install -- wget                                      │
+│       • lla plugin run brew install -- firefox --cask                            │
+```
 
-The plugin stores its configuration in `~/.config/lla/brew/config.toml`:
+## Settings
+
+The plugin reads `~/.config/lla/plugins/brew/config.toml`.
 
 ```toml
-greedy_upgrades = true    # Include auto-update casks in upgrade
-show_caveats = true       # Show package caveats after info
-
-[colors]
-success = "bright_green"
-info = "bright_cyan"
-warning = "bright_yellow"
-error = "bright_red"
-formula = "bright_blue"
-cask = "bright_magenta"
-version = "bright_yellow"
-outdated = "bright_red"
+custom_brew_path = "/opt/homebrew/bin/brew"
+greedy_upgrades = true
+show_caveats = true
 ```
 
-## Output Example
+| Key | Default | Effect |
+| --- | --- | --- |
+| `custom_brew_path` | unset | Path to the `brew` binary. Unset, the plugin asks `brew --prefix`, then tries `/opt/homebrew` on ARM or `/usr/local`. |
+| `greedy_upgrades` | `true` | `upgrade` with no package runs `brew upgrade --greedy`. |
+| `show_caveats` | `true` | `info` prints package caveats. |
 
-### List Installed
-```
-📦 Installed Packages
-──────────────────────────────────────────────────────────────────────
+A `[colors]` table sets `success`, `info`, `warning`, `error`, `formula`, `cask`, `version` and `outdated`.
 
-🍺 Formulae (42)
-   • git 2.43.0
-   • node 21.5.0 [outdated]
-   • python@3.12 3.12.1
+## Permissions
 
-🖥️  Casks (15)
-   • firefox (Firefox) 121.0
-   • visual-studio-code (Visual Studio Code) 1.85.1
-
-──────────────────────────────────────────────────────────────────────
-```
-
-### Search Results
-```
-🔍 Search Results for 'git'
-──────────────────────────────────────────────────────────────────────
-
-🍺 Formulae (25)
-   • git 2.43.0 - Distributed revision control system
-   • git-lfs 3.4.0 - Git extension for versioning large files
-   • gitui 0.24.3 - Blazing fast terminal-ui for git
-
-🖥️  Casks (8)
-   • github (GitHub Desktop) 3.3.6 - Desktop client for GitHub
-   • gitkraken (GitKraken) 9.11.0 - Git client focusing on productivity
-
-──────────────────────────────────────────────────────────────────────
-```
+`process = true`, because it runs `brew`. `network = ["formulae.brew.sh", "github.com"]`: `search` downloads the formula and cask catalogs from `formulae.brew.sh` and caches them for one hour.

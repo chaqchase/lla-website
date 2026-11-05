@@ -1,18 +1,77 @@
 ---
-title: "Tree Summary"
-description: "Adds recursive file, directory, and byte totals beside directories in the tree view."
+title: "tree_summary"
+description: "Adds recursive file, directory and byte totals beside each directory in the tree view."
 order: 37
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/tree_summary]
 ---
 
-# Tree Summary Plugin
+`tree_summary` adds recursive file, directory and byte totals beside each directory in the tree view. Turn it on when you want to see what a directory holds without expanding it.
 
-Adds recursive file, directory, and byte totals beside directories in the tree view.
+<Shot name="plugin-tree-summary" alt="A tree of the sdk directory with bracketed totals beside each directory, such as 13 files, 10 dirs and 34.7 KiB on sdk." caption="`lla -t -d 2 sdk`" />
 
-```bash
-lla --tree --depth 3 --enable-plugin tree_summary
-lla plugin run tree_summary inspect -- .
+## Turn it on
+
+```toml
+# ~/.config/lla/config.toml
+enabled_plugins = ["tree_summary"]
 ```
 
-Symlinks are not followed, preventing cycles and summaries outside the selected tree.
+Or run `lla --enable-plugin tree_summary`, which writes the same setting, so it stays on. `lla --disable-plugin tree_summary` removes it.
+
+The plugin only runs in the tree view (`-t`). Totals cover the whole subtree whatever `-d` you pass. They don't count the directory itself and don't follow symlinks.
+
+Directories get three typed fields: `tree_file_count` (integer), `tree_directory_count` (integer) and `tree_total_bytes` (bytes). Read them from JSON, and keep `-t` in the command, since `lla --json` alone leaves them out:
+
+```bash
+lla -t -d 2 --json sdk | jq -c '.[] | select(.plugin.tree_total_bytes) | {name, bytes: .plugin.tree_total_bytes, files: .plugin.tree_file_count}'
+```
+
+```text
+{"name":"sdk","bytes":35486,"files":13}
+{"name":"wit","bytes":464,"files":1}
+{"name":"tests","bytes":2319,"files":9}
+```
+
+`field:` columns stay empty, because the long and table views don't run this plugin.
+
+## Actions
+
+Run an action with `lla plugin run tree_summary <action>`.
+
+| Action | What it does |
+| --- | --- |
+| `inspect -- <path>` | Calculate recursive totals for a directory |
+
+`inspect` isn't interactive, so it works in scripts and prints JSON without a TTY. A path that isn't a directory fails with `path is not a readable directory`.
+
+## Example
+
+```bash
+lla -t -d 2 sdk
+```
+
+```text
+└── sdk/ [13 files · 10 dirs · 34.7 KiB]
+    ├── Cargo.toml
+    ├── README.md
+    ├── src/ [1 files · 0 dirs · 30.2 KiB]
+    │   └── lib.rs
+    ├── tests/ [9 files · 7 dirs · 2.3 KiB]
+    │   └── fixtures/ [9 files · 6 dirs · 2.3 KiB]
+    └── wit/ [1 files · 0 dirs · 464 B]
+        └── lla-plugin.wit
+```
+
+```bash
+lla plugin run tree_summary inspect -- sdk
+```
+
+```text
+{
+  "bytes": 35486,
+  "directories": 10,
+  "files": 13,
+  "path": "sdk"
+}
+```

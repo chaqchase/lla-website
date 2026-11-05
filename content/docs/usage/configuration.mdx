@@ -1,35 +1,39 @@
 ---
 title: "Configuration"
-description: "Manage global config, project profiles, themes, shortcuts, plugin locations, exclusions, limits, and shell completion."
+description: "Set global defaults and per-project overrides, install themes, and generate shell completions."
 order: 4
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/configuration.md]
 ---
 
-# Configuration
+Your settings live in `~/.config/lla/config.toml`. A `.lla.toml` file can override them for one project, and command-line flags override both for one run.
 
-The global configuration is stored at `~/.config/lla/config.toml`. Command-line
-options override configuration values for one invocation.
+<Diagram caption="The nearest layer wins."><ConfigLayers /></Diagram>
 
-## Create and inspect the config
+## Manage your config
 
 ```bash
-lla init
-lla init --default
-lla config
-lla config show-effective
-lla config diff --default
+lla init                            # guided setup
+lla init --default                  # write defaults without prompts
+lla config                          # summarize the current settings
+lla config show-effective           # show the merged config
+lla config diff --default           # show what differs from the defaults
 lla config --set default_format long
 ```
 
-Use `lla config --help` and the generated default file as the canonical list of
-settable keys and accepted values.
+<Shot name="config" alt="The lla config summary, with settings grouped under headings for appearance, sorting and formatters." caption="`lla config`" />
 
-## Common listing defaults
+`config.toml` is commented throughout, so it also serves as a list of the available settings.
+
+<Callout type="warning" title="Edit the generated file">
+  Start from the file `lla init` writes, rather than a blank one. In lla 0.6.6, a global config with missing settings, such as `default_sort`, is rejected with a warning and the whole file is ignored. `.lla.toml` only needs the settings you want to change.
+</Callout>
+
+## Defaults
 
 ```toml
-default_sort = "name"
 default_format = "long"
+default_sort = "name"
 default_depth = 3
 show_icons = true
 include_dirs = false
@@ -46,32 +50,15 @@ no_dotfiles = false
 respect_gitignore = true
 ```
 
-Persistent defaults currently honored by the argument parser are `default`,
-`long`, `tree`, `table`, `grid`, `git`, `timeline`, and `sizemap`. Select fuzzy
-or recursive view per invocation with `--fuzzy` or `--recursive`.
+`default_format` accepts `default`, `long`, `tree`, `table`, `grid`, `git`, `timeline` or `sizemap`. The fuzzy and recursive views can't be defaults, so select those with `-F` or `-R` when you run lla.
 
-## Long and table columns
+Long and table columns are covered under [Views](/docs/usage/views#choose-the-columns).
 
-```toml
-[formatters.long]
-hide_group = true
-relative_dates = true
-date_format = "%Y-%m-%d %H:%M"
-columns = ["permissions", "size", "modified", "user", "name"]
+## Limits
 
-[formatters.table]
-columns = ["permissions", "size", "modified", "name"]
-```
-
-See [Views and display](/docs/usage/views#long-view) for built-in keys and plugin-field
-columns.
-
-## Recursion and fuzzy limits
+These keep large directories under control.
 
 ```toml
-[formatters.tree]
-max_lines = 20000
-
 [formatters.grid]
 ignore_width = false
 max_width = 200
@@ -86,9 +73,7 @@ editor = "code --wait"
 
 ## Exclude paths
 
-`exclude_paths` removes unwanted paths from top-level and recursive listings.
-Tilde expansion is supported. Content search and jump history also honor these
-exclusions.
+`exclude_paths` removes paths from listings, content search and jump history. `~` is expanded.
 
 ```toml
 exclude_paths = [
@@ -99,75 +84,57 @@ exclude_paths = [
 
 ## Project profiles
 
-Place `.lla.toml` inside a project to keep repository-specific settings outside
-the global config:
+Put a `.lla.toml` in a project to give it its own settings:
 
 ```toml
-show_icons = true
 default_format = "git"
 
 [sort]
 dirs_first = true
 ```
 
-`lla` walks upward from the current directory, loads the nearest `.lla.toml`,
-and overlays it on the global configuration. Inspect the result with
-`lla config show-effective` and its sources with `lla config diff --default`.
+lla walks up from the current directory, loads the nearest `.lla.toml` and applies it over your global config. `lla config show-effective` prints the result, and `lla config diff --default` shows where each override came from.
 
 ## Themes
 
+Set `theme` in your config to change the colors. Only `default` is installed at first, and `lla theme pull` adds the official set of 23.
+
 ```bash
-lla theme
-lla theme pull
-lla theme install /path/to/theme.toml
-lla theme install /path/to/themes/
-lla theme preview one_dark
+lla theme pull                     # install the official themes
+lla theme                          # pick one interactively
+lla theme preview vesper           # show sample output with a theme
+lla theme install ./my-theme.toml  # install a file or a directory of themes
 ```
 
-The interactive manager selects a theme. `pull` clones the official repository
-and installs its TOML theme files, `install` accepts a local file or directory,
-and `preview` renders sample output without changing the selection.
+<Shot name="theme-picker" alt="The interactive theme picker, listing the installed themes." caption="`lla theme`" />
+
+`lla theme pull` needs Git. `lla theme preview` doesn't change your selection.
 
 ## Shortcuts
 
-Shortcuts store plugin action invocations:
+Shortcuts give a plugin action its own top-level command:
 
 ```bash
-lla shortcut add find file_finder search -d "Quick file search"
-lla shortcut remove find
-lla shortcut list
-lla shortcut create
-lla shortcut export
-lla shortcut import shortcuts.toml
-lla find query
+lla shortcut add audit security_audit audit -d "Audit permissions and secrets"
+lla audit . --recursive
 ```
 
-Configured shortcut names are invoked directly as the first argument to `lla`;
-additional arguments are passed to the plugin action. Export and import use
-TOML. Run `lla shortcut --help` for each management command's accepted argument
-form.
+They're stored in your config. [Shortcuts](/docs/plugins/shortcuts) covers listing, exporting and importing them.
 
-## Plugin locations and enablement
+## Plugin locations
 
-`plugins_dir` is the writable user plugin location. `plugin_dirs` adds
-read-only or package-manager-owned locations; earlier entries take precedence.
+`plugins_dir` is where lla installs plugins. `plugin_dirs` adds other locations, such as one managed by your system's package manager, and earlier entries take precedence. `enabled_plugins` lists the plugins that decorate your listings.
 
 ```toml
-enabled_plugins = ["git_status", "file_meta"]
 plugins_dir = "~/.config/lla/plugins"
 plugin_dirs = ["/opt/lla/plugins"]
+enabled_plugins = ["git_status", "file_hash"]
 ```
-
-See [Installing and managing plugins](/docs/plugins/overview) for runtime support,
-package integrity, permissions, and actions.
 
 ## Shell completion
 
-Generate a completion script for a supported shell:
+`lla completion` generates scripts for Bash, Zsh, Fish, PowerShell and Elvish. By default it prints to standard output, and `-o` writes to a file.
 
 ```bash
-lla completion zsh
+lla completion zsh -o ~/.zfunc/_lla
 ```
-
-Use `lla completion --help` for supported shells, output-file, and install
-options.

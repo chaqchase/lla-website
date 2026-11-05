@@ -1,32 +1,28 @@
 ---
 title: "Navigation"
-description: "Jump between bookmarked and recent directories with shell integration, and find files in the interactive fuzzy view."
+description: "Jump to bookmarked and recent directories from your shell, and find and open files in the fuzzy view."
 order: 3
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/navigation.md]
 ---
 
-# Navigation
+lla has two interactive tools. `j` moves your shell to a directory you've bookmarked or visited, and the fuzzy view finds files under the current directory and acts on them.
 
-`lla` provides an interactive directory jumper for saved and recent locations,
-and a fuzzy view for finding and acting on files.
+## Jump
 
-## Directory jumping
-
-Set up shell integration once:
+Add the shell function once:
 
 ```bash
 lla jump --setup
 ```
 
-The setup detects Bash, Zsh, or Fish and adds a shell function to the relevant
-configuration file. Override detection with `lla jump --setup --shell fish`.
-Restart the terminal or source the changed shell file, then run `j` to choose a
-directory and change into it.
+This detects Bash, Zsh or Fish and appends a function named `j` to the shell's config file. Use `lla jump --setup --shell fish` to choose the shell yourself. Restart your terminal or source the file, then run `j` and pick a directory.
 
-`lla` itself prints the selected path because a child process cannot change its
-parent shell's working directory; the generated `j` function performs the
-actual `cd`.
+<Shot name="jump" alt="The jump picker, listing bookmarked directories followed by recent ones." caption="`lla jump`, the picker behind `j`." />
+
+A child process can't change its parent shell's directory, so `lla jump` only prints the path you picked. The `j` function does the `cd`.
+
+<Diagram caption="How a jump reaches your shell."><JumpFlow /></Diagram>
 
 ### Bookmarks and history
 
@@ -37,52 +33,51 @@ lla jump --list
 lla jump --clear-history
 ```
 
-Bookmarks appear before recent directories in the selector. Directory visits
-are deduplicated in history, and paths covered by `exclude_paths` are not
-recorded.
+Bookmarks appear above recent directories. lla adds a directory to your history whenever you list it, keeps each one only once, and skips paths in [`exclude_paths`](/docs/usage/configuration#exclude-paths).
 
 ## Fuzzy view
 
+Type part of a name to narrow the list. Select one or more files, then open them, copy their paths or rename them.
+
 ```bash
-lla --fuzzy
+lla -F --respect-gitignore
 ```
 
-<img src="https://github.com/user-attachments/assets/ec946fd2-34d7-40b7-b951-ffd9c4009ad6" className="rounded-2xl" alt="fuzzy" />
+<Shot name="view-fuzzy" alt="The fuzzy view, with a query, ranked results and two selected files." caption="`lla -F --respect-gitignore`, searching for `format` with two files selected." />
 
-Fuzzy view supports interactive search, multi-selection, and file actions.
+<Callout type="warning" title="Stuck on “Indexing files”">
+  In lla 0.6.6, `lla -F` never finishes indexing unless Git ignore rules are on. Pass `--respect-gitignore`, or set `respect_gitignore = true` in your config.
+</Callout>
+
+### Keys
 
 | Key | Action |
 | --- | --- |
-| `Ctrl+J` / `Ctrl+K` | Move down / up. |
-| `Ctrl+N` / `Ctrl+P` | Move down / up. |
-| `Ctrl+D` / `Ctrl+U` | Move half a page down / up. |
-| `Ctrl+G` / `Ctrl+Shift+G` | Jump to end / start. |
-| `Space` | Toggle selection. |
-| `Enter` | Return the highlighted file or selected files. |
-| `Ctrl+E` | Open selected files in an editor. |
-| `Ctrl+Y` | Copy selected paths to the clipboard. |
-| `Ctrl+O` | Open selected files with the system opener. |
-| `F2` | Rename the highlighted file; Enter confirms and Esc cancels. |
-| `Ctrl+C` / `Esc` | Exit. |
+| `↑` `↓`, `Ctrl+K` `Ctrl+J`, `Ctrl+P` `Ctrl+N` | Move up or down |
+| `Ctrl+U` `Ctrl+D` | Move half a page up or down |
+| `Ctrl+Shift+G` `Ctrl+G` | Go to the start or end |
+| `Space` | Select or deselect the highlighted file |
+| `Enter` | Finish, returning the highlighted or selected files |
+| `Ctrl+E` | Open in your editor |
+| `Ctrl+O` | Open with the system's default app |
+| `Ctrl+Y` | Copy paths to the clipboard |
+| `F2` | Rename the highlighted file. `Enter` confirms and `Esc` cancels |
+| `Esc`, `Ctrl+C` | Quit |
 
-Search input also supports `Ctrl+W` to delete the previous word, `Ctrl+H` for
-backspace, `Ctrl+A` or Home to move to the start, and End to move to the end.
+While typing a query, `Ctrl+W` deletes a word, `Ctrl+H` is backspace, `Ctrl+A` or `Home` goes to the start, and `End` goes to the end.
 
 ### Choose the editor
 
-The editor is selected in this order:
+`Ctrl+E` uses the first of these that's set:
 
-1. `listers.fuzzy.editor` in the lla config.
-2. `$EDITOR`.
-3. `$VISUAL`.
-4. `nano` on macOS/Linux or `notepad` on Windows.
+1. `listers.fuzzy.editor` in your config
+2. `$EDITOR`
+3. `$VISUAL`
+4. `nano`, or `notepad` on Windows
 
 ```toml
 [listers.fuzzy]
-editor = "nvim"
+editor = "code --wait"
 ```
 
-Editor arguments are supported, for example `editor = "code --wait"`.
-
-See [Configuration](/docs/usage/configuration) for `exclude_paths` and other persistent
-defaults.
+Your config's `ignore_patterns` also applies here. See [Limits](/docs/usage/configuration#limits).

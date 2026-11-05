@@ -1,697 +1,242 @@
 ---
 title: "Troubleshooting"
-description: "Solutions to common problems with lla including installation issues, display problems, performance concerns, and plugin troubleshooting."
+description: "Find the symptom you're seeing in lla 0.6.6, learn what causes it, and apply the fix."
 order: 2
 published: true
 references: []
 ---
 
-# Troubleshooting Guide
+Each heading is a symptom. Under it you'll find the cause and the fix, checked against lla 0.6.6.
 
-Having issues with lla? This guide covers common problems and their solutions. If you don't find your issue here, check the [FAQ](/docs/support/faq) or [open an issue](https://github.com/chaqchase/lla/issues).
+## Install and config
 
-## Installation Issues
+### `lla: command not found`
 
-### "command not found" After Installation
+Cause: the directory holding the binary isn't on your `PATH`. The install script uses `/usr/local/bin`, and `cargo install` uses `~/.cargo/bin`.
 
-**Symptom**: Running `lla` shows "command not found"
-
-**Cause**: The installation directory isn't in your PATH
-
-**Solution**:
+Fix: add the directory to your `PATH` in your shell's startup file.
 
 ```bash
-# Check where lla is installed
-which lla
-
-# If not found, try these locations
-ls /usr/local/bin/lla
-ls ~/.cargo/bin/lla
-
-# Add to PATH temporarily
-export PATH="/usr/local/bin:$PATH"
-
-# Add to PATH permanently (bash)
-echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-
-# Add to PATH permanently (zsh)
-echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-
-# Add to PATH permanently (fish)
-fish_add_path /usr/local/bin
+export PATH="$HOME/.cargo/bin:$PATH"
 ```
 
-### Permission Denied
+### `Warning: TOML parse error` on every run
 
-**Symptom**: "Permission denied" when trying to run lla
-
-**Cause**: Binary doesn't have execute permissions
-
-**Solution**:
-
-```bash
-# Add execute permission
-chmod +x /usr/local/bin/lla
-
-# If you need sudo
-sudo chmod +x /usr/local/bin/lla
-
-# Verify permissions
-ls -l /usr/local/bin/lla
-# Should show: -rwxr-xr-x
+```text
+Warning: TOML parse error at line 1, column 1
+  |
+1 | theme = "nord"
+  | ^^^^^^^^^^^^^^
+missing field `default_sort`
 ```
 
-### Installation Script Fails
+Cause: `~/.config/lla/config.toml` is invalid or incomplete, so lla ignores the whole file and uses built-in defaults. A global config must include every required key, so a hand-written file with a few settings fails. A `"` in a shortcut description or a `.` in a shortcut name also causes this.
 
-**Symptom**: curl command fails or script errors out
-
-**Common causes and solutions**:
-
-1. **Network issues**:
-   ```bash
-   # Try with verbose output
-   curl -v -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
-   
-   # Or download first, then run
-   curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh > install.sh
-   bash install.sh
-   ```
-
-2. **Checksum verification failed**:
-   ```bash
-   # Clear any partial downloads
-   rm -f /tmp/lla-*
-   
-   # Try again
-   curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
-   ```
-
-3. **Insufficient permissions**:
-   ```bash
-   # The script may need sudo for /usr/local/bin
-   curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | sudo bash
-   ```
-
-### Build from Source Fails
-
-**Symptom**: `cargo build` or `cargo install` fails
-
-**Common causes**:
-
-1. **Outdated Rust version**:
-   ```bash
-   # Update Rust
-   rustup update
-   
-   # Check version (needs 1.70+)
-   rustc --version
-   ```
-
-2. **Missing dependencies** (Linux):
-   ```bash
-   # Ubuntu/Debian
-   sudo apt-get install build-essential pkg-config libssl-dev
-   
-   # Fedora/RHEL
-   sudo dnf install gcc openssl-devel
-   
-   # Arch
-   sudo pacman -S base-devel openssl
-   ```
-
-3. **Out of disk space**:
-   ```bash
-   # Check available space
-   df -h
-   
-   # Rust builds can use several GB
-   # Clean up old builds
-   cargo clean
-   ```
-
-## Display Issues
-
-### Icons Not Showing
-
-**Symptom**: File icons appear as squares, question marks, or missing characters
-
-**Cause**: Terminal doesn't have a Nerd Font installed
-
-**Solution**:
-
-1. **Install a Nerd Font**:
-   - Visit [nerdfonts.com](https://www.nerdfonts.com/)
-   - Download a font (recommended: FiraCode, JetBrainsMono, or Hack)
-   - Install on your system:
-     ```bash
-     # macOS
-     cp *.ttf ~/Library/Fonts/
-     
-     # Linux
-     cp *.ttf ~/.local/share/fonts/
-     fc-cache -f -v
-     
-     # Windows
-     # Right-click font files and select "Install"
-     ```
-
-2. **Configure your terminal**:
-   - Open terminal preferences
-   - Set font to the installed Nerd Font
-   - Restart terminal
-
-3. **Temporary workaround**:
-   ```bash
-   # Disable icons
-   lla --no-icons
-   
-   # Or set in config
-   lla config --set show_icons false
-   ```
-
-### Colors Look Wrong
-
-**Symptom**: Colors don't match your theme or look strange
-
-**Possible causes and solutions**:
-
-1. **Terminal color settings**:
-   - Check terminal's color scheme
-   - Ensure terminal supports 256 colors or truecolor
-   - Test: `echo $TERM` (should be xterm-256color or similar)
-
-2. **Try a different lla theme**:
-   ```bash
-   lla theme           # Interactive selector
-   lla theme pull      # Download all built-in themes
-   ```
-
-3. **Disable colors temporarily**:
-   ```bash
-   lla --no-color
-   ```
-
-4. **Check theme conflicts**:
-   ```bash
-   # View current theme
-   lla config
-   
-   # Try the default theme
-   lla config --set theme default
-   ```
-
-### Corrupted or Garbled Output
-
-**Symptom**: Output shows weird characters or is misaligned
-
-**Possible causes**:
-
-1. **Terminal encoding issues**:
-   ```bash
-   # Check encoding
-   echo $LANG
-   
-   # Should be UTF-8
-   export LANG=en_US.UTF-8
-   export LC_ALL=en_US.UTF-8
-   ```
-
-2. **Terminal size detection**:
-   ```bash
-   # Check terminal size
-   echo $COLUMNS x $LINES
-   
-   # Force recalculation
-   resize
-   ```
-
-3. **Terminal compatibility**:
-   ```bash
-   # Try with basic output
-   lla --no-icons --no-color
-   
-   # Some terminal emulators have better Unicode support:
-   # - Alacritty
-   # - Kitty
-   # - iTerm2 (macOS)
-   # - Windows Terminal (Windows)
-   ```
-
-### Grid/Table Layout Issues
-
-**Symptom**: Grid or table view doesn't fit terminal width
-
-**Solution**:
+Fix: correct the line the warning points to. To start over, move the file aside and run `lla`, which writes a new one. Then change settings with `lla config --set`. A project's `.lla.toml` can be partial.
 
 ```bash
-# For grid view
-lla -g --grid-ignore      # Ignore terminal width
-lla config --set formatters.grid.ignore_width true
-
-# For table view
-lla -T                    # Should auto-adjust
-```
-
-## Performance Issues
-
-### Slow on Large Directories
-
-**Symptom**: lla takes a long time to list directories with many files
-
-**Solutions**:
-
-1. **Adjust performance limits**:
-   ```toml
-   # In ~/.config/lla/config.toml
-   [formatters.tree]
-   max_lines = 10000    # Reduce from 20000
-   
-   [listers.recursive]
-   max_entries = 10000  # Reduce from 20000
-   ```
-
-2. **Disable expensive operations**:
-   ```bash
-   # Don't calculate directory sizes
-   lla -l                    # Instead of lla -l --include-dirs
-   
-   # Limit tree depth
-   lla -t -d 2              # Instead of unlimited depth
-   
-   # Use filters to reduce output
-   lla -f ".rs"             # Only .rs files
-   ```
-
-3. **Disable unused plugins**:
-   ```bash
-   lla use                  # Disable plugins you don't need
-   
-   # Or disable all for testing
-   lla --disable-all-plugins
-   ```
-
-4. **Optimize for your use case**:
-   ```bash
-   # Fast overview
-   lla                      # Default view is fastest
-   
-   # Detailed info only when needed
-   lla -l                   # Long format when necessary
-   ```
-
-### Git Status is Slow
-
-**Symptom**: `-G` flag makes lla very slow
-
-**Cause**: Git status checks can be expensive in large repositories
-
-**Solutions**:
-
-1. **Use Git view only when needed**:
-   ```bash
-   # Regular listing (fast)
-   lla
-   
-   # Git view (slower, when needed)
-   lla -G
-   ```
-
-2. **Check repository size**:
-   ```bash
-   git status   # If this is slow, lla's Git view will be too
-   ```
-
-3. **Optimize Git repository**:
-   ```bash
-   git gc                   # Garbage collection
-   git prune               # Remove unnecessary files
-   ```
-
-4. **Exclude large directories**:
-   ```toml
-   # In ~/.config/lla/config.toml
-   exclude_paths = [
-     "~/large-repo/node_modules",
-     "~/large-repo/target"
-   ]
-   ```
-
-### High Memory Usage
-
-**Symptom**: lla uses excessive memory
-
-**Common causes**:
-
-1. **Very large directories**:
-   - Use pagination: `lla | less`
-   - Use filters to reduce output
-   - Increase system limits if needed
-
-2. **Memory leak** (rare):
-   - Update to latest lla version
-   - Report the issue with details
-
-## Plugin Issues
-
-### Plugins Not Loading
-
-**Symptom**: Plugins don't appear in `lla --version` or don't work
-
-**Diagnostic steps**:
-
-```bash
-# 1. Check plugin directory
-ls ~/.config/lla/plugins/
-
-# 2. Check plugin permissions
-ls -l ~/.config/lla/plugins/
-
-# 3. Try loading plugins explicitly
-lla --enable-plugin plugin_name
-
-# 4. Verify contracts, checksums, and handlers
-lla plugin doctor
-lla plugin info plugin_name
-
-# 5. Remove invalid plugins
-lla clean
-```
-
-**Common issues**:
-
-1. **Wrong file extension**:
-   - Linux: must be `.so`
-   - macOS: must be `.dylib`
-   - Windows: must be `.dll`
-   - WebAssembly: must be a `.wasm` component, and the host must be built with `wasm-plugins` (official Linux, macOS, and Windows binaries include it; NetBSD does not)
-
-2. **Old plugin API version**:
-   - lla 0.6 loads API v3 plugins only; v1/v2 libraries are detected and reported as disabled without executing
-   - Migrate official plugins with `lla plugin migrate --prebuilt`, and rebuild third-party plugins against `lla_plugin_sdk` 0.6 — see [Migrating to v3](/docs/plugins/migration-v3)
-
-3. **Wrong location**:
-   ```bash
-   # Check configured plugin directory
-   lla config | grep plugins_dir
-   
-   # Default is ~/.config/lla/plugins/
-   ```
-
-4. **Missing dependencies**:
-   ```bash
-   # Rebuild plugin
-   cd plugin-directory
-   cargo build --release
-   cp target/release/lib*.so ~/.config/lla/plugins/
-   ```
-
-### Plugin Crashes or Errors
-
-**Symptom**: lla crashes when using a plugin, or plugin shows errors
-
-**Solutions**:
-
-1. **Disable problematic plugin**:
-   ```bash
-   lla --disable-plugin plugin_name
-   ```
-
-2. **Update plugin**:
-   ```bash
-   lla update plugin_name
-   ```
-
-3. **Reinstall plugin**:
-   ```bash
-   lla install --git https://github.com/user/plugin-repo
-   ```
-
-4. **Check plugin logs**:
-   ```bash
-   # Many plugins log to stderr
-   lla 2>&1 | tee lla-debug.log
-   ```
-
-5. **Report to plugin author**:
-   - Include lla version: `lla --version`
-   - Include plugin version
-   - Describe the error
-   - Share error logs
-
-### Plugin Installation Fails
-
-**Symptom**: `lla install` fails
-
-**Common causes**:
-
-1. **Rust not installed** (source installs only — `--prebuilt` needs no toolchain):
-   ```bash
-   # Install Rust
-   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-   ```
-
-2. **Build error**:
-   ```bash
-   # Install manually to see full error
-   git clone https://github.com/user/plugin-repo
-   cd plugin-repo
-   cargo build --release
-   # Check error messages
-   ```
-
-3. **Network issues**:
-   ```bash
-   # Check connectivity
-   curl -I https://github.com
-   
-   # Try direct installation
-   lla install --dir /path/to/plugin
-   ```
-
-## Configuration Issues
-
-### Configuration Not Loading
-
-**Symptom**: Changes to config don't take effect
-
-**Solutions**:
-
-1. **Verify config location**:
-   ```bash
-   # Should be ~/.config/lla/config.toml
-   ls -l ~/.config/lla/config.toml
-   
-   # View current config
-   lla config
-   ```
-
-2. **Check syntax**:
-   ```bash
-   # TOML syntax errors prevent loading
-   # Validate your config
-   cat ~/.config/lla/config.toml
-   ```
-
-3. **Regenerate config**:
-   ```bash
-   # Backup current config
-   cp ~/.config/lla/config.toml ~/.config/lla/config.toml.backup
-   
-   # Regenerate
-   lla init
-   
-   # Manually merge your changes
-   ```
-
-4. **Command-line flags override config**:
-   ```bash
-   # Config says show_icons = false
-   # But this still shows icons:
-   lla --icons
-   ```
-
-### Theme Not Applying
-
-**Symptom**: Theme changes don't appear
-
-**Solutions**:
-
-1. **Verify theme exists**:
-   ```bash
-   ls ~/.config/lla/themes/
-   
-   # Pull built-in themes
-   lla theme pull
-   ```
-
-2. **Check theme name in config**:
-   ```toml
-   # Should match filename without .toml
-   theme = "dark"  # For dark.toml
-   ```
-
-3. **Try interactive selector**:
-   ```bash
-   lla theme
-   ```
-
-4. **Validate theme file**:
-   ```bash
-   # Check for TOML syntax errors
-   cat ~/.config/lla/themes/your-theme.toml
-   ```
-
-## Fuzzy Search Issues
-
-### Fuzzy Search Not Working
-
-**Symptom**: `lla --fuzzy` doesn't start or crashes
-
-**Requirements**:
-
-- Terminal with sufficient size (min 80x24)
-- Working terminal input
-
-See [Fuzzy view](/docs/usage/navigation#fuzzy-view) for key bindings and editor selection.
-
-**Solutions**:
-
-1. **Check terminal size**:
-   ```bash
-   echo $COLUMNS x $LINES    # Should be large enough
-   ```
-
-3. **Test in smaller directory**:
-   ```bash
-   cd /tmp
-   mkdir test-fuzzy
-   cd test-fuzzy
-   touch file1 file2 file3
-   lla --fuzzy
-   ```
-
-4. **Terminal compatibility**:
-   - Some terminals have better support
-   - Try: Alacritty, Kitty, iTerm2, Windows Terminal
-
-## Archive Listing Issues
-
-### Archives Not Listing
-
-**Symptom**: `lla archive.zip` doesn't work
-
-**Solutions**:
-
-1. **Verify archive format support**:
-   - Supported: .zip, .tar, .tar.gz, .tgz
-   - Not supported yet: .rar, .7z, .bz2
-
-2. **Check archive integrity**:
-   ```bash
-   # Test archive
-   unzip -t archive.zip
-   # or
-   tar -tzf archive.tar.gz
-   ```
-
-3. **Permissions**:
-   ```bash
-   # Ensure archive is readable
-   ls -l archive.zip
-   chmod +r archive.zip
-   ```
-
-## Content Search Issues
-
-### Search Not Finding Results
-
-**Symptom**: `--search` doesn't find expected results
-
-**Solutions**:
-
-1. **Check search pattern**:
-   ```bash
-   # Default is literal search
-   lla --search "main()"     # Literal
-   
-   # Use regex: prefix for patterns
-   lla --search "regex:main.*\("
-   ```
-
-2. **Case sensitivity**:
-   ```bash
-   # Default is case-insensitive
-   lla --search "Test"       # Finds test, TEST, Test
-   
-   # Use --case-sensitive for exact case
-   lla --search "Test" --case-sensitive
-   ```
-
-3. **Check file filters**:
-   ```bash
-   # Make sure you're searching the right files
-   lla --search "pattern" --files-only
-   lla --search "pattern" -f ".rs"
-   ```
-
-4. **Binary files**:
-   - Content search skips binary files by default
-   - Use file filters to search specific file types
-
-## Getting More Help
-
-### Enable Debug Output
-
-```bash
-# Set debug level
-export RUST_LOG=debug
+mv ~/.config/lla/config.toml ~/.config/lla/config.toml.bak
 lla
-
-# Or just for lla
-RUST_LOG=debug lla
 ```
 
-### Collect Diagnostic Information
+## Listings
 
-When reporting issues, include:
+### A filter with capital letters returns nothing
+
+Cause: filtering lowercases file names but leaves your pattern as written, so `README` is compared with `readme.md`. This affects `-f`, `glob:` and `regex:` patterns, and `--refine`.
+
+Fix: write the pattern in lowercase, as in `lla -f readme`, or add `-c` to match exact case, as in `lla -f README -c`.
+
+### A filter for several extensions returns nothing
+
+Cause: comma lists and brace globs don't work for extensions in 0.6.6.
+
+Fix: use `OR`, and quote the pattern.
 
 ```bash
-# 1. lla version and plugin info
-lla --version
-
-# 2. System information
-uname -a
-
-# 3. Config
-lla config
-
-# 4. Rust version (if relevant)
-rustc --version
-
-# 5. Error output
-lla 2>&1 | tee error.log
+lla -f ".rs OR .toml"
 ```
 
-### Report a Bug
+### `--modified` returns the opposite of what you expected
 
-If you've tried these solutions and still have issues:
+Cause: the comparison runs in reverse. `<7d` selects entries older than 7 days. `--created` works the same way.
 
-1. Check if it's a known issue: [GitHub Issues](https://github.com/chaqchase/lla/issues)
-2. Create a new issue with:
-   - Clear description
-   - Steps to reproduce
-   - Expected vs actual behavior
-   - Diagnostic information (above)
-   - Screenshots if relevant
+Fix: use `>` for recent entries.
 
-### Get Community Help
+```bash
+lla --modified ">7d"    # changed within the last 7 days
+lla --modified "<7d"    # older than 7 days
+```
 
-- **GitHub Discussions**: Ask questions and share solutions
-- **Issue Tracker**: Report bugs and request features
-- **Documentation**: Check other guides and references
+### Dotfiles are missing from a tree or recursive listing
 
----
+Cause: `-t` and `-R` skip dot-named files, even with `-a`. Dot-named directories still appear.
 
-**Still stuck?** Open an issue on [GitHub](https://github.com/chaqchase/lla/issues) with full diagnostic information.
+Fix: list them with a flat view: `lla --dotfiles-only`.
+
+### A tree or recursive listing stops early
+
+Cause: depth defaults to `default_depth`, which starts at 3. Separately, `listers.recursive.max_entries` caps both views at 20000 files, and lla stops there without a warning.
+
+Fix: raise the depth or the limit.
+
+```bash
+lla -t -d 6
+lla config --set listers.recursive.max_entries 50000
+```
+
+### Icons show as squares or question marks
+
+Cause: lla's icons use Nerd Font glyphs, and your terminal font doesn't have them.
+
+Fix: install a font from [nerdfonts.com](https://www.nerdfonts.com/) and select it in your terminal, or turn icons off with `lla config --set show_icons false`.
+
+## Git view
+
+### `Not a git repository` for a subdirectory of a repository
+
+Cause: `lla -G src` fails because a relative path with no `./` never reaches the repository root.
+
+Fix: start the path with `./`, as in `lla -G ./src`, use an absolute path, or `cd` into the directory.
+
+### A directory shows `[clean]` although a file inside it changed
+
+Cause: Git view reports status for each entry in the listing, and a directory has no status of its own. The header counts do cover the whole repository.
+
+Fix: run `lla -G` inside that directory.
+
+## Search
+
+### `--search` returns nothing with a relative directory
+
+Cause: `lla --search X src` changes into `src` and then looks for paths that still start with `src`. Nothing matches, and lla prints no error.
+
+Fix: run search from that directory, or pass an absolute path.
+
+```bash
+cd src && lla --search "TODO"
+lla --search "TODO" "$PWD/src"
+```
+
+### `Failed to run ripgrep`
+
+Cause: `lla --search` runs `rg`, and it isn't on your `PATH`.
+
+Fix: [install ripgrep](https://github.com/BurntSushi/ripgrep#installation), then check with `rg --version`.
+
+### Search returns matches from `.git/`
+
+Cause: search includes dot-named files and directories by default.
+
+Fix: add `--no-dotfiles`, as in `lla --search "TODO" --no-dotfiles`.
+
+### `-f` doesn't narrow search results
+
+Cause: lla gives ripgrep an explicit list of files, and `-f` doesn't filter that list in 0.6.6.
+
+Fix: search from a narrower directory, or run ripgrep directly with `rg "TODO" --glob "*.rs"`.
+
+## Fuzzy view and jump
+
+### Fuzzy view stays at "Indexing files"
+
+`lla -F` shows `Indexing files... 0 files found` and the list never fills.
+
+Cause: the default file indexer doesn't finish in 0.6.6. The indexer used for gitignore filtering does.
+
+Fix: press Esc, then add `--respect-gitignore`, or make it your default. The setting also hides ignored files in every other view. See [Fuzzy view](/docs/usage/navigation#fuzzy-view) for the keys.
+
+```bash
+lla -F --respect-gitignore
+lla config --set filter.respect_gitignore true
+```
+
+### `lla jump` prints a path but your directory doesn't change
+
+Cause: a program can't change its parent shell's directory, so `lla jump` only prints the path you pick.
+
+Fix: run `lla jump --setup`, open a new terminal, and use `j` instead. See [Jump](/docs/usage/navigation#jump).
+
+### `interactive mode error: IO error: not a terminal`
+
+Cause: `lla jump` needs a terminal for its selector. A script or redirected input doesn't provide one.
+
+Fix: run it from an interactive shell. In a script, read paths with `lla jump --list`.
+
+## Themes
+
+### `Theme 'nord' not found`
+
+```text
+✗ Error
+
+  Theme 'nord' not found. Install it with `lla theme pull` or place it in ~/.config/lla/themes
+```
+
+Cause: `lla theme preview` and `lla config --set theme` only see installed themes. A new install has none, and `default` only appears after you run `lla init`.
+
+Fix: pull the official themes, then preview again. `lla theme pull` clones the lla repository, so it needs Git and network access. Without those, run `lla theme install <path>` on a theme file or directory you already have.
+
+```bash
+lla theme pull
+lla theme preview nord
+```
+
+## Plugins
+
+### `Plugin 'NAME' not found`
+
+Cause: the plugin isn't installed in any directory lla searches, or the name is misspelled.
+
+Fix: check `lla list-plugins`, then run `lla install` to add what's missing.
+
+### `Plugin 'NAME' was disabled. Enabling it now...`
+
+Cause: you ran an action or shortcut for a disabled plugin. lla turned it on and saved that to your config, so its output now appears in your listings.
+
+Fix: turn it off when you're done with `lla --disable-plugin NAME`.
+
+### `Action 'NAME:ACTION' is interactive and requires a TTY with --output human`
+
+Cause: the plugin declares this action as interactive, so it can't run in a pipe, a script, or with `--output json`.
+
+Fix: run it directly in a terminal.
+
+### `warning: 'lla plugin <plugin> <action>' is deprecated`
+
+Cause: you used the old form. lla 0.6.6 also prints this warning for every shortcut. It goes to stderr and the action still runs.
+
+Fix: in scripts, use the current form, as in `lla plugin run project_context inspect -- .`.
+
+### `Plugin PATH uses API v1 and is disabled; migrate it to API v3`
+
+Cause: lla 0.6 only loads API v3 plugins.
+
+Fix: migrate official plugins with the commands below. Third-party plugins have to be rebuilt against `lla_plugin_sdk` 0.6. See [Migrating to v3](/docs/plugins/migration-v3).
+
+```bash
+lla plugin migrate --prebuilt
+lla plugin doctor
+```
+
+### A plugin fails `lla plugin doctor`
+
+Cause: its checksums or contract don't match, or the package is damaged.
+
+Fix: run `lla clean`, then `lla install`. `lla clean` moves invalid plugins to `.quarantine/<timestamp>/` inside the plugins directory, so you can recover them.
+
+### `Dynamic plugins are unavailable in this build`
+
+Cause: static musl builds can't load plugins.
+
+Fix: install a GNU build. See [Installation](/docs/about/installation).
+
+## Report a bug
+
+Search the [GitHub issues](https://github.com/chaqchase/lla/issues) first. If it's new, open an issue with your operating system, the command you ran, what you expected, and what happened, along with the output of these commands:
+
+```bash
+lla --version
+lla config diff --default
+lla plugin doctor
+```

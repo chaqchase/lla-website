@@ -1,476 +1,184 @@
 ---
 title: "FAQ"
-description: "Frequently asked questions about lla, covering installation, usage, plugins, performance, and common issues with detailed answers."
+description: "Short answers to common questions about setting up lla, its listings, Git, search, plugins and themes."
 order: 1
 published: true
 references: []
 ---
 
-# Frequently Asked Questions
+These answers are checked against lla 0.6.6. If you're looking at an error message, go to [Troubleshooting](/docs/support/troubleshooting), which also explains [how to report a bug](/docs/support/troubleshooting#report-a-bug).
 
-Quick answers to common questions about lla. Can't find what you're looking for? Check the [Troubleshooting Guide](/docs/support/troubleshooting) or [open an issue](https://github.com/chaqchase/lla/issues).
-
-## General Questions
-
-### What is lla?
-
-lla is a modern file listing tool that enhances the traditional `ls` command with multiple views, powerful filtering, Git integration, and an extensible plugin system. It's written in Rust for optimal performance and reliability.
-
-### Why choose lla over ls or exa?
-
-lla offers several advantages:
-
-- **Multiple specialized views**: Tree, grid, table, timeline, sizemap, and more
-- **Plugin system**: Extend functionality without modifying core code
-- **Git integration**: Native repository status in your listings
-- **Content search**: Ripgrep-powered search across file contents
-- **Modern design**: Beautiful output with theme support
-- **Active development**: Regular updates and new features
+## Setup
 
 ### Is lla free?
 
-Yes! lla is open-source software licensed under the MIT License. It's free to use, modify, and distribute.
+Yes. lla is open source under the MIT license. `lla --license` prints the text.
 
-### What platforms does lla support?
+### Which platforms does lla run on?
 
-lla works on:
-- **Linux** (x86_64, ARM64, i686, plus static musl builds)
-- **macOS** (Intel, Apple Silicon)
-- **Windows** (native AMD64 and ARM64 executables and plugin bundles)
-- **NetBSD** (amd64, native plugins only)
+Linux, macOS, Windows and NetBSD. Static musl builds for Linux can't load plugins. See [Installation](/docs/about/installation) for each platform's builds.
 
-See the [Installation Guide](/docs/about/installation) for per-platform notes.
+### Do I have to configure lla first?
 
-## Installation & Setup
+No. The first run writes `~/.config/lla/config.toml` with default values. Run `lla init` for a setup wizard, or change one value at a time with `lla config --set`.
 
-### How do I install lla?
+### How do I upgrade lla?
 
-The quickest method is using the installation script:
-
-```bash
-curl -sSL https://raw.githubusercontent.com/chaqchase/lla/main/install.sh | bash
-```
-
-See the [Installation Guide](/docs/about/installation) for other methods including package managers and building from source.
-
-### Why can't I find lla after installation?
-
-The installation directory might not be in your PATH. Add it:
-
-```bash
-export PATH="/usr/local/bin:$PATH"
-
-# Make it permanent
-echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-### Do I need to configure lla before using it?
-
-No! lla works perfectly out of the box with sensible defaults. However, you can customize it by running:
-
-```bash
-lla init    # Creates ~/.config/lla/config.toml
-```
+Run `lla upgrade`. It replaces the binary at its current path with the latest release. Add `-v <version>` for a specific release tag, or `--path <path>` to install somewhere else.
 
 ### How do I uninstall lla?
 
-```bash
-# Remove the binary
-sudo rm /usr/local/bin/lla
+Remove the binary with `sudo rm /usr/local/bin/lla` if you used the install script, or `cargo uninstall lla` if you used Cargo. Then delete lla's directories, and remove the `j` function from your shell's startup file if you ran `lla jump --setup`.
 
-# Remove configuration (optional)
-rm -rf ~/.config/lla
+| What | Linux | macOS |
+| --- | --- | --- |
+| Config, themes, plugins | `~/.config/lla` | `~/.config/lla` |
+| Jump bookmarks and history | `~/.config/lla/jump.json` | `~/Library/Application Support/lla` |
+| Listing cache | `~/.cache/lla` | `~/Library/Caches/lla` |
+
+## Listings
+
+### Can I alias ls to lla?
+
+Yes, with one catch: some short flags mean something else. `alias ls='lla'` works, and `alias ll='lla -l'` gives you long view.
+
+| Flag | In `ls` | In `lla` |
+| --- | --- | --- |
+| `-t` | Sort by time | Tree view |
+| `-S` | Sort by size | Size map view |
+| `-d` | List the directory itself | Set depth, takes a value |
+| `-h` | Human-readable sizes | Print help |
+| `-1` | One entry per line | Not accepted |
+
+For `ls -lt`, use `lla -l -s date -r`. Long view sizes are always human-readable.
+
+### How do I hide dotfiles?
+
+lla shows them by default. Run `lla --no-dotfiles` to hide them once, or `lla config --set filter.no_dotfiles true` to hide them for every run. With the setting on, `lla -a` shows them for one run.
+
+### What's the difference between -t and -R?
+
+`-t` draws one nested tree. `-R` prints a section for each directory. Both leave out dot-named files.
+
+```text
+./src
+────────────────────────────────────────
+2026-11-04 23:01 │ lib.rs
+2026-11-04 23:01 │ main.rs
 ```
 
-## Usage
+Both also stop at `default_depth`, which starts at 3. Use `lla -t -d 6` for one run, or `lla config --set default_depth 6` to keep it.
 
-### Why are icons not displaying correctly?
+### How do I make long view the default?
 
-Icons require a Nerd Font. Install one from [nerdfonts.com](https://www.nerdfonts.com/), configure your terminal to use it, and restart your terminal.
+Run `lla config --set default_format long`. The accepted values are `default`, `long`, `tree`, `grid`, `git`, `timeline`, `sizemap`, `table` and `fuzzy`. A view flag still overrides this setting for one run.
 
-Popular choices:
-- FiraCode Nerd Font
-- JetBrainsMono Nerd Font
-- Hack Nerd Font
+### Can lla hide files listed in .gitignore?
 
-### Can I use lla as a drop-in replacement for ls?
+Yes, inside or outside a Git repository. Run `lla --respect-gitignore` once, or `lla config --set filter.respect_gitignore true` to keep it. With the setting on, `lla --no-gitignore` shows those files for one run.
 
-Yes! Create an alias in your shell configuration:
+### Can lla list what's inside an archive?
 
-```bash
-# Add to ~/.bashrc or ~/.zshrc
-alias ls='lla'
-alias ll='lla -l'
-```
-
-### How do I exclude hidden files?
-
-Use the `--no-dotfiles` flag:
+Yes, for `.zip`, `.tar`, `.tar.gz` and `.tgz`. Views, filters and machine output all work without extracting anything. Other formats, such as `.tar.bz2`, list as a single file.
 
 ```bash
-lla --no-dotfiles
+lla project.tar.gz -t
 ```
 
-Or set it as default in your config:
+### How do I get JSON or CSV?
 
-```toml
-[filter]
-no_dotfiles = true
-```
-
-### What's the difference between -R and -t?
-
-- **`-R` (recursive)**: Lists all files in subdirectories in a flat format
-- **`-t` (tree)**: Shows hierarchical directory structure with indentation
-
-Both support depth limiting with `-d`:
-```bash
-lla -R -d 2    # Recursive, 2 levels deep
-lla -t -d 2    # Tree view, 2 levels deep
-```
-
-### Can lla list archive contents?
-
-Yes! lla can list contents of zip, tar, and tar.gz archives without extraction:
+Use `--json`, `--ndjson` or `--csv`. Add `--pretty` to indent `--json`. See [Machine output](/docs/usage/machine-output) for the fields.
 
 ```bash
-lla archive.zip -t       # Tree view of archive
-lla project.tar.gz -l    # Long format of archive contents
+lla --json | jq -r '.[] | select(.file_type == "file") | "\(.size_bytes) \(.name)"'
+```
+
+## Git and search
+
+### Does lla need Git?
+
+Only for `lla -G` and `lla diff --git`, which run the `git` command. Every other view works without it.
+
+### Does search need ripgrep?
+
+Yes. `lla --search` runs `rg`, so it must be on your `PATH`.
+
+### Is search literal or regex?
+
+Literal and case-insensitive by default. Start the pattern with `regex:` for a regular expression, and add `-c` for exact case.
+
+```bash
+lla --search 'regex:fn\s+main' -c
 ```
 
 ## Plugins
 
 ### How do I install plugins?
 
-Install all first-party plugins:
+`lla install` downloads the prebuilt bundle for your platform and needs no toolchain. Building from source needs Rust.
 
 ```bash
-lla install --prebuilt
+lla install
+lla install --git https://github.com/chaqchase/lla
+lla install --dir ~/code/my-plugin
 ```
 
-Install from a Git repository:
+### How do I turn a plugin on or off?
 
-```bash
-lla install --git https://github.com/username/plugin-repo
-```
+Run `lla use` for a menu, or `lla --enable-plugin file_hash` and `lla --disable-plugin file_hash`. Both flags save the change to `enabled_plugins`, so it lasts beyond the current run.
 
-Install from a local directory:
+### Why does a plugin keep showing up in my listings?
 
-```bash
-lla install --dir /path/to/plugin
-```
-
-### Do I need Rust to install plugins?
-
-Only for source installs. `lla install --prebuilt` downloads ready-to-run plugin packages and needs no toolchain. Building from a Git repository (`--git`) or local directory (`--dir`) compiles from source and requires Rust — install it from [rustup.rs](https://rustup.rs).
-
-### How do I enable/disable plugins?
-
-Interactive mode:
-```bash
-lla use    # Navigate with arrow keys, toggle with space
-```
-
-Command line:
-```bash
-lla --enable-plugin plugin_name
-lla --disable-plugin plugin_name
-```
+It's enabled. Running an action or a [shortcut](/docs/plugins/shortcuts) on a disabled plugin turns it on and leaves it on. Run `lla --disable-plugin NAME` to stop it.
 
 ### Where are plugins stored?
 
-Default location: `~/.config/lla/plugins/`
+In `~/.config/lla/plugins`, which you can change with `plugins_dir`. lla also searches any directories in `plugin_dirs` and a system path such as `/usr/local/lib/lla/plugins`. `lla plugin doctor` prints every path it checks.
 
-You can customize this in your config:
+### Are plugins sandboxed?
 
-```toml
-plugins_dir = "~/custom/plugin/path"
-```
+WebAssembly plugins are, and you approve their permissions at install time. Native plugins run with your full user rights, so only install ones you trust. `lla plugin permissions NAME` prints what a plugin declares.
 
-### Can I write plugins in other languages?
+### Can I write a plugin in another language?
 
-Rust is the maintained SDK language: native plugins and Rust WebAssembly components share the same high-level `Plugin` trait. Other languages may generate Component Model bindings from the published WIT world (`sdk/wit/lla-plugin.wit`). See [Developing plugins](/docs/plugins/developing).
-
-### How do I create a plugin?
-
-Follow our comprehensive [Plugin Development Tutorial](/docs/guides/plugin-development-tutorial) which walks you through creating your first plugin step-by-step.
-
-### Do plugins slow down lla?
-
-Disabled plugins have zero performance impact. Enabled plugins only run when needed, and lla's architecture ensures they can't significantly slow down listings.
-
-## Performance
-
-### Is lla slower than ls?
-
-For small directories, lla and ls perform similarly. For large directories, lla's Rust implementation and optimized algorithms often match or exceed ls performance, while providing much more information.
-
-### Why is lla slow on my large directory?
-
-A few possible reasons:
-
-1. **Directory size calculation**: Use `--no-dirs` to skip this expensive operation
-2. **Deep recursion**: Limit depth with `-d 3`
-3. **Plugin overhead**: Disable unused plugins with `lla use`
-4. **Network filesystems**: These are inherently slower; consider using filters to reduce output
-
-Adjust performance limits in your config:
-
-```toml
-[formatters.tree]
-max_lines = 10000
-
-[listers.recursive]
-max_entries = 10000
-```
-
-### Can I speed up Git status?
-
-Git status checks can be slow in large repositories. Disable Git integration when not needed:
-
-```bash
-lla         # Without Git status
-lla -G      # With Git status (only when needed)
-```
-
-### Why is the first run slow?
-
-The first run may need to:
-- Load and verify plugins
-- Generate configuration
-- Cache Git repository information
-
-Subsequent runs should be much faster due to caching.
+Rust is the language the SDK supports. Other languages can generate WebAssembly Component Model bindings from `sdk/wit/lla-plugin.wit`. See [Developing plugins](/docs/plugins/developing).
 
 ## Customization
 
-### How do I change colors?
+### How do I change the theme?
 
-lla uses themes. Switch themes:
-
-```bash
-lla theme              # Interactive theme selector
-```
-
-Or edit your config:
-
-```toml
-theme = "dark"
-```
-
-Available themes include: default, dark, light, dracula, nord, gruvbox_dark, and many more.
-
-### Can I create my own theme?
-
-Yes! Create a TOML file in `~/.config/lla/themes/`:
-
-```toml
-name = "my_theme"
-author = "Your Name"
-description = "My custom theme"
-
-[colors]
-file = "#FFFFFF"
-directory = "#89AFFF"
-# ... more colors
-```
-
-See [Themes](/docs/usage/configuration#themes) for the `lla theme` commands.
-
-### How do I change the default view?
-
-Edit your config:
-
-```toml
-default_format = "long"    # Options: default, long, tree, table, grid, git, timeline, sizemap
-```
-
-### Can I set defaults for flags?
-
-Yes, in your config:
-
-```toml
-show_icons = true
-default_sort = "size"
-default_depth = 3
-
-[sort]
-dirs_first = true
-case_sensitive = false
-
-[filter]
-no_dotfiles = true
-```
-
-## Machine Output
-
-### What output formats does lla support?
-
-lla supports three machine-readable formats:
-
-- **JSON**: `lla --json` (add `--pretty` for formatted output)
-- **NDJSON**: `lla --ndjson` (newline-delimited JSON)
-- **CSV**: `lla --csv`
-
-### How do I use lla output in scripts?
-
-JSON example with jq:
+A new install has no other themes, so pull them, then pick one with the arrow keys. To set one without the picker, run `lla config --set theme nord`. See [Themes](/docs/usage/configuration#themes).
 
 ```bash
-# Get all .rs files larger than 1KB
-lla --json | jq '[.[] | select(.extension == "rs" and .size_bytes > 1024)]'
-
-# Export file sizes to CSV
-lla --csv > files.csv
+lla theme pull
+lla theme
 ```
 
-NDJSON for streaming:
+### Can I write my own theme?
+
+Yes. A theme is a TOML file with a `name` and a `[colors]` table. Start by copying a theme from `~/.config/lla/themes`, then install and select your copy.
 
 ```bash
-# Process large directories line-by-line
-lla --ndjson | while read -r line; do
-  echo "$line" | jq '.name'
-done
+lla theme install my_theme.toml
+lla config --set theme my_theme
 ```
 
-### Is the output format stable?
+### Can a project have its own settings?
 
-Yes! The machine output format is versioned and stable. We guarantee backward compatibility and announce any changes in advance.
+Yes. Put a `.lla.toml` file in the project, with a line such as `default_format = "tree"`. lla applies the nearest one, looking up from the current directory, on top of your global config. `lla config show-effective` prints the merged result.
 
-## Git Integration
+### How do I reset my config?
 
-### Does lla require Git?
+Delete `~/.config/lla/config.toml`. The next run writes a new one with default values. `lla init --default` won't overwrite a file that already exists.
 
-No, Git integration is optional. If Git is not installed or you're not in a repository, lla works normally without Git features.
+## Moving from eza
 
-### Why isn't Git status showing?
+### What are the lla equivalents of common eza flags?
 
-Possible reasons:
-
-1. Not in a Git repository: `git status` to verify
-2. Git not installed: Install Git for your platform
-3. Git view not active: Use `lla -G` to enable Git view
-
-### Can I see untracked files?
-
-Yes! The Git view shows:
-- Modified files
-- Staged files
-- Untracked files
-- Conflicts
-- Branch and commit information
-
-```bash
-lla -G    # Git view with full status
-```
-
-## Troubleshooting
-
-### lla crashes when I run it
-
-1. Check your lla version: `lla --version`
-2. Update to the latest version
-3. Disable plugins: `lla --disable-all-plugins`
-4. Check for file permission issues
-5. Report the issue with crash details
-
-### Output looks corrupted
-
-This usually indicates a terminal compatibility issue:
-
-1. Ensure your terminal supports Unicode
-2. Check that your font supports special characters
-3. Try disabling icons: `lla --no-icons`
-4. Try disabling colors: `lla --no-color`
-
-### Fuzzy search isn't working
-
-Fuzzy search requires:
-
-1. Sufficient terminal size (min 80x24)
-2. Working terminal input
-
-Try: `lla --fuzzy` in a test directory. See [Fuzzy view](/docs/usage/navigation#fuzzy-view) for key bindings.
-
-### Plugins fail to load
-
-Check:
-
-1. Plugin file has correct extension (.so, .dylib, or .dll)
-2. Plugin has execute permissions: `chmod +x plugin.so`
-3. Plugin is in the correct directory: `~/.config/lla/plugins/`
-4. Run `lla clean` to remove invalid plugins
-
-## Contributing
-
-### How can I contribute to lla?
-
-Many ways to contribute:
-
-- **Report bugs**: Open issues on GitHub
-- **Suggest features**: Start a discussion
-- **Write plugins**: Share your plugins with the community
-- **Improve docs**: Submit documentation improvements
-- **Write code**: Submit pull requests
-
-See our [Contributing Guide](/docs/support/contributing) for details.
-
-### I found a bug, what should I include in the report?
-
-Include:
-
-1. lla version: `lla --version`
-2. Operating system and version
-3. Steps to reproduce
-4. Expected vs actual behavior
-5. Any error messages
-6. Output of `lla --version` (shows loaded plugins)
-
-### Can I request a feature?
-
-Absolutely! Open a feature request on GitHub with:
-
-- Clear description of the feature
-- Use cases and examples
-- Why it would benefit other users
-
-## Migration
-
-### I'm coming from exa/eza, what are the equivalents?
-
-| exa/eza | lla equivalent |
-|---------|----------------|
-| `exa -l` | `lla -l` |
-| `exa -T` | `lla -t` |
-| `exa --git` | `lla -G` |
-| `exa --sort=size` | `lla -s size` |
-| `exa --reverse` | `lla -r` |
-
-Most flags are similar or identical!
-
-### Can I import my exa configuration?
-
-lla uses its own configuration format, but most exa settings have lla equivalents. See the [Configuration Guide](/docs/usage/configuration) for mapping your preferences.
-
-## Getting Help
-
-### Where can I get help?
-
-- **Documentation**: Browse our comprehensive guides
-- **FAQ**: You're reading it!
-- **Troubleshooting**: Check the [Troubleshooting Guide](/docs/support/troubleshooting)
-- **GitHub Issues**: [Report bugs or ask questions](https://github.com/chaqchase/lla/issues)
-- **Discussions**: Join community discussions on GitHub
-
-### Is there a community chat?
-
-Check the GitHub repository for links to community channels like Discord or Matrix.
-
-### How often is lla updated?
-
-lla follows semantic versioning with regular releases. Check the [Changelog](https://github.com/chaqchase/lla/blob/main/CHANGELOG.md) for update history.
-
----
-
-**Still have questions?** Open an issue on [GitHub](https://github.com/chaqchase/lla/issues) or check the [Troubleshooting Guide](/docs/support/troubleshooting).
+| eza | lla |
+| --- | --- |
+| `eza -l` | `lla -l` |
+| `eza -T` | `lla -t` (`lla -T` is table view) |
+| `eza --git` | `lla -G` |
+| `eza -s size` | `lla -s size` |
+| `eza -r` | `lla -r` |

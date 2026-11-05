@@ -1,95 +1,34 @@
 ---
-title: "Plugin Development Tutorial"
-description: "A hands-on tutorial for building your first lla plugin with the Rust SDK: project setup, manifest, decoration, typed actions, local testing, and WebAssembly conversion."
+title: "Plugin development tutorial"
+description: "Build a native lla plugin from an empty directory until lla plugin doctor passes."
 order: 1
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/plugins/developing.md, https://github.com/chaqchase/lla/blob/main/docs/handbook.md]
 ---
 
-# Plugin Development Tutorial
+This tutorial builds `file_score`, a native plugin that adds a size score to each file in a listing and exposes an `inspect` action. You start with an empty directory and finish with `lla plugin doctor` passing.
 
-In this tutorial you will build `file_score`, a complete Plugin Platform v3 plugin that decorates files with a score, formats it for humans, and exposes a typed `inspect` action. For the condensed authoring guide, see [Developing plugins](/docs/plugins/developing); for the full system design, see the [Architecture Handbook](/docs/about/architecture).
-
-## What You'll Build
-
-A plugin that:
-
-- Decorates regular files with an integer `score` and string `size_class`
-- Prints compact and long human fields
-- Exposes a typed `inspect` action returning structured output
-
-## Prerequisites
-
-- Rust toolchain ([rustup.rs](https://rustup.rs))
-- lla 0.6 installed ([Installation](/docs/about/installation))
-
-Verify your setup:
+The code and output below come from a real build on macOS with lla 0.6.6. You need a Rust toolchain and lla installed.
 
 ```bash
 cargo --version
 lla --version
 ```
 
-## Learning Path
-
-```mermaid
-graph LR
-    A[Understand Architecture] --> B[Project Setup]
-    B --> C[Write Manifest]
-    C --> D[Implement Plugin]
-    D --> E[Build & Test]
-    E --> F[Run Actions]
-    F --> G[Convert to WASM]
-    G --> H[Share It! 🎉]
-```
-
-## Understanding Plugin Architecture
-
-### The Big Picture
-
-```mermaid
-graph TB
-    subgraph "Your Code"
-        SRC[Plugin Source]
-        TOML[plugin.toml]
-    end
-    subgraph "Build"
-        LIB[Native .so/.dylib/.dll<br/>or .wasm Component]
-    end
-    subgraph "lla Host"
-        MGR[PluginManager]
-        FMT[Host Rendering]
-    end
-    SRC --> LIB
-    TOML --> LIB
-    LIB --> MGR
-    MGR --> FMT
-```
-
-### Key Concepts
-
-- **Manifest is the contract**: `plugin.toml` declares identity, capabilities, fields, actions, arguments, and permissions. The export macro embeds its exact bytes, and the host compares the embedded manifest with the packaged file before enabling the plugin.
-- **Decoration**: The host sends batches of entries (at most 512); the plugin adds display strings and typed values.
-- **Typed actions**: The host parses and validates arguments before calling the plugin, then renders the declared output (`none`, `text`, `value`, or `table`).
-- **Two runtimes**: Native libraries are trusted in-process code; WebAssembly components run sandboxed with persisted grants.
-
-## Project Setup
-
-### 1. Create the Project
+## Create the crate
 
 ```bash
 cargo new --lib file-score
 cd file-score
 ```
 
-### 2. Configure Cargo.toml
+Replace `Cargo.toml` with this:
 
 ```toml
 [package]
 name = "file-score"
 version = "1.0.0"
 edition = "2021"
-license = "MIT"
 
 [lib]
 name = "file_score"
@@ -99,16 +38,11 @@ crate-type = ["cdylib"]
 lla_plugin_sdk = "0.6"
 ```
 
-While developing inside the lla repository, use the workspace dependency instead:
+`crate-type = ["cdylib"]` builds the shared library that lla loads. `name = "file_score"` sets the library's filename, and the manifest's `entrypoint` has to match it.
 
-```toml
-[dependencies]
-lla_plugin_sdk.workspace = true
-```
+## Write the manifest
 
-## Write the Manifest
-
-Place `plugin.toml` beside `Cargo.toml`:
+Create `plugin.toml` next to `Cargo.toml`. The manifest is the plugin's contract: it says what the plugin adds and which commands it accepts, and lla checks the code against it.
 
 ```toml
 schema_version = 3
@@ -121,9 +55,7 @@ api_min = 3
 api_max = 3
 runtime = "native"
 entrypoint = "file_score"
-description = "Score files from their filesystem metadata"
-license = "MIT"
-repository = "https://github.com/example/file-score"
+description = "Score files by size"
 
 [capabilities]
 decorates_entries = true
@@ -132,54 +64,45 @@ machine_output = true
 
 [permissions]
 filesystem = ["metadata:selection", "read:user-path"]
-network = []
-process = false
-clipboard = false
-open_url = false
 
 [[fields]]
 name = "score"
 type = "integer"
-sortable = true
-filterable = true
-description = "A score derived from file size"
+description = "Base-2 logarithm of the file size"
 
 [[fields]]
 name = "size_class"
 type = "string"
-sortable = true
-filterable = true
-description = "small, medium, or large"
+description = "small, medium or large"
 
 [[actions]]
 id = "inspect"
-description = "Calculate a score for one path"
-examples = [
-  "lla plugin run file_score inspect -- README.md",
-  "lla plugin run file_score inspect -- README.md --multiplier 2",
-]
-interactive = false
+description = "Score one file"
+examples = ["lla plugin run file_score inspect -- README.md --multiplier 2"]
 arguments = [
-  { name = "path", type = "path", description = "File to inspect", position = 0, required = true },
-  { name = "multiplier", type = "integer", description = "Score multiplier", option = "--multiplier", default = 1, min = 1, max = 10 },
+  { name = "path", type = "path", description = "File to score", position = 0, required = true },
+  { name = "multiplier", type = "integer", description = "Multiply the score", option = "--multiplier", default = 1, min = 1, max = 10 },
 ]
-output = { type = "value", schema = { path = "path", score = "integer", size_class = "string" } }
+output = { type = "value" }
 ```
 
-The native entrypoint is a logical library name. Packaging resolves it to the platform filename (`libfile_score.so`, `libfile_score.dylib`, or `file_score.dll`). See the [Manifest Reference](/docs/plugins/manifest) for every field.
+| Section | What it does here |
+| --- | --- |
+| `[plugin]` | Names the package and declares that it supports host API 3. `entrypoint` is the library name without a platform prefix or suffix. |
+| `[capabilities]` | `formats` lists the views that call the plugin: the default listing and `lla -l`. Other views skip it. |
+| `[permissions]` | Declares what the plugin touches. Native code runs fully trusted, so `lla plugin info` displays these and nothing enforces them. |
+| `[[fields]]` | Declares the typed values the plugin sets on each entry. |
+| `[[actions]]` | Declares the `inspect` command, its arguments and its output type. |
 
-## Implement the Plugin
+The [manifest reference](/docs/plugins/manifest) lists every field and accepted value.
 
-Replace `src/lib.rs` with:
+## Write the plugin
+
+Replace `src/lib.rs` with this:
 
 ```rust
 use lla_plugin_sdk::{
-    interface::proto,
-    response,
-    value,
-    ActionArguments,
-    ActionArgumentsExt,
-    DecoratedEntryExt,
+    interface::proto, response, value, ActionArguments, ActionArgumentsExt, DecoratedEntryExt,
     Plugin,
 };
 
@@ -187,11 +110,7 @@ use lla_plugin_sdk::{
 struct FileScore;
 
 fn score(size: u64) -> i64 {
-    if size == 0 {
-        0
-    } else {
-        size.ilog2().min(100) as i64
-    }
+    size.checked_ilog2().unwrap_or(0) as i64
 }
 
 fn size_class(size: u64) -> &'static str {
@@ -203,17 +122,13 @@ fn size_class(size: u64) -> &'static str {
 }
 
 impl Plugin for FileScore {
-    fn decorate_entry(
-        &mut self,
-        mut entry: proto::DecoratedEntry,
-    ) -> proto::DecoratedEntry {
+    fn decorate_entry(&mut self, mut entry: proto::DecoratedEntry) -> proto::DecoratedEntry {
         let Some(metadata) = entry.metadata.as_ref() else {
             return entry;
         };
         if !metadata.is_file {
             return entry;
         }
-
         let size = metadata.size;
         entry.insert_field(
             "score",
@@ -239,185 +154,278 @@ impl Plugin for FileScore {
     }
 
     fn registered_actions(&mut self) -> Vec<proto::ActionInfo> {
-        lla_plugin_sdk::manifest_action_infos(include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/plugin.toml"
-        )))
+        lla_plugin_sdk::manifest_action_infos(include_str!("../plugin.toml"))
     }
 
     fn run_action(&mut self, action: String, arguments: ActionArguments) -> proto::ActionResponse {
         if action != "inspect" {
             return response::error(format!("unknown action '{action}'"));
         }
-
         let path = match arguments.path("path") {
             Ok(Some(path)) => path,
             Ok(None) => return response::error("path is required"),
             Err(error) => return response::error(error),
         };
         let multiplier = match arguments.integer("multiplier") {
-            Ok(Some(value)) => value,
-            Ok(None) => 1,
+            Ok(value) => value.unwrap_or(1),
             Err(error) => return response::error(error),
         };
-        let metadata = match std::fs::metadata(&path) {
-            Ok(metadata) => metadata,
+        let size = match std::fs::metadata(&path) {
+            Ok(metadata) => metadata.len(),
             Err(error) => return response::error(format!("{}: {error}", path.display())),
         };
-        let final_score = score(metadata.len()) * multiplier;
-
         response::value(value::object([
             ("path".to_string(), value::path(path.to_string_lossy())),
-            ("score".to_string(), value::integer(final_score)),
             (
-                "size_class".to_string(),
-                value::string(size_class(metadata.len())),
+                "score".to_string(),
+                value::integer(score(size) * multiplier),
             ),
+            ("size_class".to_string(), value::string(size_class(size))),
         ]))
     }
 }
 
 lla_plugin_sdk::export_plugin!(FileScore);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scores_are_log2_of_size() {
+        assert_eq!(score(0), 0);
+        assert_eq!(score(1024), 10);
+    }
+
+    #[test]
+    fn classes_change_at_one_kib_and_one_mib() {
+        assert_eq!(size_class(1023), "small");
+        assert_eq!(size_class(1024), "medium");
+        assert_eq!(size_class(1_048_576), "large");
+    }
+}
 ```
 
-Important details:
+Each method has one job:
 
-- `insert_field` writes both a display string and a typed value — preferred over keeping the two maps synchronized manually.
-- The default `decorate_batch` calls `decorate_entry` per entry. Override it only to share expensive I/O across a batch, and always preserve entry count and order.
-- `registered_actions` must return exactly the action IDs declared in the manifest. Building the inventory from the embedded manifest prevents drift.
-- The export macro requires `Default + Send + 'static`, validates `plugin.toml` at compile time, and embeds the exact manifest.
+| Method | What it does here |
+| --- | --- |
+| `decorate_entry` | Sets `score` and `size_class` on regular files. `insert_field` stores a typed value for machine output and a display string for people. |
+| `format_field` | Returns the text printed after the name. It runs once per entry, with the name of the current view's format. |
+| `registered_actions` | Reports the actions the code handles. Building the list from the manifest keeps the two in step. |
+| `run_action` | Receives arguments the host has already validated and returns typed output. The host does the printing. |
 
-## Build and Test
+`export_plugin!` generates the entrypoint lla looks for. It also validates `plugin.toml` when the crate compiles and embeds the file's exact bytes in the library.
 
-### 1. Build and Install
+## Run the tests
 
 ```bash
-cargo fmt --check
 cargo test
-cargo build --release
-lla install --dir "$PWD"
+```
+
+```text
+running 2 tests
+test tests::classes_change_at_one_kib_and_one_mib ... ok
+test tests::scores_are_log2_of_size ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+A manifest mistake stops the build here. Remove the `description` from the `path` argument and the compiler reports it:
+
+```text
+error: invalid API v3 plugin.toml: argument 'path' in action 'inspect' needs a description
+```
+
+## Install the package
+
+```bash
+lla install --dir .
+```
+
+On a terminal, lla opens a `Select plugins to install` list with nothing selected, even when it finds one plugin. Press Space to select `file-score`, then Enter. Pressing Enter alone ends with `No plugins selected`.
+
+```text
+  ℹ Found plugins: file-score v1.0.0
+
+  ℹ Selected 1 plugin
+  ℹ file-score will be built independently
+  ✔ Built and installed file_score in 12s
+  ✔ Installed file_score  v1.0.0
+
+╭─ Summary ────────────────╮
+│   ● Installed (1)        │
+│                          │
+│       file_score  v1.0.0 │
+╰──────────────────────────╯
+
+  ∑  1 installed · 0 failed · 1 total
+```
+
+The installer runs `cargo build --release`, copies the library and the manifest into a package directory, and writes a checksum for each file.
+
+```bash
+ls ~/.config/lla/plugins/file_score
+```
+
+```text
+checksums.toml
+libfile_score.dylib
+plugin.toml
+```
+
+The library is `libfile_score.so` on Linux and `file_score.dll` on Windows.
+
+## Run the doctor
+
+```bash
 lla plugin doctor
+```
+
+```text
+Plugin Platform v3 diagnostics
+  ✓ ~/.config/lla/plugins
+    ✓ file_score v1.0.0 (API 3..=3, checksums + contract verified)
+  · /opt/homebrew/lib/lla/plugins (not present)
+  · /usr/local/lib/lla/plugins (not present)
+  1 plugin artifact(s) checked
+```
+
+This is the check that matters. A source install builds and copies the package and never loads it, so a plugin that breaks its contract still installs. The doctor verifies the checksums, loads the library, compares its embedded manifest with the packaged file, compares its actions with the declared ones, and sends it test entries.
+
+To see a failure, delete `registered_actions` from `src/lib.rs` and reinstall. The install succeeds and the doctor exits with status 1:
+
+```text
+Plugin Platform v3 diagnostics
+  ✓ ~/.config/lla/plugins
+    ✗ file_score: manifest/runtime metadata mismatch
+  · /opt/homebrew/lib/lla/plugins (not present)
+  · /usr/local/lib/lla/plugins (not present)
+  1 plugin artifact(s) checked
+
+✗ Plugin Error
+
+  Plugin Platform v3 diagnostics found problems
+```
+
+Put the method back, then install and run the doctor again. [Developing plugins](/docs/plugins/developing#diagnose-a-failure) maps each doctor message to its cause.
+
+`lla plugin info` shows what lla read from the package:
+
+```bash
 lla plugin info file_score
 ```
 
-The source installer creates the final package and checksum inventory. Do not copy only the `.so`, `.dylib`, or `.dll` into the plugin directory — v3 expects a complete package.
+```text
+file_score v1.0.0
+  ID: dev.example.file-score
+  Runtime: Native
+  API: 3..=3
+  Score files by size
+  Formats: default, long
+  Fields: score, size_class
+Permissions for file_score:
+  Filesystem: metadata:selection, read:user-path
+  Network: none
+  Process execution: false
+  Clipboard: false
+  Open URL: false
+  Note: native permissions are declarations; native code is fully trusted.
+```
 
-### 2. Enable and Use
+## Use it in a listing
+
+An installed plugin stays disabled until you enable it.
 
 ```bash
-lla use                                    # interactive manager
-lla --enable-plugin file_score             # one invocation
-lla -l --enable-plugin file_score
-lla --json --pretty --enable-plugin file_score
+lla --enable-plugin file_score
 ```
 
-### 3. Run the Typed Action
+```text
+.git/
+.gitignore [score:3]
+Cargo.lock [score:13]
+Cargo.toml [score:7]
+plugin.toml [score:9]
+src/
+target/
+```
+
+The directories have no score because `decorate_entry` skips them.
+
+<Callout type="note">
+`--enable-plugin` writes the plugin to `enabled_plugins` in your config, so it stays on for later runs. Turn it off with `lla --disable-plugin file_score`.
+</Callout>
+
+The long view asks the plugin for its `long` format:
 
 ```bash
-lla plugin run file_score inspect -- README.md
-lla plugin run file_score inspect --output json -- README.md --multiplier 2
+lla -l
 ```
 
-The first `--` ends host option parsing. Tokens after it are plugin-action arguments. Supported output formats are `human`, `json`, `ndjson`, and `csv`.
-
-### 4. Add Fields to Columns
-
-After persistently enabling the plugin:
-
-```toml
-[formatters.long]
-columns = ["permissions", "size", "modified", "name", "field:score", "field:size_class"]
+```text
+drwxr-xr-x  288B Nov 04 23:03 you staff .git/
+-rw-r--r--    8B Nov 04 23:03 you staff .gitignore score=3 class=small
+-rw-r--r-- 14.0K Nov 04 23:03 you staff Cargo.lock score=13 class=medium
+-rw-r--r--  155B Nov 04 23:03 you staff Cargo.toml score=7 class=small
+-rw-r--r--  961B Nov 04 23:03 you staff plugin.toml score=9 class=small
+drwxr-xr-x   96B Nov 04 23:03 you staff src/
+drwxr-xr-x  192B Nov 04 23:03 you staff target/
 ```
 
-### Try This Exercise
-
-1. Add a `large_file` boolean field that is true above 1 MiB
-2. Declare it in `plugin.toml`, set it in `decorate_entry`, reinstall, and verify with `lla plugin doctor`
-3. Render it in `format_field` for the `long` format
-
-## Convert to WebAssembly
-
-Use a Component Model plugin when portability and enforced permissions matter more than direct native integration.
-
-### 1. Change the SDK Dependency
-
-```toml
-[dependencies]
-lla_plugin_sdk = { version = "0.6", features = ["component"] }
-```
-
-### 2. Change the Manifest Runtime and Entrypoint
-
-```toml
-[plugin]
-runtime = "wasm-component"
-entrypoint = "file_score.wasm"
-```
-
-Everything else can stay the same, provided the implementation works within WASM host capabilities. A WASM manifest cannot request `process = true`.
-
-### 3. Change the Export
-
-```rust
-lla_plugin_sdk::export_component!(FileScore);
-```
-
-### 4. Build the Component
+Machine output carries the typed values under `plugin`:
 
 ```bash
-rustup target add wasm32-wasip2
-cargo build --release --target wasm32-wasip2
-lla install --dir "$PWD"
-lla plugin doctor
+lla --json --pretty plugin.toml
 ```
 
-The output lands under `target/wasm32-wasip2/release/file_score.wasm`, and the source installer copies the declared entrypoint into the package. Loading it requires a host built with `wasm-plugins` (official Linux, macOS, and Windows binaries include it; NetBSD omits it).
+```text
+  "git_status": null,
+  "plugin": {
+    "size_class": "small",
+    "score": 9
+  }
+}]
+```
 
-WASM host capabilities: scoped filesystem preopens, exact-domain HTTP, gated clipboard and URL calls. Raw sockets and subprocesses are unavailable, and memory, responses, batches, and timeouts are bounded by the host.
-
-## Testing Strategies
-
-- `cargo test` for pure logic such as scoring functions
-- `lla plugin doctor` after every manifest or handler change — it compares packaged and embedded manifests, validates checksums, and exercises the contract
-- `lla plugin run ... --output json` to verify machine output before scripting against it
-- Test with `--enable-plugin` on small directories first, then on archives and symlinks, since plugins must handle virtual or inaccessible paths safely
-
-## Share Your Plugin
-
-1. Give it a stable reverse-domain `id`, a version, a license, and a repository URL
-2. Write a README with features, configuration, and `lla plugin run` examples
-3. Verify a clean install: `lla install --dir /path/to/plugin && lla plugin doctor`
-4. Publish the source so users can `lla install --git <url>`
-
-To contribute it as a bundled plugin, follow [Contributing a bundled plugin](/docs/about/architecture#contributing-a-bundled-plugin) in the handbook.
-
-## Quick Reference
+## Run the action
 
 ```bash
-# Scaffold
-cargo new --lib my-plugin
-
-# Manifest (plugin.toml beside Cargo.toml)
-schema_version = 3
-
-# Implement lla_plugin_sdk::Plugin, then export
-lla_plugin_sdk::export_plugin!(MyPlugin);       # native
-lla_plugin_sdk::export_component!(MyPlugin);    # WASM component
-
-# Build, install, verify
-cargo build --release
-lla install --dir "$PWD"
-lla plugin doctor
-
-# Use
-lla --enable-plugin my_plugin
-lla plugin run my_plugin my_action -- args...
+lla plugin run file_score inspect -- plugin.toml
 ```
 
-## Next Steps
+```text
+{
+  "path": "plugin.toml",
+  "score": 9,
+  "size_class": "small"
+}
+```
 
-- **[Developing Plugins](/docs/plugins/developing)**: Runtime choice, batching, and SDK fixtures
-- **[Manifest Reference](/docs/plugins/manifest)**: Every manifest field and constraint
-- **[Platform Architecture](/docs/plugins/architecture)**: ABI, Component Model runtime, and verification
-- **[Architecture Handbook](/docs/about/architecture)**: Complete lifecycle, permissions, packaging, and troubleshooting
-- **[Plugin Catalog](/docs/first-party-plugins/overview)**: Study the 37 bundled plugins as examples
+Tokens after `--` belong to the action. Host options such as `--output` go before it.
+
+```bash
+lla plugin run file_score inspect --output ndjson -- plugin.toml --multiplier 3
+```
+
+```text
+{"path":"plugin.toml","score":27,"size_class":"small"}
+```
+
+The host validates arguments against the manifest before your code runs. A value above the declared `max` never reaches `run_action`:
+
+```bash
+lla plugin run file_score inspect -- plugin.toml --multiplier 11
+```
+
+```text
+✗ Plugin Error
+
+  argument 'multiplier' is above its maximum
+```
+
+<Cards>
+  <Card href="/docs/plugins/developing" title="Developing plugins">Batching, tables, data directories, WebAssembly and failure diagnosis.</Card>
+  <Card href="/docs/plugins/manifest" title="Manifest reference">Every plugin.toml field, type and accepted value.</Card>
+  <Card href="/docs/plugins/architecture" title="Platform architecture">The host, the ABI and the permission model.</Card>
+</Cards>

@@ -1,18 +1,18 @@
 ---
-title: "Manifest Reference"
-description: "Complete plugin.toml reference: identity, capabilities, listing fields, actions, arguments, permissions, and integrity."
+title: "Manifest reference"
+description: "Every plugin.toml field, type and accepted value, checked against the manifest parser in lla 0.6.6."
 order: 3
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/plugins/manifest.md]
 ---
 
-# Plugin manifest reference
+`plugin.toml` declares a plugin's identity, listing behavior, permissions and actions. It sits next to `Cargo.toml` in the source and at the root of the installed package.
 
-Every API v3 package contains `plugin.toml`. The export macro embeds the exact
-manifest bytes in the compiled entrypoint, and the host compares that embedded
-contract with the packaged file before enabling the plugin.
+lla validates the same rules three times: `export_plugin!` and `export_component!` at compile time, `lla install`, and package discovery when a plugin loads. Unknown keys are ignored, so a misspelled optional key produces no error.
 
-## Plugin identity
+## Complete example
+
+This manifest compiles, installs and passes `lla plugin doctor`.
 
 ```toml
 schema_version = 3
@@ -25,119 +25,245 @@ api_min = 3
 api_max = 3
 runtime = "native"
 entrypoint = "my_plugin"
-description = "Example plugin"
+description = "Inspect files"
 license = "MIT"
-repository = "https://example.com/my-plugin"
-```
+repository = "https://github.com/example/my-plugin"
 
-- `id` is the stable package identity. Use a reverse-domain identifier.
-- `name` is the user-facing CLI name.
-- `api_min` and `api_max` declare the supported host API range.
-- `runtime` is `native` or `wasm-component`.
-- A native `entrypoint` is a logical library name; lla adds the platform prefix
-  and suffix. A WebAssembly entrypoint names the package-local `.wasm` file.
-- Entrypoints must be one package-local filename. Absolute paths and traversal
-  components are rejected.
-
-Identifiers accept ASCII letters, digits, `.`, `_`, and `-`.
-
-## Capabilities
-
-```toml
 [capabilities]
 decorates_entries = true
 formats = ["default", "long"]
 machine_output = true
-```
 
-`formats` names the listing formats supported by the plugin. Set
-`machine_output` when its fields and action results are safe for structured
-rendering.
+[permissions]
+filesystem = ["metadata:selection", "read:user-path"]
+network = ["api.example.com"]
+process = false
+clipboard = false
+open_url = false
 
-## Listing fields
-
-```toml
 [[fields]]
 name = "score"
 type = "integer"
 sortable = true
 filterable = true
-```
+description = "Score derived from file size"
 
-Field types are `string`, `integer`, `float`, `boolean`, `path`, `bytes`, and
-`timestamp`. Field names must be unique.
-
-## Actions and arguments
-
-```toml
 [[actions]]
 id = "inspect"
 description = "Inspect one or more paths"
 examples = ["lla plugin run my_plugin inspect -- README.md --depth 2"]
 interactive = false
 arguments = [
-  { name = "paths", type = "path", position = 0, required = true, repeatable = true },
-  { name = "depth", type = "integer", option = "--depth", default = 1, min = 0, max = 8 },
-  { name = "mode", type = "string", option = "--mode", choices = ["fast", "full"] },
-  { name = "hidden", type = "boolean", option = "--hidden", default = false },
+  { name = "paths", type = "path", description = "Paths to inspect", position = 0, required = true, repeatable = true },
+  { name = "depth", type = "integer", description = "Levels to descend", option = "--depth", default = 1, min = 0, max = 8 },
+  { name = "mode", type = "string", description = "Inspection mode", option = "--mode", choices = ["quick", "full"] },
+  { name = "hidden", type = "boolean", description = "Include hidden files", option = "--hidden", default = false },
 ]
-output = { type = "value" }
+output = { type = "table", columns = [
+  { name = "path", type = "path", description = "Inspected path" },
+  { name = "bytes", type = "bytes", description = "Size in bytes" },
+] }
 ```
 
-Argument types are `string`, `integer`, `float`, `boolean`, and `path`.
-Arguments may declare:
+## Top level
 
-- `required` and `default`
-- `repeatable`
-- `choices`
-- numeric `min` and `max`
-- a zero-based positional `position`
-- a long option name in `option`
+| Key | Type | Required | Accepted values |
+| --- | --- | --- | --- |
+| `schema_version` | integer | yes | `3` |
+| `[plugin]` | table | yes | See [`[plugin]`](#plugin) |
+| `[capabilities]` | table | no | See [`[capabilities]`](#capabilities) |
+| `[permissions]` | table | no | See [`[permissions]`](#permissions) |
+| `[[fields]]` | array of tables | no | See [`[[fields]]`](#fields) |
+| `[[actions]]` | array of tables | no | See [`[[actions]]`](#actions) |
 
-Names, positions, and option names must be unique within an action. Defaults and
-choices must match the argument type and numeric constraints.
+Several keys below are identifiers. An identifier is non-empty and contains only ASCII letters, digits, `.`, `_` and `-`.
 
-Set `interactive = true` only when an action reads from the terminal or owns its
-human-facing interaction. The host rejects interactive actions without a TTY or
-when `json`, `ndjson`, or `csv` output is requested.
+## `[plugin]`
 
-Action output types are:
+| Key | Type | Required | Default | Accepted values |
+| --- | --- | --- | --- | --- |
+| `id` | string | yes | | Identifier. The stable package identity. Use a reverse-domain name such as `dev.example.my-plugin`. |
+| `name` | string | yes | | Identifier. The name used in `lla plugin run`, `--enable-plugin` and `lla plugin info`. |
+| `version` | string | yes | | Any non-blank string. lla does not parse it as SemVer. |
+| `api_min` | integer | yes | | Non-zero. |
+| `api_max` | integer | yes | | At least `api_min`. The range must include `3` for lla 0.6.6 to load the plugin. |
+| `runtime` | string | no | `native` | `native` or `wasm-component`. |
+| `entrypoint` | string | yes | | One filename with no directory part. |
+| `description` | string | no | empty | Any string. `lla list-plugins` and `lla plugin info` show it. |
+| `license` | string | no | | Any string. |
+| `repository` | string | no | | Any string. |
 
-- `none`: the action has no host-rendered result.
-- `text`: human-readable text.
-- `value`: a typed null, scalar, list, or object.
-- `table`: rows with a declared typed column schema.
+`entrypoint` works differently per runtime:
 
-## Permissions
+| Runtime | Example | What lla looks for |
+| --- | --- | --- |
+| `native` | `file_score` | The exact name, then `libfile_score.so`, `libfile_score.dylib` or `file_score.dll` for the platform, then the name plus the platform suffix. |
+| `wasm-component` | `file_score.wasm` | The exact file. A source install copies it from `target/wasm32-wasip2/release/`. |
 
-```toml
-[permissions]
-filesystem = ["read:selection"]
-network = ["api.example.com"]
-clipboard = false
-open_url = false
-process = false
-```
+A source install finds native libraries in `target/release` by matching the Cargo package name with `-` replaced by `_`. Keep the three names aligned: package `file-score`, `[lib] name = "file_score"` and `entrypoint = "file_score"`.
 
-Supported filesystem scopes are:
+## `[capabilities]`
 
-- `metadata:selection`
-- `metadata:tree`
-- `read:selection`
-- `read:tree`
-- `read:user-path`
-- `write:selected-destination`
-- `write:tree`
-- `write:user-path`
-- `delete:selection`
-- `delete:quarantine`
+| Key | Type | Default | Effect |
+| --- | --- | --- | --- |
+| `formats` | string array | `[]` | The views that call the plugin. Entries must be non-empty, unpadded and unique. |
+| `decorates_entries` | boolean | `false` | Parsed, not consulted by the 0.6.6 host. Bundled plugins set it to record intent. |
+| `machine_output` | boolean | `false` | Parsed, not consulted by the 0.6.6 host. Bundled plugins set it to record intent. |
 
-Network entries are exact domain names; wildcards are rejected. WebAssembly
-plugins cannot request `process = true`. Native permissions are declarative,
-while WebAssembly permissions are enforced by the host.
+Any string passes validation in `formats`, but the host only sends the values below. A view missing from `formats` never calls the plugin.
+
+| Command | Format sent |
+| --- | --- |
+| `lla` | `default` |
+| `lla -l`, `lla -T` | `long` |
+| `lla -t` | `tree` |
+| `lla -g` | `grid` |
+| `lla -R` | `recursive` |
+| `lla -G` | `git` |
+| `lla --timeline` | `timeline` |
+| `lla -S` | `sizemap` |
+| `lla -F --respect-gitignore` | `fuzzy`, decoration only. The fuzzy view never asks for formatted text. |
+| `lla --json`, `--ndjson`, `--csv` | The format of any view flag in the same command, otherwise `default`. |
+
+The table view normalizes to `long`, so declaring `table` has no effect.
+
+## `[permissions]`
+
+| Key | Type | Default | Accepted values |
+| --- | --- | --- | --- |
+| `filesystem` | string array | `[]` | The scopes below. Entries must be unique. |
+| `network` | string array | `[]` | Exact host names. ASCII letters, digits, `.` and `-` only. No `*`, URL, port, leading or trailing `.`, or `..`. |
+| `process` | boolean | `false` | `true` is rejected for `wasm-component`. |
+| `clipboard` | boolean | `false` | Allows the host's `clipboard-write` call. |
+| `open_url` | boolean | `false` | Allows the host's `open-url` call. |
+
+Native plugins run fully trusted, so these keys are declarations that `lla plugin info` displays. A WebAssembly component only gets what the user approved, and the scopes control what it can reach.
+
+For a selected entry, lla preopens the entry's parent directory. With a scope marked Tree below, a selected directory is preopened itself. For a user path, meaning a `path` value in an action's arguments, lla preopens the path's parent directory. A path containing `..` is rejected.
+
+| Scope | Applies to | List directories | Change directory entries | Read files | Write files | Tree |
+| --- | --- | --- | --- | --- | --- | --- |
+| `metadata:selection` | selected entries | yes | | | | |
+| `metadata:tree` | selected entries | yes | | | | yes |
+| `read:selection` | selected entries | yes | | yes | | |
+| `read:tree` | selected entries | yes | | yes | | yes |
+| `write:tree` | selected entries | yes | yes | | yes | yes |
+| `delete:selection` | selected entries | yes | yes | | | |
+| `read:user-path` | action path arguments | yes | | yes | | |
+| `write:user-path` | action path arguments | yes | yes | | yes | |
+| `write:selected-destination` | action path arguments | yes | yes | | yes | |
+| `delete:quarantine` | none | | | | | |
+
+`delete:quarantine` passes validation and opens nothing.
+
+Runtime network checks compare the request's host with each entry exactly, and the comparison is case-sensitive.
+
+## `[[fields]]`
+
+| Key | Type | Required | Default | Accepted values |
+| --- | --- | --- | --- | --- |
+| `name` | string | yes | | Identifier. Unique across fields. |
+| `type` | string | yes | | `string`, `integer`, `float`, `boolean`, `bytes`, `timestamp` or `path`. |
+| `sortable` | boolean | no | `false` | Declaration only. The 0.6.6 host does not read it. |
+| `filterable` | boolean | no | `false` | Declaration only. The 0.6.6 host does not read it. |
+| `description` | string | no | empty | Any string. |
+
+If a plugin sets a display string for a declared field and no typed value, the host converts the string to the declared type. `lla plugin doctor` fails with `field 'score' cannot be converted to its declared Integer type` when it can't.
+
+## `[[actions]]`
+
+| Key | Type | Required | Default | Accepted values |
+| --- | --- | --- | --- | --- |
+| `id` | string | yes | | Identifier. Unique across actions. |
+| `description` | string | yes | | Non-blank. |
+| `examples` | string array | no | `[]` | Non-empty, unpadded and unique. |
+| `interactive` | boolean | no | `false` | When `true`, stdin and stdout must be a terminal and `--output` must be `human`. |
+| `arguments` | array of inline tables | no | `[]` | See [Arguments](#arguments). |
+| `output` | inline table | no | `{ type = "none" }` | See [Output](#output). |
+
+### Arguments
+
+| Key | Type | Required | Accepted values |
+| --- | --- | --- | --- |
+| `name` | string | yes | Identifier. Unique within the action. |
+| `type` | string | yes | `string`, `integer`, `float`, `boolean` or `path`. |
+| `description` | string | yes | Non-blank. |
+| `position` | integer | one of `position`, `option` | Zero-based. Unique within the action. |
+| `option` | string | one of `position`, `option` | Starts with `--`, at least 3 characters. Unique within the action. |
+| `required` | boolean | no | Can't be `true` together with `default`. |
+| `default` | value | no | Must match `type`. |
+| `repeatable` | boolean | no | The plugin receives a list. Read it with `paths` or `strings`. |
+| `choices` | value array | no | Each value must match `type`. |
+| `min`, `max` | number | no | `integer` and `float` arguments only. `min` can't exceed `max`. |
+
+`default` and `choices` values match `type` as follows:
+
+| Argument `type` | TOML value |
+| --- | --- |
+| `string`, `path` | string |
+| `integer` | integer |
+| `float` | integer or float |
+| `boolean` | boolean |
+
+The host parses action arguments against this schema before it calls the plugin:
+
+| Token | How it parses |
+| --- | --- |
+| `--name value` | Sets the argument with `option = "--name"`. |
+| `--name=value` | The same, inline. |
+| `--flag` | Sets a `boolean` option to `true`. Use `--flag=false` to clear it. |
+| Anything else | The next positional argument. A single leading dash doesn't make a token an option. |
+
+A repeatable positional collects every remaining positional token, and a repeatable option accepts the flag more than once. The host fills in `default` when you omit an argument, so the plugin receives it as if you had typed it.
+
+### Output
+
+| `type` | Extra keys | SDK call | `human` | `json` | `ndjson` | `csv` |
+| --- | --- | --- | --- | --- | --- | --- |
+| `none` | | `response::none()` | Nothing | `null` | `null` | Error |
+| `text` | | `response::text(...)` | The text | JSON string | JSON string | Error |
+| `value` | optional `schema` | `response::value(...)` | Pretty JSON | Pretty JSON | One line, or one line per item for a list | Error |
+| `table` | required `columns` | `response::table(...)` | Tab-separated with a header | Array of objects | One object per line | Header and rows |
+
+The host doesn't check the contents of `schema` against the returned value. It does check that the returned output kind matches the declared `type`, and fails with `action 'inspect' returned output that does not match plugin.toml` when it doesn't.
+
+Each entry in `columns`:
+
+| Key | Type | Required | Accepted values |
+| --- | --- | --- | --- |
+| `name` | string | yes | Identifier. Unique within the table. |
+| `type` | string | yes | The field types from [`[[fields]]`](#fields). |
+| `description` | string | no | Any string. |
+
+Table rows are checked strictly. Column names must match in order, each row needs one cell per column, and each cell's type must match exactly, so a `bytes` column needs `value::bytes`. A violation fails with `action 'inspect' returned a table that violates its column schema`.
 
 ## Package integrity
 
-Release packages contain `checksums.toml` covering `plugin.toml` and the runtime
-entrypoint. Prebuilt installation and `plugin doctor` reject missing coverage,
-changed files, manifest mismatches, and incompatible API ranges.
+The installer writes `checksums.toml` into each package. You don't write it by hand.
+
+```toml
+[files]
+"libfile_score.dylib" = "<64 hex characters>"
+"plugin.toml" = "<64 hex characters>"
+```
+
+The table must cover the entrypoint and `plugin.toml`. Paths are relative and name regular files. Symlinks are rejected. Each value is a SHA-256 digest of 64 hex characters.
+
+## Validation errors
+
+| Error | Fix |
+| --- | --- |
+| `unsupported plugin manifest schema 2; expected 3` | Set `schema_version = 3`. |
+| `plugin.id must contain only ASCII letters, numbers, '.', '_' or '-'` | Remove spaces and other characters. The same error appears for `plugin.name`, field names, action IDs and argument names. |
+| `plugin API range is invalid` | Set `api_min` to at least 1 and `api_max` to at least `api_min`. |
+| `plugin.entrypoint must be a single package-local file name` | Remove directories from `entrypoint`. |
+| `unknown filesystem permission scope 'read:all'` | Use a scope from the [permissions table](#permissions). |
+| `invalid network permission domain '*.example.com'` | List exact host names. |
+| `WASM plugins cannot request process permission in API v3` | Remove `process = true`, or use the `native` runtime. |
+| `action 'inspect' needs a description` | Add `description`. |
+| `argument 'path' in action 'inspect' needs a description` | Add `description` to the argument. |
+| `argument 'path' in action 'inspect' needs position or option` | Add one of the two. |
+| `required argument 'path' in action 'inspect' cannot have a default` | Remove `required` or `default`. |
+| `argument 'path' in action 'inspect' contains a value with the wrong type` | Match `default` and `choices` to `type`. |
+| `argument 'path' in action 'inspect' uses a numeric range with a non-numeric type` | Remove `min` and `max`, or change `type`. |
+| `table output for action 'inspect' needs at least one column` | Add `columns`. |

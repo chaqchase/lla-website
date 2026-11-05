@@ -1,64 +1,89 @@
 ---
-title: "Filtering and Search"
-description: "Sort entries, filter by name, size, time, type, and Git rules, save presets, and search file contents with ripgrep."
+title: "Filtering and search"
+description: "Sort entries, select them by name, size, date, type or Git rules, save presets, and search file contents."
 order: 2
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/filtering-and-search.md]
 ---
 
-# Filtering and search
+Filters choose which entries appear in a listing, and they work with every view. To find text inside files, use [content search](#search-file-contents), which has its own rules.
 
-Use filters to select directory entries before formatting them. Use content
-search to find matching text inside files. Content search has a deliberately
-narrower set of compatible listing filters, documented below.
+<Diagram caption="Each filter narrows the selection, and the view draws what's left."><FilterGates /></Diagram>
 
-## Sort entries
+## Sort
 
 ```bash
-lla --sort name
-lla --sort size --sort-reverse
-lla --sort date --sort-dirs-first
+lla -s size
+lla -s date -r
+lla --sort-dirs-first
 lla --sort-natural
 lla --sort-case-sensitive
 ```
 
-`--sort` accepts `name`, `size`, or `date`. Natural sorting orders numbered names
-such as `2.txt` before `10.txt`.
+`-s`, `--sort` takes `name`, `size` or `date`. `-r`, `--sort-reverse` flips the order. `--sort-natural` puts `2.txt` before `10.txt`.
 
-## Filter names and extensions
+## Filter by name
+
+`-f`, `--filter` matches anywhere in the name.
 
 ```bash
-lla --filter "test"
-lla --filter ".rs"
-lla --filter "regex:^test.*\.rs$"
-lla --filter "glob:*.{rs,toml}"
+lla -f test
+lla -f .rs
+lla -f "regex:^(cargo|flake|install)"
+lla -f "glob:*.toml"
 ```
 
-Name filters are case-insensitive unless `--case-sensitive` is set. Supported
-compositions include:
+<Shot name="filter-regex" alt="A long listing narrowed to names matching a regular expression." caption='`lla -f "regex:^(cargo|flake|install)" -l --hide-group`' />
 
-| Form | Meaning |
+Write patterns in lowercase. lla lowercases each file name before comparing it to your pattern, but not the pattern itself, so `-f readme` finds `README.md` and `-f README` finds nothing. To match exact case, add `-c`, `--case-sensitive`.
+
+To combine terms, use one of these forms:
+
+| Form | Matches names containing |
 | --- | --- |
-| `test,spec` | Match `test` or `spec`. |
-| `+test,api` | Match both `test` and `api`. |
-| `test AND .rs` | Logical AND. |
-| `test OR spec` | Logical OR. |
-| `NOT test` | Logical NOT. |
+| `test,spec` | `test` or `spec` |
+| `+test,api` | `test` and `api` |
+| `"test AND .rs"` | `test` and the `.rs` extension |
+| `".toml OR .lock"` | Either extension |
+| `"NOT .md"` | Anything except `.md` files |
 
-## Filter by size or time
+<Callout type="warning" title="Matching several extensions">
+  In lla 0.6.6, `glob:*.{toml,lock}` and `.toml,.lock` both return nothing. Use `".toml OR .lock"` instead.
+</Callout>
+
+## Filter by size
 
 ```bash
 lla --size ">10M"
 lla --size "512K..2G"
 lla --size "..100K"
-lla --modified "<7d"
-lla --created "2023-01-01..2023-12-31"
 ```
 
-Size filters accept human-readable units and open or closed ranges. Modified and
-created filters accept relative durations and ISO date ranges.
+Sizes take `K`, `M` and `G` suffixes, and ranges can be open at either end.
 
-## Filter by entry type and visibility
+## Filter by date
+
+`--modified` and `--created` take a relative age or a date range:
+
+```bash
+lla --modified ">7d"
+lla --modified "<30d"
+lla --created "2026-01-01..2026-06-30"
+```
+
+<Callout type="warning" title="Read the operator as a point in time">
+  `>7d` means after the moment seven days ago, so it selects what changed **in the last week**. `<30d` means before the moment 30 days ago, so it selects what's **older than a month**.
+</Callout>
+
+Combine filters to get a precise selection, then sort it:
+
+```bash
+lla --files-only --size ">2K" --modified ">30d" -s size -l --hide-group
+```
+
+<Shot name="filter-size" alt="A long listing of files over 2K changed in the last 30 days, sorted by size." caption="Files over 2K changed in the last 30 days, largest first." />
+
+## Filter by type
 
 | Show only | Hide |
 | --- | --- |
@@ -67,92 +92,93 @@ created filters accept relative durations and ISO date ranges.
 | `--symlinks-only` | `--no-symlinks` |
 | `--dotfiles-only` | `--no-dotfiles` |
 
-`--show-symlinks` includes symlinks whose targets match `--dirs-only` or
-`--files-only`. `--all` shows dotfiles; `--almost-all` shows dotfiles except `.`
-and `..`.
+`--show-symlinks` also includes symlinks whose targets match `--dirs-only` or `--files-only`. `-a`, `--all` and `-A`, `--almost-all` show dotfiles even if your config hides them.
 
-```bash
-lla --dirs-only --dotfiles-only
-lla --files-only --no-dotfiles
-lla --files-only --show-symlinks
-```
+## Respect .gitignore
 
-## Respect `.gitignore`
-
-```bash
-lla --respect-gitignore
-lla --no-gitignore
-```
-
-The first option applies repository `.gitignore` and Git exclude rules. The
-second overrides an enabled configuration default for one run.
+`--respect-gitignore` hides anything matched by `.gitignore` or Git's exclude rules. To make that the default, add this to your config:
 
 ```toml
 [filter]
 respect_gitignore = true
 ```
 
-## Presets and refinements
+`--no-gitignore` turns it off again for one run.
 
-Define a reusable preset in `~/.config/lla/config.toml`:
+## Presets
+
+A preset saves a set of filters under a name. Define it in `~/.config/lla/config.toml`:
 
 ```toml
-[filter.presets.rust_sources]
-description = "Rust source files changed in the last week"
+[filter.presets.recent_rust]
+description = "Rust files changed in the last week"
 filter = ".rs"
-modified = "<7d"
+modified = ">7d"
 ```
 
-Apply it with `lla --preset rust_sources`. Repeat `--refine <filter>` to apply
-additional name or path filters sequentially after the normal listing and
-plugin-decoration pipeline. Every refinement must match. Despite the historical
-CLI wording about a cache, the current implementation still walks the
-filesystem normally.
+```bash
+lla --preset recent_rust
+```
+
+## Refine a listing
+
+`--refine` narrows a listing you've already run. It reads lla's cached copy of that listing instead of walking the directory again. Repeat the flag to narrow further, and an entry must match every refinement to stay.
+
+```bash
+lla -l --refine cargo --refine .toml
+```
+
+lla caches each directory listing under the directory and options you used. If there's no match in the cache, `--refine` walks the directory first. Because a cached listing can be out of date, run the command without `--refine` to refresh it.
 
 ## Search file contents
+
+`--search` runs ripgrep from the current directory. It prints each match with its path, line number, syntax highlighting and two lines of context. Patterns are literal unless you prefix them with `regex:`.
 
 ```bash
 lla --search "TODO"
 lla --search "TODO" --search-context 5
 lla --search "regex:^func.*\("
-lla --search "Error" --filter ".rs" --case-sensitive
-lla --search "FIXME" --json
+lla --search "Error" --case-sensitive
 ```
 
-Content search uses literal matching by default. Prefix the pattern with
-`regex:` to enable regular expressions. Human output includes file paths, line
-numbers, themed syntax highlighting, context, and match indicators.
+<Shot name="search" alt="Content search results, with highlighted matches and surrounding lines from Rust files." caption='`lla --search "record_visit" --search-context 1`' />
 
-Search honors case sensitivity, configured hidden-file behavior,
-`--no-dotfiles`, and `--almost-all`. `--dotfiles-only` is not applied.
-`--filter` is applied only when it is a simple extension such as `.rs` or a
-`glob:` pattern. A single preset can supply one of those compatible name
-filters, but preset size, date, and refinement criteria are ignored. Multiple
-preset name filters are combined into an expression that search does not map to
-ripgrep. `--dirs-only` and `--no-files` return no search results because ripgrep
-searches file contents. Size/date flags, refinements, complex name expressions,
-and the other entry-type filters are not applied to content search.
-
-Search currently always applies Git ignore rules, including when
-`--no-gitignore` is supplied. Configured `exclude_paths` reliably match when the
-search root is absolute; with a relative root such as `.`, absolute configured
-exclusions may not match the walker paths. Use an absolute search root when
-those exclusions matter:
+To search another directory, change into it or give an absolute path:
 
 ```bash
-lla "$(pwd)" --search "TODO"
+lla "$(pwd)/src" --search "TODO"
 ```
 
-Search supports JSON, NDJSON, and CSV, but their search-specific records differ
-from listing records. See [Search results](/docs/usage/machine-output#search-results).
+<Callout type="warning" title="Relative directories">
+  In lla 0.6.6, `lla src --search "TODO"` returns nothing, and passing a relative file path fails. Use an absolute path, as above.
+</Callout>
 
-## Send search matches to a plugin
+### Which filters apply to search
+
+| Option | During search |
+| --- | --- |
+| `-c`, `--case-sensitive` | Applied |
+| `--no-dotfiles`, `-A` | Applied |
+| `--dirs-only`, `--no-files` | Return no results, since ripgrep only reads files |
+| `--no-gitignore` | Ignored. Search always applies Git ignore rules |
+| `-f`, `--preset`, size, date, `--refine`, other type filters | Ignored |
+
+<Callout type="warning" title="Limiting search to one file type">
+  In lla 0.6.6, `lla --search "TODO" -f .rs` still searches every file. Filter the results yourself, for example with `--json` and `jq`.
+</Callout>
+
+If your config shows dotfiles, search also reads `.git/`. Add `--no-dotfiles` to skip it.
+
+`exclude_paths` from your config only matches reliably when the search root is absolute.
+
+For `--json`, `--ndjson` and `--csv`, see [search results](/docs/usage/machine-output#search-results).
+
+### Send matches to a plugin
+
+`--search-pipe` runs a plugin action once when the search finishes, adding every matching path to the action's arguments. The form is `plugin:action[:arg...]`. It turns on the plugin if it's off.
 
 ```bash
-lla --search "TODO" --search-pipe file_tagger:list-tags
-lla --search "TODO" --search-pipe file_organizer:organize:type
+lla --search "setup_shell_integration" --search-pipe preview:show
 ```
 
-The syntax is `plugin:action[:arg...]`. Matching file paths are appended to the
-plugin action arguments. See [Plugins](/docs/plugins/overview) for installation,
-permissions, and typed actions.
+The action has to accept that many paths. `preview show` takes one, so the command above only works when one file matches. Among the official plugins, only `trash put` takes any number of paths, and it moves every match to the trash.

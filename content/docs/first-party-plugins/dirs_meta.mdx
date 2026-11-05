@@ -1,59 +1,90 @@
 ---
-title: "Directory Metadata"
-description: "Real-time directory statistics with intelligent caching."
+title: "dirs_meta"
+description: "Adds file count, directory count and total size to each directory in default and long listings."
 order: 8
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/dirs_meta]
 ---
 
-# lla Directory Metadata Plugin
+`dirs_meta` adds a file count and total size to each directory in a listing, plus a directory count and modified age in the long view. Turn it on when you want directory sizes in a normal listing. It walks the whole tree under each listed directory, including hidden files, and doesn't follow symlinks. Files stay bare.
 
-Real-time directory statistics with intelligent caching.
+<Shot name="plugin-dirs-meta" alt="A long listing in which each directory shows its file count, directory count, total size and modified age." caption="`lla -l --hide-group <dir>` with only `dirs_meta` enabled." />
 
-## Features
-
-- **Analysis**: Parallel scanning, caching, configurable depth
-- **Statistics**: File counts, sizes, subdirectories, modification times
-- **Performance**: Multi-threaded, cache-optimized
-
-## Configuration
-
-`~/.config/lla/dirs_meta/config.toml`:
+## Turn it on
 
 ```toml
-cache_size = 1000           # Max cached directories
-max_scan_depth = 100        # Max scan depth
-parallel_threshold = 1000    # Min entries for parallel
-
-[colors]
-files = "bright_cyan"
-dirs = "bright_green"
-size = "bright_yellow"
-time = "bright_magenta"
+# ~/.config/lla/config.toml
+enabled_plugins = ["dirs_meta"]
 ```
 
-## Usage
+Or run this once. It saves the same setting, so the plugin stays on until you run `lla --disable-plugin dirs_meta`.
 
 ```bash
-# Show stats
-lla plugin run dirs_meta stats -- "/path/to/directory"
-
-# Clear cache
-lla plugin run dirs_meta clear-cache
+lla --enable-plugin dirs_meta
 ```
 
-## Display Formats
+Output appears in the default and long views (`formats = ["default", "long"]`), and in the table view, which uses the long format.
 
-Default: `Documents (15 files, 2.5 GB)`
+| Field | Type | Holds |
+| --- | --- | --- |
+| `dir_file_count` | integer | Files under the directory |
+| `dir_subdir_count` | integer | Directories under it, counting the directory itself |
+| `dir_total_size` | bytes | Total size of those files |
 
-Long:
-
-```
-Documents
-Files:       15
-Directories: 3
-Total Size:  2.5 GB
-Modified:    5 mins ago
+```bash
+lla --json | jq '.[] | select(.name=="docs") | .plugin'
 ```
 
-Units: B/KB/MB/GB, seconds/minutes/hours/days ago
+```text
+{
+  "dir_file_count": 3,
+  "dir_total_size": 16,
+  "dir_subdir_count": 1
+}
+```
+
+You can also add them as [columns](/docs/usage/views#choose-the-columns), such as `field:dir_total_size`, which prints raw bytes.
+
+## Actions
+
+Run an action with `lla plugin run dirs_meta <action> -- <args>`. Every action is interactive, so it needs a TTY and the default `--output human`. Running one also enables the plugin and saves that setting.
+
+| Action | Arguments | What it does |
+| --- | --- | --- |
+| `stats` | `<dir>` | Prints the counts and size for one directory. |
+| `clear-cache` | | Clears the cache, which keeps results for 2 seconds, and prints `Cache cleared successfully`. |
+| `help` | | Prints usage. |
+
+## Example
+
+```bash
+lla
+```
+
+```text
+.github/ 
+11 files, 75.05 KB
+
+completions/ 
+5 files, 112.93 KB
+
+docs/ 
+16 files, 120.49 KB
+```
+
+```bash
+lla -l --hide-group
+```
+
+```text
+drwxr-xr-x   128B Oct 07 15:26 you .github/ 
+┌─
+│ Files        11
+│ Directories  3
+│ Total Size   75.05 KB
+│ Modified     28 days ago
+```
+
+## Settings
+
+`~/.config/lla/plugins/dirs_meta/config.toml` sets colors in a `[colors]` table: `files`, `dirs`, `size`, `time` and `info`. The `cache_size`, `max_scan_depth` and `parallel_threshold` keys in that file do nothing in 0.6.6.

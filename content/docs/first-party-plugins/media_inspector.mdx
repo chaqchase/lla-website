@@ -1,22 +1,94 @@
 ---
-title: "Media Inspector"
-description: "Provides MIME and media metadata as listing fields. PNG, GIF, and JPEG dimensions have built-in parsers. Optional system tools enrich the result: `file` for MIME detection, `exiftool` for EXIF, `ffprobe` for audio/video duration and streams, and `sips` or ImageMagick `identify` as image-dimension fallbacks."
+title: "media_inspector"
+description: "Adds MIME type, dimensions, duration and codecs to listings, and prints full metadata for one media file."
 order: 27
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/media_inspector]
 ---
 
-# Media Inspector Plugin
+`media_inspector` adds MIME types and media details to listings. Turn it on in folders of images, audio or video when you want dimensions or duration without opening each file.
 
-Provides MIME and media metadata as listing fields. PNG, GIF, and JPEG dimensions have
-built-in parsers. Optional system tools enrich the result: `file` for MIME detection,
-`exiftool` for EXIF, `ffprobe` for audio/video duration and streams, and `sips` or
-ImageMagick `identify` as image-dimension fallbacks.
+## Turn it on
+
+```toml
+# ~/.config/lla/config.toml
+enabled_plugins = ["media_inspector"]
+```
+
+Or run `lla --enable-plugin media_inspector`, which writes the same setting, so it stays on. `lla --disable-plugin media_inspector` removes it.
+
+Output shows in the default, long and table views. In the table view, the long text follows each row.
+
+The plugin adds these typed fields: `mime_type`, `media_kind`, `codecs` and `exif` (strings), and `media_width`, `media_height`, `duration_ms` and `bitrate_bps` (integers). Read them from JSON or show them as `field:<name>` columns:
 
 ```bash
-lla --enable-plugin media_inspector --long ./media
-lla plugin run media_inspector inspect -- ./media/video.mp4
+lla --json | jq -c '.[] | select(.name == "clip.mp4") | .plugin | {media_kind, media_width, media_height, duration_ms}'
+```
+
+```text
+{"media_kind":"video","media_width":320,"media_height":240,"duration_ms":2000}
+```
+
+On its own, the plugin reads MIME types from magic bytes and file extensions, dimensions from PNG, GIF and JPEG files, and EXIF data such as capture date, camera and GPS position. Optional tools add more:
+
+| Tool | What it adds |
+| --- | --- |
+| `ffprobe` | Duration, codecs, bitrate and video dimensions |
+| `file` | MIME type when the built-in checks don't settle it |
+| `exiftool` | EXIF data when the built-in reader finds none |
+| `sips` or `identify` | Dimensions for other image types |
+
+## Actions
+
+Run an action with `lla plugin run media_inspector <action>`.
+
+| Action | What it does |
+| --- | --- |
+| `inspect -- <path>` | Print complete media metadata |
+| `tools` | Report which optional tools are on your `PATH` |
+| `help` | Show help |
+
+All of them are interactive, so they need a TTY.
+
+## Example
+
+```bash
+lla
+```
+
+```text
+clip.mp4 [video/mp4; 320x240]
+notes.md [text/markdown]
+tone.wav [audio/wav]
+window.png [image/png; 1990x1042]
+```
+
+```bash
+lla plugin run media_inspector inspect -- clip.mp4
+```
+
+```text
+Path: clip.mp4
+Kind: video
+MIME: video/mp4
+Dimensions: 320x240
+Duration: 2000 ms
+Codecs: aac, h264
+Bitrate: 119340 bps
+```
+
+```bash
 lla plugin run media_inspector tools
 ```
 
-Missing optional tools do not prevent the plugin from loading or decorating entries.
+```text
+file: available
+ffprobe: available
+exiftool: not found
+sips: available
+identify: not found
+```
+
+## Permissions
+
+`process = true`, because the plugin runs the tools above when they're on your `PATH`. It also has `read:selection` and `read:user-path`, so it can read the files you list or name.

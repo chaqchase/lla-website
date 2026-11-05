@@ -1,127 +1,46 @@
 ---
-title: "File Mover"
-description: "A plugin for `lla` that provides an intuitive clipboard-based interface for moving files and directories."
+title: "file_mover"
+description: "Collects files and directories on a clipboard, then moves them to a target directory."
 order: 13
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/file_mover]
 ---
 
-# lla File Mover Plugin
+`file_mover` collects files and directories on a clipboard, then moves them to a target directory. Reach for it when you're gathering items from several places into one. It adds nothing to listings.
 
-A plugin for `lla` that provides an intuitive clipboard-based interface for moving files and directories.
+The clipboard is a JSON file, separate from your system clipboard: `mv_clipboard.json` in `~/Library/Application Support/lla/` on macOS and `~/.config/lla/` on Linux.
 
-## Features
+## Actions
 
-- **Clipboard Management**: Persistent clipboard for files and directories
-- **Interactive Selection**: Multi-select interface for files and operations
-- **Flexible Moving**: Move all or selected items from clipboard
-- **Path Flexibility**: Support for both current and specified directories
-- **Safe Operations**: Validation and error handling for move operations
-- **User Interface**: Colored output and interactive menus
+Run an action with `lla plugin run file_mover <action> -- <args>`. Every action is interactive, so it needs a TTY and the default `--output human`.
 
-## Configuration
+| Action | Arguments | What it does |
+| --- | --- | --- |
+| `add` | `[dir]` | Opens a multi-select for one directory and adds your picks to the clipboard. Space selects, `a` toggles all, Enter confirms. |
+| `move-all` | `[target]` | Moves every clipboard item to the target and empties the clipboard. |
+| `move-partial` | `[target]` | Lets you pick which clipboard items to move, and removes those from the clipboard. |
+| `show` | | Shows the clipboard in a selector, where you can remove items. |
+| `clear` | | Empties the clipboard. |
+| `help` | | Prints usage. |
 
-Config file: `~/.config/lla/mv_clipboard.json`
+`dir` and `target` default to the current directory.
 
-```toml
-[colors]
-success = "bright_green"
-info = "bright_blue"
-error = "bright_red"
-path = "bright_yellow"
-```
+<Callout type="warning">
+A file already at the destination is overwritten with no prompt. The source and target must also be on the same filesystem. Across filesystems the move fails with `Cross-device link (os error 18)`.
+</Callout>
 
-## Usage
-
-### Basic Operations
+## Example
 
 ```bash
-# Add files from current directory to clipboard
-lla plugin run file_mover add
-
-# Add files from a specific directory to clipboard
-lla plugin run file_mover add -- /path/to/source
-
-# Move all files from clipboard to current directory
-lla plugin run file_mover move-all
-
-# Move all files from clipboard to specific directory
-lla plugin run file_mover move-all -- /path/to/destination
-
-# Move selected files from clipboard to current directory
-lla plugin run file_mover move-partial
-
-# Move selected files from clipboard to specific directory
-lla plugin run file_mover move-partial -- /path/to/destination
+lla plugin run file_mover add -- ~/project/mv-src
+lla plugin run file_mover move-all -- ~/project/mv-dst
 ```
 
-### Clipboard Management
-
-```bash
-# View clipboard contents with option to remove items
-lla plugin run file_mover show
-
-# Clear the clipboard
-lla plugin run file_mover clear
-
-# Show help information
-lla plugin run file_mover help
+```text
+Success: Added 2 items to clipboard from ~/project/mv-src
+Success: Moved all items to ~/project/mv-dst
 ```
 
-## Common Workflows
+## Permissions
 
-### 1. Moving Files Between Directories (Using Explicit Paths)
-
-```bash
-# Add files from source directory
-lla plugin run file_mover add -- /path/to/source
-# Select files to move using space, confirm with enter
-
-# Move all files to target directory
-lla plugin run file_mover move-all -- /path/to/target
-```
-
-### 2. Moving Files Using Current Directory Navigation
-
-```bash
-# In source directory
-cd /path/to/source
-lla plugin run file_mover add
-# Select files to add to clipboard
-
-# Navigate to first target
-cd /path/to/target1
-lla plugin run file_mover move-partial
-# Select subset of files to move here
-
-# Navigate to second target
-cd /path/to/target2
-lla plugin run file_mover move-partial
-# Select another subset of files to move here
-```
-
-### 3. Mixed Workflow (Current and Explicit Paths)
-
-```bash
-# Add files from current directory
-lla plugin run file_mover add
-# Select files to add to clipboard
-
-# Move selected files to a specific directory without changing location
-lla plugin run file_mover move-partial -- /path/to/target
-```
-
-## Display Format
-
-```
-─────────────────────────────────────
- File Mover Clipboard
-─────────────────────────────────────
- Current Items:
-   → /path/to/file1.txt
-   → /path/to/directory1
-   → /path/to/file2.rs
-─────────────────────────────────────
- Use Space to select, Enter to confirm
-─────────────────────────────────────
-```
+`filesystem = ["read:tree", "write:selected-destination", "delete:selection"]`: it reads the source tree, writes to the target and removes the originals. It also declares `clipboard = true`, though its clipboard is the JSON file above.

@@ -1,63 +1,123 @@
 ---
-title: "Categorizer"
-description: "File categorization plugin for `lla` that organizes files based on extensions, with hierarchical categorization support."
+title: "categorizer"
+description: "Labels each file with a category and subcategory based on its extension, in default and long listings."
 order: 4
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/categorizer]
 ---
 
-# lla Categorizer Plugin
+`categorizer` labels each file with a category and subcategory based on its extension, such as `[Code] (Systems)`. Turn it on when a directory mixes file kinds and you want them marked in the listing.
 
-File categorization plugin for `lla` that organizes files based on extensions, with hierarchical categorization support.
+<Shot name="plugin-categorizer" alt="A long listing in which files carry category and subcategory labels such as [Document] (Text)." caption="`lla -l --hide-group <dir>` with only `categorizer` enabled." />
 
-## Features
+## Turn it on
 
-- Automatic file categorization by extension with colored labels
-- Hierarchical categories and subcategories
-- Size-based rules and statistics tracking
-- Configurable categories, colors, and rules
-
-## Default Categories
-
-### Documents
-
-- Color: bright_blue
-- Extensions: txt, md, doc, docx, pdf, rtf, odt
-- Subcategories:
-  - Text: txt, md
-  - Office: doc, docx, xls, xlsx, ppt, pptx
-
-### Code
-
-- Color: bright_cyan
-- Extensions: rs, py, js, ts, java, c, cpp, h, hpp, go, rb, php
-- Subcategories:
-  - Systems: rs, c, cpp, h, hpp
-  - Web: js, ts, html, css, php
-  - Scripts: py, rb, sh, bash
-
-## Usage
-
-```bash
-# Add category
-lla plugin run categorizer add-category -- "Images" "yellow" "jpg,png,gif"
-
-# Add subcategory
-lla plugin run categorizer add-subcategory -- "Images" "Raster" "jpg,png,gif"
-
-# List categories
-lla plugin run categorizer list-categories
+```toml
+# ~/.config/lla/config.toml
+enabled_plugins = ["categorizer"]
 ```
 
-## Configuration
+Or run this once. It saves the same setting, so the plugin stays on until you run `lla --disable-plugin categorizer`.
 
-Config file: `~/.config/lla/plugins/categorizer/config.toml`
+```bash
+lla --enable-plugin categorizer
+```
 
-- Category definitions and mappings
-- Size rules and subcategories
-- UI color schemes
+Labels appear in the default and long views (`formats = ["default", "long"]`), and in the table view, which uses the long format. The default view shows the category only.
 
-## Display Formats
+| Field | Type | Holds |
+| --- | --- | --- |
+| `category` | string | Category name |
+| `subcategory` | string | Subcategory name, when one matches |
 
-- **default**: `[Documents]`
-- **long**: `[Documents] (Text)`
+Read them as JSON, where you also get an untyped `category_color`:
+
+```bash
+lla --json | jq '.[] | select(.name=="README.md") | .plugin'
+```
+
+```text
+{
+  "subcategory": "Text",
+  "category": "Document",
+  "category_color": "bright_blue"
+}
+```
+
+Or add them as columns. The plugin's label still prints after the row.
+
+```toml
+[formatters.table]
+columns = ["name", "size", "field:category", "field:subcategory"]
+```
+
+```text
+┌───────────┬──────┬──────────┬─────────────┐
+│ Name      │ Size │ category │ subcategory │
+├───────────┼──────┼──────────┼─────────────┤
+│ .git/     │ 384B │ -        │ -           │
+│ README.md │   7B │ Document │ Text        │ [Document] (Text)
+│ docs/     │ 160B │ -        │ -           │
+```
+
+## Default rules
+
+| Category | Extensions | Size limit | Subcategories |
+| --- | --- | --- | --- |
+| `Document` | txt, md, doc, docx, pdf, rtf, odt | 10 MiB | `Text`: txt, md. `Office`: doc, docx, xls, xlsx, ppt, pptx |
+| `Code` | rs, py, js, ts, java, c, cpp, h, hpp, go, rb, php, cs, swift, kt | 1 MiB | `Systems`: rs, c, cpp, h, hpp. `Web`: js, ts, html, css, php. `Scripts`: py, rb, sh, bash |
+
+Extensions match in any case. A file over its category's size limit gets no label, and neither does a file with an unknown extension or none.
+
+## Actions
+
+Run an action with `lla plugin run categorizer <action> -- <args>`. Every action is interactive, so it needs a TTY and the default `--output human`. Running one also enables the plugin and saves that setting.
+
+| Action | Arguments | What it does |
+| --- | --- | --- |
+| `add-category` | `<name> <color> <ext1,ext2> [description]` | Adds a category. Prints nothing on success. |
+| `add-subcategory` | `<category> <subcategory> <ext1,ext2>` | Adds a subcategory to an existing category. Prints nothing on success. |
+| `list-categories` | | Prints each category with its extensions and subcategories. |
+| `help` | | Prints usage. |
+
+```bash
+lla plugin run categorizer add-category -- Images bright_magenta png,jpg "Image files"
+lla plugin run categorizer add-subcategory -- Images Raster png,jpg
+```
+
+## Example
+
+```bash
+lla -l --hide-group
+```
+
+```text
+-rw-r--r--   2B Nov 04 23:01 you a.JS [Code] (Web)
+-rw-r--r-- 2.0M Nov 04 23:01 you big.rs
+-rw-r--r--   2B Nov 04 23:01 you no_rule.xyz
+-rw-r--r--   2B Nov 04 23:01 you small.rs [Code] (Systems)
+```
+
+`big.rs` has no label because it's over the 1 MiB limit for `Code`.
+
+## Settings
+
+Rules live in `~/.config/lla/plugins/categorizer/config.toml`, the file `add-category` and `add-subcategory` write to.
+
+```toml
+[[rules]]
+name = "Data"
+color = "bright_magenta"
+extensions = ["csv", "parquet"]
+description = "Tabular data"
+size_ranges = [[0, 10485760]]
+
+[rules.subcategories]
+Text = ["csv"]
+```
+
+`size_ranges` is optional and counts bytes.
+
+<Callout type="warning">
+Every rule needs `name`, `color`, `extensions`, `description` and `subcategories`. If the file fails to parse, the plugin prints the TOML error, falls back to the default rules and overwrites your file with them. Keep a copy before you edit by hand.
+</Callout>

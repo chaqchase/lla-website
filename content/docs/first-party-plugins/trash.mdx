@@ -1,26 +1,96 @@
 ---
-title: "Trash"
-description: "Provides recoverable deletion with the same behavior on macOS, Linux, and Windows. Content is moved into lla's plugin data directory with a JSON record of its original path, deletion time, size, and restore id. If a restore target exists, a conflict-safe `(restored N)` name is chosen instead of overwriting it."
+title: "trash"
+description: "Moves files into lla's own trash store, lists what's there, restores by id and empties old items."
 order: 36
 published: true
 references: [https://github.com/chaqchase/lla/tree/main/plugins/trash]
 ---
 
-# Trash Plugin
+`trash` moves files and directories into a store of its own, so you can restore them later. Reach for it instead of `rm` when you might want a file back. It works the same on macOS, Linux and Windows.
 
-Provides recoverable deletion with the same behavior on macOS, Linux, and Windows.
-Content is moved into lla's plugin data directory with a JSON record of its original
-path, deletion time, size, and restore id. If a restore target exists, a conflict-safe
-`(restored N)` name is chosen instead of overwriting it.
+<Callout type="note" title="This isn't your system Trash">
+Items go to `~/.config/lla/plugins/trash/items`, with a JSON record of each in `records`. They won't appear in Finder's Trash or your desktop's recycle bin. `file_remover remove` uses the same store.
+</Callout>
 
-```bash
-lla plugin run trash put -- ./draft.txt ./old-directory
-lla plugin run trash list
-lla plugin run trash restore -- <id>
+## Turn it on
 
-# Irreversible and intentionally requires --yes
-lla plugin run trash empty -- 30 -- --yes
+You don't need to turn it on to use the actions. Turning it on tags entries in listings, which is rarely useful:
+
+```text
+draft.txt [trash: available]
 ```
 
-The existing `file_remover remove` action uses this same store. Its `purge` action is
-the explicit permanent-deletion alternative.
+Running any action also turns the plugin on and leaves it on, so these tags appear after your first `put`. `lla --disable-plugin trash` removes them until you run another action.
+
+To turn it on yourself, add it to your config:
+
+```toml
+# ~/.config/lla/config.toml
+enabled_plugins = ["trash"]
+```
+
+Or run `lla --enable-plugin trash`, which writes the same setting, so it stays on.
+
+Tags show in the default, long and table views. The plugin adds two typed fields, `trashable` (boolean) and `trash_state` (string), which you can read with `lla --json` or `field:<name>` columns.
+
+## Actions
+
+Run an action with `lla plugin run trash <action>`.
+
+| Action | What it does |
+| --- | --- |
+| `put -- <path>...` | Move files or directories into the trash |
+| `list` | List trashed items with their ids |
+| `restore -- <id>` | Put an item back. If the path is taken, it picks a `(restored N)` name and never overwrites |
+| `empty -- [days] --yes` | Permanently remove items at least `days` old, 30 by default. `--yes` is required |
+| `help` | Show help |
+
+All of them are interactive, so they need a TTY.
+
+## Example
+
+```bash
+lla plugin run trash put -- draft.txt old-folder
+```
+
+```text
+Trashed ~/project/draft.txt
+  id: 20261105T001207.732Z-87314-0
+  restore: lla plugin run trash restore -- 20261105T001207.732Z-87314-0
+Trashed ~/project/old-folder
+  id: 20261105T001207.733Z-87314-1
+  restore: lla plugin run trash restore -- 20261105T001207.733Z-87314-1
+```
+
+```bash
+lla plugin run trash list
+```
+
+```text
+20261105T001207.732Z-87314-0  2026-11-05T00:12:07Z  2 bytes  ~/project/draft.txt
+20261105T001207.733Z-87314-1  2026-11-05T00:12:07Z  2 bytes  ~/project/old-folder
+```
+
+Restoring when a new `draft.txt` has taken the path keeps both files:
+
+```bash
+lla plugin run trash restore -- 20261105T001207.732Z-87314-0
+```
+
+```text
+Restored to ~/project/draft (restored 1).txt
+```
+
+Emptying is permanent. Pass `0` to remove everything:
+
+```bash
+lla plugin run trash empty -- 0 --yes
+```
+
+```text
+Permanently removed 1 trash item(s) at least 0 day(s) old.
+```
+
+## Permissions
+
+The plugin can delete what you select and move it into its store (`metadata:selection`, `read:user-path`, `write:user-path`, `delete:selection`, `delete:quarantine`). It refuses to trash its own store or any directory that contains it.
