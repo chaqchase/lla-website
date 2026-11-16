@@ -8,7 +8,7 @@ references: []
 
 This walkthrough takes about 15 minutes. Run it in a project of your own, ideally a Git repository, and type each command as you go. Your project files stay untouched.
 
-You need lla installed. `lla --version` should print `lla 0.6.6`. If it doesn't, start with [Installation](/docs/about/installation).
+You need lla installed. `lla --version` should print `lla 0.8.0` or later. If it doesn't, start with [Installation](/docs/about/installation).
 
 ## First listing
 
@@ -74,7 +74,7 @@ lla -t -d 2 docs
 
 <Shot name="view-tree" alt="lla -t drawing a project's directories and files as a tree." />
 
-Tree view leaves out dot-named files, and `-a` doesn't bring them back. Use `lla --dotfiles-only` to see them.
+Tree view shows dotfiles too, and lists `.git` without going into it. Add `--no-dotfiles` to hide them.
 
 ## Git
 
@@ -135,7 +135,7 @@ File: README.md [./README.md]
 
 <Shot name="search" alt="lla --search showing matching lines grouped by file, with the match underlined." />
 
-Run search from the directory you want to search, because a relative directory argument returns nothing in 0.6.6. See [Search file contents](/docs/usage/filtering-search#search-file-contents) for regex patterns.
+Run search from the directory you want to search, because a relative directory argument returns nothing in 0.8.0. See [Search file contents](/docs/usage/filtering-search#search-file-contents) for regex patterns.
 
 ## A config default
 
@@ -212,5 +212,5 @@ You've now used each part of lla once. These pages cover each one in full.
 <Cards>
   <Card href="/docs/usage/views" title="Views">Every view with a screenshot and when to use it.</Card>
   <Card href="/docs/plugins/overview" title="Plugins">How plugins install, run and declare permissions.</Card>
-  <Card href="/docs/reference/cli-reference" title="CLI reference">Every flag and subcommand in lla 0.6.6.</Card>
+  <Card href="/docs/reference/cli-reference" title="CLI reference">Every flag and subcommand in lla 0.8.0.</Card>
 </Cards>

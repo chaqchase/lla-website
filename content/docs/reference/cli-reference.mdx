@@ -1,18 +1,18 @@
 ---
 title: "CLI reference"
-description: "Every lla 0.6.6 option and subcommand, grouped by purpose, with the value names lla --help uses."
+description: "Every lla 0.8.0 option and subcommand, grouped by purpose, with the value names lla --help uses."
 order: 1
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/command-reference.md]
 ---
 
-This page lists every option and subcommand in lla 0.6.6. `lla --help` and `lla <subcommand> --help` print the same names for the version you have installed.
+This page lists every option and subcommand in lla 0.8.0. `lla --help` and `lla <subcommand> --help` print the same names for the version you have installed.
 
 ```text
-lla [OPTIONS] [directory] [SUBCOMMAND]
+lla [OPTIONS] [directory]... [SUBCOMMAND]
 ```
 
-`<directory>` defaults to `.`. It can also be one file, or a `.zip`, `.tar`, `.tar.gz` or `.tgz` archive.
+`<directory>` defaults to `.`. It can also be a file, or a `.zip`, `.tar`, `.tar.gz` or `.tgz` archive. Pass several and each directory is listed under its own `path:` heading. If one can't be listed, lla reports it, lists the rest, and exits with status 1.
 
 If the first argument is the name of a [shortcut](/docs/plugins/shortcuts), lla runs the shortcut and passes it the remaining arguments.
 
@@ -25,15 +25,15 @@ A view flag overrides `default_format` from your config.
 | Option | Short | What it does |
 | --- | --- | --- |
 | `--long` | `-l` | Long listing with permissions, size, date, owner and group. |
-| `--tree` | `-t` | Tree listing. Leaves out dot-named files. |
+| `--tree` | `-t` | Tree listing. |
 | `--table` | `-T` | Table with bordered columns. |
 | `--grid` | `-g` | Grid that fits the terminal width. |
 | `--grid-ignore` | | With `-g`, ignore the terminal width. Lines may run past the screen. Has no effect without `-g`. |
 | `--sizemap` | `-S` | Bars showing each entry's share of the total size. |
 | `--timeline` | | Group entries by time period. |
 | `--git` | `-G` | Git status, last commit, time and author for each entry. |
-| `--fuzzy` | `-F` | Interactive fuzzy finder. Add `--respect-gitignore`, or it stays at "Indexing files" in 0.6.6. |
-| `--recursive` | `-R` | One section per directory. Leaves out dot-named files. |
+| `--fuzzy` | `-F` | Interactive fuzzy finder with a preview pane. |
+| `--recursive` | `-R` | One section per directory. |
 | `--depth <depth>` | `-d` | Depth for tree and recursive listings. Defaults to `default_depth` from your config, which starts at 3. |
 
 See [Views](/docs/usage/views) for examples of each.
@@ -47,15 +47,21 @@ See [Views](/docs/usage/views) for examples of each.
 | `--sort-dirs-first` | | List directories before files. |
 | `--sort-case-sensitive` | | Sort with case sensitivity. Natural sort, which is on by default, already puts uppercase names first. |
 | `--sort-natural` | | Sort numbers in names by value, so `file2` comes before `file10`. |
+| `--no-sort-dirs-first` | | Don't list directories first, even if your config does. |
+| `--no-sort-case-sensitive` | | Sort without case sensitivity, even if your config sorts with it. |
+| `--no-sort-natural` | | Turn off natural number ordering for this run. |
+
+Tree and recursive views follow these options too.
 
 ## Filtering
 
 | Option | Short | What it does |
 | --- | --- | --- |
-| `--filter <filter>` | `-f` | Filter by name or extension. Write patterns in lowercase unless you add `-c`. Use `".a OR .b"` for alternatives. |
+| `--filter <filter>` | `-f` | Filter by name or extension. Use `".a OR .b"` for alternatives. |
 | `--case-sensitive` | `-c` | Match filters and `--search` with exact case. |
+| `--ignore-case` | | Match filters without case, even if your config makes them case-sensitive. |
 | `--preset <preset>...` | | Apply named filter presets from `[filter.presets.<name>]` in your config. |
-| `--refine <refine>...` | | Filter a previous listing from its cache without walking the filesystem again. Repeat it to narrow further. |
+| `--refine <refine>...` | | Apply extra filters to the listing. Repeat it to narrow further. |
 | `--size <size>` | | Filter by size: `">10M"`, `"5K..2G"`, `"..100K"`. |
 | `--modified <modified>` | | Filter by modified time. `">7d"` selects entries changed within the last 7 days, `"<7d"` selects older ones, and `"2023-01-01..2023-12-31"` selects a date range. |
 | `--created <created>` | | Filter by creation time, with the same syntax as `--modified`. |
@@ -84,9 +90,9 @@ See [Filtering and search](/docs/usage/filtering-search) for the pattern syntax.
 
 | Option | Short | What it does |
 | --- | --- | --- |
-| `--icons` | | Show icons. Needs a Nerd Font. |
+| `--icons` | | Show icons. Needs a Nerd Font. Icons turned on in your config are left out when the output is piped; this keeps them. |
 | `--no-icons` | | Hide icons. |
-| `--no-color` | | Turn off lla's colors. Search matches and plugin output can still contain color codes in 0.6.6. |
+| `--no-color` | | Turn off lla's colors. Search snippets, plugin columns and plugin action output can still contain color codes. |
 | `--hyperlink [<WHEN>...]` | | Emit OSC 8 file links: `always`, `auto`, `automatic` or `never`. With no value it means `auto`, which emits links only when stdout is a terminal. |
 | `--permission-format <permission-format>` | | Show permissions as `symbolic` (default), `octal`, `binary`, `verbose` or `compact`. |
 | `--include-dirs` | | Show the total size of each directory's contents. It walks every directory, so it can take a while. |
@@ -109,7 +115,9 @@ The options in the first table switch to long view on their own. The options in 
 | Option | What it does |
 | --- | --- |
 | `--hide-group` | Hide the group column. |
+| `--show-group` | Show the group column, even if your config hides it. |
 | `--relative-dates` | Show dates such as `4 weeks ago`. |
+| `--absolute-dates` | Show full dates, even if your config uses relative ones. |
 | `--date-format <date-format>` | Format dates with chrono strftime syntax, such as `'%Y-%m-%d %H:%M'`. |
 
 ## Search
@@ -163,6 +171,7 @@ See [Machine output](/docs/usage/machine-output) for the fields.
 | [`jump`](#jump) | Pick a bookmarked or recent directory. |
 | [`list-plugins`](#list-plugins) | List installed plugins. |
 | [`plugin`](#plugin) | Run plugin actions and inspect plugin packages. |
+| [`scan`](#scan) | See what is filling your disk and clean it up. |
 | [`shortcut`](#shortcut) | Manage shortcuts. |
 | [`theme`](#theme) | Pick, install and preview themes. |
 | [`update`](#update) | Update installed plugins. |
@@ -342,6 +351,22 @@ Replaces matching official plugins and keeps the old files in `.legacy/<timestam
 | `--prebuilt` | Required. Use the official prebuilt plugin bundle. |
 
 See [Migrating to v3](/docs/plugins/migration-v3).
+
+### scan
+
+```text
+lla scan [OPTIONS] [path]
+```
+
+Scans your home folder, plus `/Applications` on macOS, or `[path]` instead. In a terminal it opens an interactive view where you can mark items and move them to the trash. When the output is piped it prints a summary.
+
+| Option | What it does |
+| --- | --- |
+| `--report` | Print a summary instead of opening the interactive view. |
+| `--json` | Print the results as JSON. |
+| `--top <N>` | How many items each section of the summary lists. Defaults to 10. |
+
+See [Disk scan](/docs/usage/disk-scan).
 
 ### shortcut
 

@@ -6,7 +6,7 @@ published: true
 references: []
 ---
 
-These answers are checked against lla 0.6.6. If you're looking at an error message, go to [Troubleshooting](/docs/support/troubleshooting), which also explains [how to report a bug](/docs/support/troubleshooting#report-a-bug).
+These answers are checked against lla 0.8.0. If you're looking at an error message, go to [Troubleshooting](/docs/support/troubleshooting), which also explains [how to report a bug](/docs/support/troubleshooting#report-a-bug).
 
 ## Setup
 
@@ -34,7 +34,7 @@ Remove the binary with `sudo rm /usr/local/bin/lla` if you used the install scri
 | --- | --- | --- |
 | Config, themes, plugins | `~/.config/lla` | `~/.config/lla` |
 | Jump bookmarks and history | `~/.config/lla/jump.json` | `~/Library/Application Support/lla` |
-| Listing cache | `~/.cache/lla` | `~/Library/Caches/lla` |
+| WebAssembly plugin cache | `~/.cache/lla` | `~/Library/Caches/lla` |
 
 ## Listings
 
@@ -58,7 +58,7 @@ lla shows them by default. Run `lla --no-dotfiles` to hide them once, or `lla co
 
 ### What's the difference between -t and -R?
 
-`-t` draws one nested tree. `-R` prints a section for each directory. Both leave out dot-named files.
+`-t` draws one nested tree. `-R` prints a section for each directory. Both show dotfiles unless you pass `--no-dotfiles`, and both list `.git` without going into it.
 
 ```text
 ./src

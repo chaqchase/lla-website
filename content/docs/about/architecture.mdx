@@ -183,7 +183,7 @@ Human formatters live under `lla/src/formatter/`:
 | `lla -G` | Git | `git` | repository status view |
 | `lla --timeline` | timeline | `timeline` | time-grouped listing |
 | `lla -S` | sizemap | `sizemap` | size bars and totals |
-| `lla -F --respect-gitignore` | fuzzy | `fuzzy`, decoration only | interactive selection |
+| `lla -F` | fuzzy | `fuzzy`, decoration only | interactive selection |
 | `lla --json` | JSON | view flag's format, or `default` | streamed JSON array |
 | `lla --ndjson` | NDJSON | view flag's format, or `default` | one JSON object per entry |
 | `lla --csv` | CSV | view flag's format, or `default` | fixed columns, no plugin fields |
@@ -210,7 +210,7 @@ lla -R -d 3                 # recursive view
 lla -G                      # Git view
 lla --timeline              # group by modification period
 lla -S --include-dirs       # sizemap with recursive directory sizes
-lla -F --respect-gitignore  # interactive fuzzy finder
+lla -F                      # interactive fuzzy finder
 ```
 
 View flags override `default_format` from configuration. `--include-dirs` can
@@ -1115,9 +1115,9 @@ machine_output = true
 
 | Key | Meaning |
 | --- | --- |
-| `decorates_entries` | Declares that the plugin adds per-entry metadata. The 0.6.6 host doesn't read it. |
+| `decorates_entries` | Declares that the plugin adds per-entry metadata. The 0.8.0 host doesn't read it. |
 | `formats` | The views that call the plugin. |
-| `machine_output` | Declares that the plugin intends to support structured output. The 0.6.6 host doesn't read it. Listing fields and action rendering follow the returned values and the output schema. |
+| `machine_output` | Declares that the plugin intends to support structured output. The 0.8.0 host doesn't read it. Listing fields and action rendering follow the returned values and the output schema. |
 
 The host sends `default`, `long`, `tree`, `grid`, `recursive`, `git`, `timeline`,
 `sizemap` and `fuzzy`. Table rendering uses `long`. Other names pass manifest
@@ -1316,7 +1316,7 @@ response::error("operation failed");
 response::from_result(result);
 ```
 
-For actionable failures, construct `ActionError` with a stable code. The 0.6.6 host
+For actionable failures, construct `ActionError` with a stable code. The 0.8.0 host
 prints `message [code]`, and doesn't display the typed details:
 
 ```rust

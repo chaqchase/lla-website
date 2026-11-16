@@ -1,7 +1,7 @@
 ---
 title: "Configuration"
 description: "Set global defaults and per-project overrides, install themes, and generate shell completions."
-order: 4
+order: 5
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/configuration.md]
 ---
@@ -25,9 +25,7 @@ lla config --set default_format long
 
 `config.toml` is commented throughout, so it also serves as a list of the available settings.
 
-<Callout type="warning" title="Edit the generated file">
-  Start from the file `lla init` writes, rather than a blank one. In lla 0.6.6, a global config with missing settings, such as `default_sort`, is rejected with a warning and the whole file is ignored. `.lla.toml` only needs the settings you want to change.
-</Callout>
+Both `config.toml` and `.lla.toml` only need the settings you want to change; everything else keeps its default. If a line can't be read, lla prints a warning that points to it. A broken `.lla.toml` is skipped with a warning that names the file, and the rest of your settings still apply.
 
 ## Defaults
 
@@ -109,6 +107,8 @@ lla theme install ./my-theme.toml  # install a file or a directory of themes
 <Shot name="theme-picker" alt="The interactive theme picker, listing the installed themes." caption="`lla theme`" />
 
 `lla theme pull` needs Git. `lla theme preview` doesn't change your selection.
+
+The theme also colors the [fuzzy view](/docs/usage/navigation#fuzzy-view) and [`lla scan`](/docs/usage/disk-scan), including the syntax highlighting in the preview.
 
 ## Shortcuts
 

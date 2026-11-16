@@ -1,12 +1,12 @@
 ---
 title: "Troubleshooting"
-description: "Find the symptom you're seeing in lla 0.6.6, learn what causes it, and apply the fix."
+description: "Find the symptom you're seeing in lla 0.8.0, learn what causes it, and apply the fix."
 order: 2
 published: true
 references: []
 ---
 
-Each heading is a symptom. Under it you'll find the cause and the fix, checked against lla 0.6.6.
+Each heading is a symptom. Under it you'll find the cause and the fix, checked against lla 0.8.0.
 
 ## Install and config
 
@@ -23,16 +23,16 @@ export PATH="$HOME/.cargo/bin:$PATH"
 ### `Warning: TOML parse error` on every run
 
 ```text
-Warning: TOML parse error at line 1, column 1
+Warning: TOML parse error at line 1, column 18
   |
-1 | theme = "nord"
-  | ^^^^^^^^^^^^^^
-missing field `default_sort`
+1 | default_format = 5
+  |                  ^
+invalid type: integer `5`, expected a string
 ```
 
-Cause: `~/.config/lla/config.toml` is invalid or incomplete, so lla ignores the whole file and uses built-in defaults. A global config must include every required key, so a hand-written file with a few settings fails. A `"` in a shortcut description or a `.` in a shortcut name also causes this.
+Cause: a line in `~/.config/lla/config.toml` can't be read, so lla ignores the file and uses built-in defaults. Missing settings are fine, since a config only needs the keys it changes. A `"` in a shortcut description or a `.` in a shortcut name also causes this. A broken project `.lla.toml` gives a warning that starts with `ignoring` and names the file.
 
-Fix: correct the line the warning points to. To start over, move the file aside and run `lla`, which writes a new one. Then change settings with `lla config --set`. A project's `.lla.toml` can be partial.
+Fix: correct the line the warning points to. To start over, move the file aside and run `lla`, which writes a new one. Then change settings with `lla config --set`.
 
 ```bash
 mv ~/.config/lla/config.toml ~/.config/lla/config.toml.bak
@@ -41,15 +41,9 @@ lla
 
 ## Listings
 
-### A filter with capital letters returns nothing
-
-Cause: filtering lowercases file names but leaves your pattern as written, so `README` is compared with `readme.md`. This affects `-f`, `glob:` and `regex:` patterns, and `--refine`.
-
-Fix: write the pattern in lowercase, as in `lla -f readme`, or add `-c` to match exact case, as in `lla -f README -c`.
-
 ### A filter for several extensions returns nothing
 
-Cause: comma lists and brace globs don't work for extensions in 0.6.6.
+Cause: comma lists and brace globs don't work for extensions.
 
 Fix: use `OR`, and quote the pattern.
 
@@ -67,12 +61,6 @@ Fix: use `>` for recent entries.
 lla --modified ">7d"    # changed within the last 7 days
 lla --modified "<7d"    # older than 7 days
 ```
-
-### Dotfiles are missing from a tree or recursive listing
-
-Cause: `-t` and `-R` skip dot-named files, even with `-a`. Dot-named directories still appear.
-
-Fix: list them with a flat view: `lla --dotfiles-only`.
 
 ### A tree or recursive listing stops early
 
@@ -92,12 +80,6 @@ Cause: lla's icons use Nerd Font glyphs, and your terminal font doesn't have the
 Fix: install a font from [nerdfonts.com](https://www.nerdfonts.com/) and select it in your terminal, or turn icons off with `lla config --set show_icons false`.
 
 ## Git view
-
-### `Not a git repository` for a subdirectory of a repository
-
-Cause: `lla -G src` fails because a relative path with no `./` never reaches the repository root.
-
-Fix: start the path with `./`, as in `lla -G ./src`, use an absolute path, or `cd` into the directory.
 
 ### A directory shows `[clean]` although a file inside it changed
 
@@ -132,24 +114,25 @@ Fix: add `--no-dotfiles`, as in `lla --search "TODO" --no-dotfiles`.
 
 ### `-f` doesn't narrow search results
 
-Cause: lla gives ripgrep an explicit list of files, and `-f` doesn't filter that list in 0.6.6.
+Cause: lla gives ripgrep an explicit list of files, and `-f` doesn't filter that list.
 
 Fix: search from a narrower directory, or run ripgrep directly with `rg "TODO" --glob "*.rs"`.
 
+## Disk scan
+
+### System & other takes up most of the disk
+
+Cause: it holds everything the disk reports as used that lla didn't find in the scanned folders: the operating system, swap, snapshots, other users' files, and folders lla couldn't read. The number of unreadable folders is shown at the top of the scan.
+
+Fix: on macOS, give your terminal Full Disk Access in System Settings › Privacy & Security and scan again. On Linux, run `sudo lla scan` to read system folders such as `/var/lib/docker`. On Windows, use an administrator terminal.
+
+### Space didn't come back after cleaning
+
+Cause: `d` moves items to the trash, and the trash still uses the space.
+
+Fix: empty the trash. The Trash category in `lla scan` shows what is waiting there, and removing items from that category deletes them for good.
+
 ## Fuzzy view and jump
-
-### Fuzzy view stays at "Indexing files"
-
-`lla -F` shows `Indexing files... 0 files found` and the list never fills.
-
-Cause: the default file indexer doesn't finish in 0.6.6. The indexer used for gitignore filtering does.
-
-Fix: press Esc, then add `--respect-gitignore`, or make it your default. The setting also hides ignored files in every other view. See [Fuzzy view](/docs/usage/navigation#fuzzy-view) for the keys.
-
-```bash
-lla -F --respect-gitignore
-lla config --set filter.respect_gitignore true
-```
 
 ### `lla jump` prints a path but your directory doesn't change
 
@@ -204,7 +187,7 @@ Fix: run it directly in a terminal.
 
 ### `warning: 'lla plugin <plugin> <action>' is deprecated`
 
-Cause: you used the old form. lla 0.6.6 also prints this warning for every shortcut. It goes to stderr and the action still runs.
+Cause: you used the old form. lla also prints this warning for every shortcut. It goes to stderr and the action still runs.
 
 Fix: in scripts, use the current form, as in `lla plugin run project_context inspect -- .`.
 

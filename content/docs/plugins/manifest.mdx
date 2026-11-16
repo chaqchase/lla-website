@@ -1,6 +1,6 @@
 ---
 title: "Manifest reference"
-description: "Every plugin.toml field, type and accepted value, checked against the manifest parser in lla 0.6.6."
+description: "Every plugin.toml field, type and accepted value, checked against the manifest parser in lla 0.8.0."
 order: 3
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/plugins/manifest.md]
@@ -86,7 +86,7 @@ Several keys below are identifiers. An identifier is non-empty and contains only
 | `name` | string | yes | | Identifier. The name used in `lla plugin run`, `--enable-plugin` and `lla plugin info`. |
 | `version` | string | yes | | Any non-blank string. lla does not parse it as SemVer. |
 | `api_min` | integer | yes | | Non-zero. |
-| `api_max` | integer | yes | | At least `api_min`. The range must include `3` for lla 0.6.6 to load the plugin. |
+| `api_max` | integer | yes | | At least `api_min`. The range must include `3` for lla 0.8.0 to load the plugin. |
 | `runtime` | string | no | `native` | `native` or `wasm-component`. |
 | `entrypoint` | string | yes | | One filename with no directory part. |
 | `description` | string | no | empty | Any string. `lla list-plugins` and `lla plugin info` show it. |
@@ -107,8 +107,8 @@ A source install finds native libraries in `target/release` by matching the Carg
 | Key | Type | Default | Effect |
 | --- | --- | --- | --- |
 | `formats` | string array | `[]` | The views that call the plugin. Entries must be non-empty, unpadded and unique. |
-| `decorates_entries` | boolean | `false` | Parsed, not consulted by the 0.6.6 host. Bundled plugins set it to record intent. |
-| `machine_output` | boolean | `false` | Parsed, not consulted by the 0.6.6 host. Bundled plugins set it to record intent. |
+| `decorates_entries` | boolean | `false` | Parsed, not consulted by the 0.8.0 host. Bundled plugins set it to record intent. |
+| `machine_output` | boolean | `false` | Parsed, not consulted by the 0.8.0 host. Bundled plugins set it to record intent. |
 
 Any string passes validation in `formats`, but the host only sends the values below. A view missing from `formats` never calls the plugin.
 
@@ -122,7 +122,7 @@ Any string passes validation in `formats`, but the host only sends the values be
 | `lla -G` | `git` |
 | `lla --timeline` | `timeline` |
 | `lla -S` | `sizemap` |
-| `lla -F --respect-gitignore` | `fuzzy`, decoration only. The fuzzy view never asks for formatted text. |
+| `lla -F` | `fuzzy`, decoration only. The fuzzy view never asks for formatted text. |
 | `lla --json`, `--ndjson`, `--csv` | The format of any view flag in the same command, otherwise `default`. |
 
 The table view normalizes to `long`, so declaring `table` has no effect.
@@ -164,8 +164,8 @@ Runtime network checks compare the request's host with each entry exactly, and t
 | --- | --- | --- | --- | --- |
 | `name` | string | yes | | Identifier. Unique across fields. |
 | `type` | string | yes | | `string`, `integer`, `float`, `boolean`, `bytes`, `timestamp` or `path`. |
-| `sortable` | boolean | no | `false` | Declaration only. The 0.6.6 host does not read it. |
-| `filterable` | boolean | no | `false` | Declaration only. The 0.6.6 host does not read it. |
+| `sortable` | boolean | no | `false` | Declaration only. The 0.8.0 host does not read it. |
+| `filterable` | boolean | no | `false` | Declaration only. The 0.8.0 host does not read it. |
 | `description` | string | no | empty | Any string. |
 
 If a plugin sets a display string for a declared field and no typed value, the host converts the string to the declared type. `lla plugin doctor` fails with `field 'score' cannot be converted to its declared Integer type` when it can't.

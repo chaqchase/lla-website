@@ -54,7 +54,7 @@ Artifacts: target
 Repository: not-a-repository
 ```
 
-lla 0.6.6 prints that warning on every shortcut run. It goes to stderr and you can ignore it.
+lla 0.8.0 prints that warning on every shortcut run. It goes to stderr and you can ignore it.
 
 Three rules follow from how lla matches the name:
 
@@ -171,7 +171,7 @@ A file with the wrong key fails and changes nothing:
 ```
 
 <Callout type="note" title="Plugin aliases don't survive an import">
-lla 0.6.6 reads `[plugin_aliases]` from the file but drops all aliases when it saves the config, so they're gone after the import.
+lla 0.8.0 reads `[plugin_aliases]` from the file but drops all aliases whenever it saves the config, so they're gone after the import. The same happens on `lla shortcut add` or `remove`, `--enable-plugin` and `lla config --set`.
 </Callout>
 
 To carry shortcuts to another machine, keep the file with your dotfiles:

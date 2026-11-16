@@ -37,34 +37,61 @@ Bookmarks appear above recent directories. lla adds a directory to your history 
 
 ## Fuzzy view
 
-Type part of a name to narrow the list. Select one or more files, then open them, copy their paths or rename them.
+Type part of a path to narrow the list, look at the highlighted file in the preview, then open it, copy its path or rename it. Mark several files to act on all of them.
 
 ```bash
-lla -F --respect-gitignore
+lla -F
 ```
 
-<Shot name="view-fuzzy" alt="The fuzzy view, with a query, ranked results and two selected files." caption="`lla -F --respect-gitignore`, searching for `format` with two files selected." />
+<Shot name="view-fuzzy" alt="The fuzzy view, with ranked results on the left and a syntax-highlighted preview of the selected file on the right." caption="`lla -F`, searching for `palette`." />
 
-<Callout type="warning" title="Stuck on “Indexing files”">
-  In lla 0.6.6, `lla -F` never finishes indexing unless Git ignore rules are on. Pass `--respect-gitignore`, or set `respect_gitignore = true` in your config.
-</Callout>
+Matched characters are highlighted, and a match in the file name ranks above a match in its folder. The search runs in the background, so typing stays quick even in a folder with millions of files.
+
+The finder still draws on the terminal when its output goes somewhere else, so `vim $(lla -F)` and `lla -F | xargs …` work. What you pick is printed as plain paths.
+
+### Query syntax
+
+| Query | Matches |
+| --- | --- |
+| `cfg mod` | Paths that fuzzy-match every word |
+| `'exact` | Paths that contain `exact` as written |
+| `^src` | Paths that start with `src` |
+| `.rs$` | Paths that end with `.rs` |
+| `!test` | Paths that don't contain `test` |
+
+A lowercase query ignores case. Put an uppercase letter in a word and that word matches case exactly.
+
+### Preview
+
+In a terminal at least 120 columns wide, the right side previews the highlighted file:
+
+- source code and config files, with syntax highlighting and line numbers
+- CSV and TSV files as aligned tables
+- minified JSON, reformatted so you can read it
+- what is inside zip, tar and tar.gz archives
+- the pixel size of PNG, JPEG, GIF, WebP and BMP images
+- a hex dump and the likely file type for anything binary
+
+`Ctrl+T` hides or shows it. The finder and its preview use the colors of your [theme](/docs/usage/configuration#themes).
 
 ### Keys
 
 | Key | Action |
 | --- | --- |
 | `↑` `↓`, `Ctrl+K` `Ctrl+J`, `Ctrl+P` `Ctrl+N` | Move up or down |
-| `Ctrl+U` `Ctrl+D` | Move half a page up or down |
-| `Ctrl+Shift+G` `Ctrl+G` | Go to the start or end |
-| `Space` | Select or deselect the highlighted file |
-| `Enter` | Finish, returning the highlighted or selected files |
+| `PageUp` `PageDown`, `Ctrl+U` `Ctrl+D` | Move a page up or down |
+| `Ctrl+G` or `Ctrl+Home` | Go to the top |
+| `Alt+G`, `Ctrl+Shift+G` or `Ctrl+End` | Go to the bottom |
+| `Tab` `Shift+Tab` | Mark or unmark the highlighted file and move down or up |
+| `Ctrl+T` | Show or hide the preview |
+| `Enter` | Finish, returning the highlighted or marked files |
 | `Ctrl+E` | Open in your editor |
 | `Ctrl+O` | Open with the system's default app |
 | `Ctrl+Y` | Copy paths to the clipboard |
 | `F2` | Rename the highlighted file. `Enter` confirms and `Esc` cancels |
 | `Esc`, `Ctrl+C` | Quit |
 
-While typing a query, `Ctrl+W` deletes a word, `Ctrl+H` is backspace, `Ctrl+A` or `Home` goes to the start, and `End` goes to the end.
+`Space` types a space into the query, so you can search for several words. While typing, `Ctrl+W` or `Alt+Backspace` deletes a word, `Ctrl+H` is backspace, `Ctrl+A` or `Home` goes to the start, and `End` goes to the end.
 
 ### Choose the editor
 
@@ -80,4 +107,4 @@ While typing a query, `Ctrl+W` deletes a word, `Ctrl+H` is backspace, `Ctrl+A` o
 editor = "code --wait"
 ```
 
-Your config's `ignore_patterns` also applies here. See [Limits](/docs/usage/configuration#limits).
+`ignore_patterns` in your config hides folders from the finder. A plain entry such as `.git` or `target` matches a whole path component, so `.git` doesn't hide `.github`. Use a `glob:` or `regex:` prefix for anything else. See [Limits](/docs/usage/configuration#limits).

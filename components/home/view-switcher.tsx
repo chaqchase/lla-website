@@ -18,7 +18,7 @@ const VIEWS: Array<{ id: ShotName; glyph: string; flag: string; name: string; li
   { id: 'view-table', glyph: '⊞', flag: '-T', name: 'Table', line: 'Bordered columns for lining entries up and comparing them.', href: '/docs/usage/views#table-view' },
   { id: 'view-grid', glyph: '▦', flag: '-g', name: 'Grid', line: 'Many short names, packed to the width of your terminal.', href: '/docs/usage/views#grid-view' },
   { id: 'view-recursive', glyph: '↳', flag: '-R', name: 'Recursive', line: 'Walk nested directories as one flat, sectioned listing.', href: '/docs/usage/views#recursive-view' },
-  { id: 'view-fuzzy', glyph: '≈', flag: '-F', name: 'Fuzzy', line: 'Type a few letters, select files, and act on them.', href: '/docs/usage/navigation#fuzzy-view' }
+  { id: 'view-fuzzy', glyph: '≈', flag: '-F', name: 'Fuzzy', line: 'Type a few letters, preview what matches, and act on it.', href: '/docs/usage/navigation#fuzzy-view' }
 ]
 
 const ADVANCE_MS = 5200

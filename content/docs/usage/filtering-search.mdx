@@ -48,7 +48,7 @@ To combine terms, use one of these forms:
 | `"NOT .md"` | Anything except `.md` files |
 
 <Callout type="warning" title="Matching several extensions">
-  In lla 0.6.6, `glob:*.{toml,lock}` and `.toml,.lock` both return nothing. Use `".toml OR .lock"` instead.
+  In lla 0.8.0, `glob:*.{toml,lock}` and `.toml,.lock` both return nothing. Use `".toml OR .lock"` instead.
 </Callout>
 
 ## Filter by size
@@ -150,7 +150,7 @@ lla "$(pwd)/src" --search "TODO"
 ```
 
 <Callout type="warning" title="Relative directories">
-  In lla 0.6.6, `lla src --search "TODO"` returns nothing, and passing a relative file path fails. Use an absolute path, as above.
+  In lla 0.8.0, `lla src --search "TODO"` returns nothing, and passing a relative file path fails. Use an absolute path, as above.
 </Callout>
 
 ### Which filters apply to search
@@ -164,7 +164,7 @@ lla "$(pwd)/src" --search "TODO"
 | `-f`, `--preset`, size, date, `--refine`, other type filters | Ignored |
 
 <Callout type="warning" title="Limiting search to one file type">
-  In lla 0.6.6, `lla --search "TODO" -f .rs` still searches every file. Filter the results yourself, for example with `--json` and `jq`.
+  In lla 0.8.0, `lla --search "TODO" -f .rs` still searches every file. Filter the results yourself, for example with `--json` and `jq`.
 </Callout>
 
 If your config shows dotfiles, search also reads `.git/`. Add `--no-dotfiles` to skip it.

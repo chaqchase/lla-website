@@ -236,7 +236,7 @@ The host prints the message and the code, then exits with status 1:
   expected a regular file [not-a-file]
 ```
 
-`--output json` doesn't change this form, so scripts should check the exit status. `ActionError::with_detail` attaches typed data that the 0.6.6 host doesn't display. A panic in native code returns `plugin panicked` and later calls return `plugin state is poisoned`.
+`--output json` doesn't change this form, so scripts should check the exit status. `ActionError::with_detail` attaches typed data that the 0.8.0 host doesn't display. A panic in native code returns `plugin panicked` and later calls return `plugin state is poisoned`.
 
 ## Add an interactive action
 

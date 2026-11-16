@@ -1,0 +1,135 @@
+---
+title: "Disk scan"
+description: "Find out what is filling your disk, see what is safe to remove, and move it to the trash from one screen."
+order: 4
+published: true
+references: [https://github.com/chaqchase/lla/blob/main/docs/disk-scan.md]
+---
+
+`lla scan` reads your disk, groups everything it finds by what it is, and tells you which parts you can get back without losing anything. It runs on macOS, Linux and Windows.
+
+```bash
+lla scan               # your home folder, plus /Applications on macOS
+lla scan ~/code        # one folder
+lla scan --report      # print a summary instead
+lla scan --json        # the same data for scripts
+```
+
+<Shot name="scan" alt="lla scan showing a disk usage bar, a dot map of the disk colored by category, and a list of categories with their sizes." caption="`lla scan` on a home folder." />
+
+In a terminal, `lla scan` opens the interactive view. With `--report` or `--json`, or when the output is piped, it prints a summary and exits.
+
+## What it shows
+
+The top of the screen shows how full the volume is and a dot map of the whole disk, one color per category. Below it, everything lla found is grouped like this:
+
+| Category | What lands there |
+| --- | --- |
+| Apps | Installed apps and the data they keep: `/Applications`, `~/Library/Application Support`, `%LOCALAPPDATA%`, Flatpak, Snap, `/opt` |
+| Developer | Build and dependency folders found anywhere (`node_modules`, Rust `target`, `.next`, `Pods`, `DerivedData` and more), package caches and toolchains |
+| Caches | `~/Library/Caches`, `~/.cache`, `%TEMP%`, `/var/cache` |
+| Logs | `~/Library/Logs`, `/var/log`, crash dumps |
+| Downloads, Documents, Photos, Videos, Music | The usual folders, plus iCloud Drive and OneDrive |
+| Trash | What is already in the trash |
+| Other | Everything else in the scanned folders |
+| System & other | What the disk reports as used minus everything lla found: the OS, swap, snapshots, other users, and folders lla couldn't read |
+
+A build folder only counts as one when its project file sits next to it, so `target` needs a `Cargo.toml` and `bin` needs a `.csproj`. Every byte is counted once: a `node_modules` inside `~/Documents` shows up under Developer and is taken out of the Documents total.
+
+Sizes are the space files actually take on disk, so sparse and cloud-only files count for what they really use. Hard links are counted once, and the scan stays on the filesystem it started on.
+
+### Labels
+
+Each item gets one of three labels:
+
+| Label | Meaning |
+| --- | --- |
+| safe to clean | Rebuilt or downloaded again on its own, or already in the trash. |
+| review first | Probably fine to remove, but look first: apps, downloads, toolchains, virtualenvs. |
+| your files | Documents, photos and the like. lla never suggests removing these. |
+
+Anything that hasn't been touched in three months is also marked as probably unused.
+
+## Clean up
+
+Open a category with `Enter`, mark what you want gone with `Space`, then press `d`. Nothing is removed until you confirm a list of every path and the total size.
+
+| Key | Action |
+| --- | --- |
+| `↑` `↓`, `j` `k` | Move |
+| `Enter` `→`, `l` | Open a category or folder |
+| `Esc` `←`, `h` | Go back |
+| `Tab` | Next category |
+| `Space` | Mark or unmark |
+| `a` | Mark everything cleanable in the list |
+| `u` | Clear the marks |
+| `d` | Move the marked items, or the highlighted one, to the trash |
+| `D` | Delete the marked items for good |
+| `g` | Jump to the biggest part of a folder |
+| `o` | Reveal in Finder, Explorer or your file manager |
+| `f` | Show only cleanable and unused items |
+| `s` | Sort by size, age or name |
+| `r` | Scan again |
+| `?` | Help |
+| `q` | Quit |
+
+`d` moves things to the trash, so you can put them back. Items that are already in the trash are deleted for good, and the confirmation says so. Moving something to the trash doesn't free space until you empty it; the Trash category shows what is waiting there.
+
+lla refuses to remove your home folder, the folders it groups by (such as `~/Library/Caches` itself), anything above them, and folders like `~/.ssh` and `~/.config`.
+
+## Permissions
+
+The number of folders lla couldn't read is shown at the top, and their size ends up in System & other.
+
+- **macOS**: give your terminal Full Disk Access in System Settings › Privacy & Security. Without it, macOS may ask once for access to folders like Documents, and some folders stay unreadable.
+- **Linux**: system folders such as `/var/lib/docker` need `sudo lla scan`.
+- **Windows**: some folders need an administrator terminal. The Recycle Bin isn't scanned yet.
+
+## Report and JSON
+
+`--report` prints the categories, the largest items that are safe to clean, and the largest ones nobody has touched in three months. `--top N` sets how many items each list shows. The default is 10.
+
+<Shot name="scan-report" alt="lla scan --report printing categories with sizes, then the largest items that are safe to clean." caption="`lla scan ~ --report --top 5`" />
+
+`--json` prints the same data. Sizes are in bytes, `modified` is a Unix timestamp, and `safety` is `safe`, `review` or `keep`, matching the three labels:
+
+```json
+{
+  "volume": { "label": "startup disk", "total": 994662584320, "used": 951000000000, "free": 43662584320 },
+  "roots": ["/Users/me", "/Applications"],
+  "scanned_bytes": 693000000000,
+  "files": 5121672,
+  "unreadable_folders": 0,
+  "elapsed_ms": 36300,
+  "safe_bytes": 120000000000,
+  "categories": [
+    {
+      "key": "developer",
+      "label": "Developer",
+      "bytes": 181000000000,
+      "safe_bytes": 102000000000,
+      "stale_bytes": 9200000000,
+      "item_count": 3359,
+      "items": [
+        {
+          "path": "/Users/me/code/app/node_modules",
+          "bytes": 2300000000,
+          "files": 48211,
+          "modified": 1762300000,
+          "safety": "safe",
+          "reason": "reinstalled by your package manager",
+          "stale": false,
+          "protected": false,
+          "loose_files": false
+        }
+      ]
+    }
+  ]
+}
+```
+
+For example, to list every safe-to-clean item over 1 GB:
+
+```bash
+lla scan --json | jq -r '.categories[].items[] | select(.safety == "safe" and .bytes > 1e9) | .path'
+```

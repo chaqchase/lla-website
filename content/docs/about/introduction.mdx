@@ -20,9 +20,11 @@ lla is a command-line file lister. Run it wherever you'd run `ls`. It's a single
 | What changed, and who last touched it? | `lla -G` |
 | What did I work on recently? | `lla --timeline` |
 | Where did the disk space go? | `lla -S --include-dirs` |
+| What can I delete to free up space? | `lla scan` |
 | Which files mention this? | `lla --search "TODO"` |
 | How does this differ from the last commit? | `lla diff src --git` |
 | What's inside this archive? | `lla backup.tar.gz -t` |
+| Where is that file I was editing? | `lla -F` |
 | Can a script read this? | `lla --json` |
 
 ## Views
@@ -32,6 +34,10 @@ A view changes how a listing is drawn. Filters and sorting carry over, so you ca
 <ViewIndex />
 
 [Views](/docs/usage/views) shows each one with a screenshot. For opening and acting on files interactively, use the [fuzzy view](/docs/usage/navigation#fuzzy-view).
+
+## Disk cleanup
+
+`lla scan` goes through your home folder and sorts what it finds into apps, developer files, caches, logs, downloads, media and trash. Each item is labeled safe to clean, review first, or your files, and you can move what you don't need to the trash from the same screen. See [Disk scan](/docs/usage/disk-scan).
 
 ## Selecting and searching
 

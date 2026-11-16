@@ -36,7 +36,7 @@ export const shots = {
   'theme-tokyo': { w: 2120, h: 817 },
   'theme-vesper': { w: 2120, h: 817 },
   'view-default': { w: 2120, h: 1481 },
-  'view-fuzzy': { w: 2120, h: 1443 },
+  'view-fuzzy': { w: 2856, h: 1720 },
   'view-git': { w: 2360, h: 1324 },
   'view-grid': { w: 2120, h: 695 },
   'view-long': { w: 2120, h: 1114 },
@@ -44,7 +44,9 @@ export const shots = {
   'view-sizemap': { w: 2120, h: 949 },
   'view-table': { w: 2120, h: 1293 },
   'view-timeline': { w: 2120, h: 1291 },
-  'view-tree': { w: 2120, h: 1293 }
+  'view-tree': { w: 2120, h: 1293 },
+  'scan-report': { w: 2856, h: 1720 },
+  'scan': { w: 2856, h: 1720 }
 } as const
 
 export type ShotName = keyof typeof shots
