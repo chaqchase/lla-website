@@ -1,7 +1,7 @@
 export const siteConfig = {
   name: 'lla',
   url: 'https://lla.chaqchase.com',
-  version: '0.8.0',
+  version: '0.9.0',
   description:
     'lla is an ls replacement written in Rust. Trees, tables, timelines, size maps, Git status, a fuzzy finder, disk cleanup, content search, machine-readable output and plugins, from one binary.',
   author: 'chaqchase',

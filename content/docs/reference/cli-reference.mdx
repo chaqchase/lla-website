@@ -1,12 +1,12 @@
 ---
 title: "CLI reference"
-description: "Every lla 0.8.0 option and subcommand, grouped by purpose, with the value names lla --help uses."
+description: "Every lla 0.9.0 option and subcommand, grouped by purpose, with the value names lla --help uses."
 order: 1
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/command-reference.md]
 ---
 
-This page lists every option and subcommand in lla 0.8.0. `lla --help` and `lla <subcommand> --help` print the same names for the version you have installed.
+This page lists every option and subcommand in lla 0.9.0. `lla --help` and `lla <subcommand> --help` print the same names for the version you have installed.
 
 ```text
 lla [OPTIONS] [directory]... [SUBCOMMAND]
@@ -32,7 +32,9 @@ A view flag overrides `default_format` from your config.
 | `--sizemap` | `-S` | Bars showing each entry's share of the total size. |
 | `--timeline` | | Group entries by time period. |
 | `--git` | `-G` | Git status, last commit, time and author for each entry. |
-| `--fuzzy` | `-F` | Interactive fuzzy finder with a preview pane. |
+| `--fuzzy` | `-F` | Interactive fuzzy finder with a preview pane. `Ctrl+F` switches between files, folders and text. |
+| `--dirs` | | Open the fuzzy finder on folders. |
+| `--contents` | | Open the fuzzy finder searching the text inside files. Can't be combined with `--dirs`. |
 | `--recursive` | `-R` | One section per directory. |
 | `--depth <depth>` | `-d` | Depth for tree and recursive listings. Defaults to `default_depth` from your config, which starts at 3. |
 
@@ -172,6 +174,7 @@ See [Machine output](/docs/usage/machine-output) for the fields.
 | [`list-plugins`](#list-plugins) | List installed plugins. |
 | [`plugin`](#plugin) | Run plugin actions and inspect plugin packages. |
 | [`scan`](#scan) | See what is filling your disk and clean it up. |
+| [`shell-init`](#shell-init) | Print the `j` and `lcd` shell functions. |
 | [`shortcut`](#shortcut) | Manage shortcuts. |
 | [`theme`](#theme) | Pick, install and preview themes. |
 | [`update`](#update) | Update installed plugins. |
@@ -365,8 +368,17 @@ Scans your home folder, plus `/Applications` on macOS, or `[path]` instead. In a
 | `--report` | Print a summary instead of opening the interactive view. |
 | `--json` | Print the results as JSON. |
 | `--top <N>` | How many items each section of the summary lists. Defaults to 10. |
+| `--no-duplicates` | Skip the search for duplicate files. |
 
 See [Disk scan](/docs/usage/disk-scan).
+
+### shell-init
+
+```text
+lla shell-init <shell>
+```
+
+`<shell>` is `bash`, `zsh`, `fish` or `powershell`. Prints the `j` and `lcd` functions for that shell. See [Shell functions with shell-init](/docs/usage/navigation#shell-functions-with-shell-init).
 
 ### shortcut
 

@@ -1,6 +1,6 @@
 ---
 title: "Navigation"
-description: "Jump to bookmarked and recent directories from your shell, and find and open files in the fuzzy view."
+description: "Jump to bookmarked and recent directories from your shell, and find files, folders and text in the fuzzy view."
 order: 3
 published: true
 references: [https://github.com/chaqchase/lla/blob/main/docs/navigation.md]
@@ -35,6 +35,19 @@ lla jump --clear-history
 
 Bookmarks appear above recent directories. lla adds a directory to your history whenever you list it, keeps each one only once, and skips paths in [`exclude_paths`](/docs/usage/configuration#exclude-paths).
 
+### Shell functions with shell-init
+
+`lla shell-init` prints `j` and a second function, `lcd`, for your shell, so you don't need to edit any config file by hand. `lcd [path]` opens the [fuzzy view](#fuzzy-view) on folders and moves your shell into the one you pick. Add one line to your shell's startup file:
+
+| Shell | Startup file | Line |
+| --- | --- | --- |
+| Bash | `~/.bashrc` | `eval "$(lla shell-init bash)"` |
+| Zsh | `~/.zshrc` | `eval "$(lla shell-init zsh)"` |
+| Fish | `~/.config/fish/config.fish` | `lla shell-init fish \| source` |
+| PowerShell | `$PROFILE` | `Invoke-Expression (& lla shell-init powershell \| Out-String)` |
+
+`lla jump --setup` still works for Bash, Zsh and Fish, and adds only `j`.
+
 ## Fuzzy view
 
 Type part of a path to narrow the list, look at the highlighted file in the preview, then open it, copy its path or rename it. Mark several files to act on all of them.
@@ -46,6 +59,18 @@ lla -F
 <Shot name="view-fuzzy" alt="The fuzzy view, with ranked results on the left and a syntax-highlighted preview of the selected file on the right." caption="`lla -F`, searching for `palette`." />
 
 Matched characters are highlighted, and a match in the file name ranks above a match in its folder. The search runs in the background, so typing stays quick even in a folder with millions of files.
+
+### Files, folders and text
+
+`Ctrl+F` switches between three modes. The current one is shown before the prompt.
+
+| Mode | Lists | Start in it with |
+| --- | --- | --- |
+| files | Files whose path matches | `lla -F` |
+| folders | Folders whose path matches | `lla --dirs` |
+| text | Lines inside files that contain the query | `lla --contents` |
+
+Text mode looks for the query as written, ignoring case unless it has an uppercase letter, and starts once you've typed two characters. It skips binary files and files over 8 MB, shows lines as they're found, and starts over as soon as you change the query. The preview scrolls to the matching line and marks it. `Ctrl+E` opens your editor at that line in Vim, Neovim, Nano, Emacs, Helix, VS Code, Cursor, Zed, Sublime Text and others. `Enter` still prints only the path.
 
 The finder still draws on the terminal when its output goes somewhere else, so `vim $(lla -F)` and `lla -F | xargs …` work. What you pick is printed as plain paths.
 
@@ -63,16 +88,19 @@ A lowercase query ignores case. Put an uppercase letter in a word and that word 
 
 ### Preview
 
-In a terminal at least 120 columns wide, the right side previews the highlighted file:
+In a terminal at least 120 columns wide, the right side previews the highlighted entry:
 
 - source code and config files, with syntax highlighting and line numbers
+- folders, as a list of what's inside
+- images (PNG, JPEG, GIF, WebP, BMP), with their pixel size
 - CSV and TSV files as aligned tables
 - minified JSON, reformatted so you can read it
 - what is inside zip, tar and tar.gz archives
-- the pixel size of PNG, JPEG, GIF, WebP and BMP images
 - a hex dump and the likely file type for anything binary
 
-`Ctrl+T` hides or shows it. The finder and its preview use the colors of your [theme](/docs/usage/configuration#themes).
+Images are drawn at full resolution in terminals that support the Kitty graphics protocol (Kitty, Ghostty, WezTerm), and with colored half blocks everywhere else, including Windows Terminal and tmux. Set `LLA_IMAGES` to `kitty`, `blocks` or `off` to choose yourself.
+
+`Ctrl+T` hides or shows the preview. The finder and its preview use the colors of your [theme](/docs/usage/configuration#themes).
 
 ### Keys
 
@@ -83,9 +111,10 @@ In a terminal at least 120 columns wide, the right side previews the highlighted
 | `Ctrl+G` or `Ctrl+Home` | Go to the top |
 | `Alt+G`, `Ctrl+Shift+G` or `Ctrl+End` | Go to the bottom |
 | `Tab` `Shift+Tab` | Mark or unmark the highlighted file and move down or up |
+| `Ctrl+F` | Switch between files, folders and text |
 | `Ctrl+T` | Show or hide the preview |
 | `Enter` | Finish, returning the highlighted or marked files |
-| `Ctrl+E` | Open in your editor |
+| `Ctrl+E` | Open in your editor, at the matching line in text mode |
 | `Ctrl+O` | Open with the system's default app |
 | `Ctrl+Y` | Copy paths to the clipboard |
 | `F2` | Rename the highlighted file. `Enter` confirms and `Esc` cancels |
@@ -106,5 +135,9 @@ In a terminal at least 120 columns wide, the right side previews the highlighted
 [listers.fuzzy]
 editor = "code --wait"
 ```
+
+### Large folders
+
+When reading a folder takes a while, the finder saves its file list in your cache folder. Next time, results appear right away while the folder is read again in the background, and the fresh list replaces the saved one when it's done. On a home folder with 2.6 million entries, everything is searchable after 1.5 seconds instead of 7.4. Set `listers.fuzzy.remember_index = false` to turn this off.
 
 `ignore_patterns` in your config hides folders from the finder. A plain entry such as `.git` or `target` matches a whole path component, so `.git` doesn't hide `.github`. Use a `glob:` or `regex:` prefix for anything else. See [Limits](/docs/usage/configuration#limits).

@@ -80,7 +80,7 @@ const FEATURES: Array<{
   {
     glyph: '≈',
     title: 'Find files as you type',
-    line: 'Fuzzy search across millions of files, with a preview of code, tables, archives and images.',
+    line: 'Search names, folders or the text inside files, with a preview of code, tables, archives and images.',
     href: '/docs/usage/navigation#fuzzy-view',
     shot: 'view-fuzzy',
     alt: 'The fuzzy finder with ranked results on the left and a syntax-highlighted preview of the selected file on the right.',

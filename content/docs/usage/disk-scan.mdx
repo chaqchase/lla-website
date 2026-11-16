@@ -13,6 +13,7 @@ lla scan               # your home folder, plus /Applications on macOS
 lla scan ~/code        # one folder
 lla scan --report      # print a summary instead
 lla scan --json        # the same data for scripts
+lla scan --no-duplicates   # skip the duplicate search
 ```
 
 <Shot name="scan" alt="lla scan showing a disk usage bar, a dot map of the disk colored by category, and a list of categories with their sizes." caption="`lla scan` on a home folder." />
@@ -25,18 +26,35 @@ The top of the screen shows how full the volume is and a dot map of the whole di
 
 | Category | What lands there |
 | --- | --- |
-| Apps | Installed apps and the data they keep: `/Applications`, `~/Library/Application Support`, `%LOCALAPPDATA%`, Flatpak, Snap, `/opt` |
-| Developer | Build and dependency folders found anywhere (`node_modules`, Rust `target`, `.next`, `Pods`, `DerivedData` and more), package caches and toolchains |
+| Apps | Installed apps and the data they keep: `/Applications`, `~/Library/Application Support`, `%LOCALAPPDATA%`, Flatpak, Snap, `/opt`. iPhone and iPad backups too, one item per device |
+| Developer | Build and dependency folders found anywhere (`node_modules`, Rust `target`, `.next`, `Pods`, `DerivedData` and more), package caches, toolchains, and Xcode and container disk images |
 | Caches | `~/Library/Caches`, `~/.cache`, `%TEMP%`, `/var/cache` |
 | Logs | `~/Library/Logs`, `/var/log`, crash dumps |
 | Downloads, Documents, Photos, Videos, Music | The usual folders, plus iCloud Drive and OneDrive |
-| Trash | What is already in the trash |
+| Trash | What is already in the trash: `~/.Trash`, `~/.local/share/Trash`, and your Recycle Bin on each fixed drive on Windows |
 | Other | Everything else in the scanned folders |
 | System & other | What the disk reports as used minus everything lla found: the OS, swap, snapshots, other users, and folders lla couldn't read |
 
 A build folder only counts as one when its project file sits next to it, so `target` needs a `Cargo.toml` and `bin` needs a `.csproj`. Every byte is counted once: a `node_modules` inside `~/Documents` shows up under Developer and is taken out of the Documents total.
 
 Sizes are the space files actually take on disk, so sparse and cloud-only files count for what they really use. Hard links are counted once, and the scan stays on the filesystem it started on.
+
+### Developer tools
+
+| What | Where | Label |
+| --- | --- | --- |
+| Xcode DerivedData, DeviceSupport for iOS, watchOS, tvOS and visionOS, SwiftUI previews | `~/Library/Developer/Xcode/...` | safe to clean |
+| Simulator caches | `~/Library/Developer/CoreSimulator/Caches` | safe to clean |
+| Simulators | `~/Library/Developer/CoreSimulator/Devices` | review first. `xcrun simctl delete unavailable` removes old ones |
+| Xcode archives | `~/Library/Developer/Xcode/Archives` | review first |
+| Docker disk image | `~/Library/Containers/com.docker.docker`, `%LOCALAPPDATA%\Docker` (the WSL `.vhdx`), `/var/lib/docker` | review first. `docker system prune` frees space inside it |
+| OrbStack, Colima and Lima disks | `~/Library/Group Containers/HUAQ24HBR6.dev.orbstack`, `~/.colima`, `~/.lima` | review first |
+| Homebrew downloads | `~/Library/Caches/Homebrew`, `~/.cache/Homebrew` or `$HOMEBREW_CACHE` | safe to clean, like `brew cleanup` |
+| Package caches | npm, pnpm, Yarn, Bun, Cargo, Gradle, Maven, Go modules, pip, uv and NuGet, including their `%LOCALAPPDATA%` versions on Windows | safe to clean |
+
+The Homebrew Caskroom and Cellar hold installed software, not cache, so lla leaves them alone. lla only reads these folders. It never runs `docker`, `brew` or `xcrun` for you.
+
+iPhone and iPad backups are listed under the device name stored in each backup. They live in `~/Library/Application Support/MobileSync/Backup` on macOS, and in `%APPDATA%\Apple Computer\MobileSync\Backup` or `%USERPROFILE%\Apple\MobileSync\Backup` on Windows. Remove old ones from Finder or iTunes when you can, so the device list there stays in sync.
 
 ### Labels
 
@@ -50,6 +68,18 @@ Each item gets one of three labels:
 
 Anything that hasn't been touched in three months is also marked as probably unused.
 
+## Duplicates
+
+After the scan, lla looks for large files, 1 MB and up, stored more than once in the scanned folders. It groups them by size, compares the first and last 64 KB, then confirms with a SHA-256 of the whole file. This runs in the background, so you can use the view right away, and the header shows how far along it is.
+
+Only your own files are compared. lla skips app data (`~/Library`, `%APPDATA%`), caches, build folders, device backups, the trash, hidden folders, git checkouts, and macOS packages such as apps and Photos libraries. Removing one file from inside those breaks the whole thing, and most of them are already offered for cleaning as a whole. Hard links are one file with several names, so they aren't reported.
+
+Duplicates appears below the categories. Each row is one file, with how many copies there are and how much removing the extras would free. `Enter` shows the copies, `Space` marks one, and `a` marks every copy but the first. You can never mark every copy of a file. If a folder you marked would take the last copy with it, the confirmation leaves one out and says which.
+
+<Callout type="note" title="APFS clones">
+  On APFS, a file you copy in Finder can be a clone that shares its space with the original. lla can't tell clones apart, so removing one may free less than shown.
+</Callout>
+
 ## Clean up
 
 Open a category with `Enter`, mark what you want gone with `Space`, then press `d`. Nothing is removed until you confirm a list of every path and the total size.
@@ -57,11 +87,11 @@ Open a category with `Enter`, mark what you want gone with `Space`, then press `
 | Key | Action |
 | --- | --- |
 | `↑` `↓`, `j` `k` | Move |
-| `Enter` `→`, `l` | Open a category or folder |
+| `Enter` `→`, `l` | Open a category or folder, or show a duplicate's copies |
 | `Esc` `←`, `h` | Go back |
 | `Tab` | Next category |
 | `Space` | Mark or unmark |
-| `a` | Mark everything cleanable in the list |
+| `a` | Mark everything cleanable in the list. In Duplicates, every copy but one |
 | `u` | Clear the marks |
 | `d` | Move the marked items, or the highlighted one, to the trash |
 | `D` | Delete the marked items for good |
@@ -83,11 +113,11 @@ The number of folders lla couldn't read is shown at the top, and their size ends
 
 - **macOS**: give your terminal Full Disk Access in System Settings › Privacy & Security. Without it, macOS may ask once for access to folders like Documents, and some folders stay unreadable.
 - **Linux**: system folders such as `/var/lib/docker` need `sudo lla scan`.
-- **Windows**: some folders need an administrator terminal. The Recycle Bin isn't scanned yet.
+- **Windows**: some folders need an administrator terminal. lla finds your own Recycle Bin (`X:\$Recycle.Bin\<your SID>`) on each fixed drive and lists its entries under Trash by their original names. Removing one also removes its `$I` record, so Explorer doesn't show a broken entry. Other users' bins need administrator rights.
 
 ## Report and JSON
 
-`--report` prints the categories, the largest items that are safe to clean, and the largest ones nobody has touched in three months. `--top N` sets how many items each list shows. The default is 10.
+`--report` prints the categories, the largest items that are safe to clean, the largest ones nobody has touched in three months, and the duplicates that waste the most space. `--top N` sets how many items each list shows. The default is 10.
 
 <Shot name="scan-report" alt="lla scan --report printing categories with sizes, then the largest items that are safe to clean." caption="`lla scan ~ --report --top 5`" />
 
@@ -120,9 +150,17 @@ The number of folders lla couldn't read is shown at the top, and their size ends
           "reason": "reinstalled by your package manager",
           "stale": false,
           "protected": false,
-          "loose_files": false
+          "loose_files": false,
+          "label": null
         }
       ]
+    }
+  ],
+  "duplicates": [
+    {
+      "bytes": 4200000000,
+      "wasted_bytes": 4200000000,
+      "paths": ["/Users/me/Movies/trip.mov", "/Users/me/Downloads/trip.mov"]
     }
   ]
 }

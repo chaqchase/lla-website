@@ -67,7 +67,10 @@ max_entries = 20000
 [listers.fuzzy]
 ignore_patterns = ["node_modules", "target", ".git", ".idea", ".vscode"]
 editor = "code --wait"
+remember_index = true
 ```
+
+`remember_index` saves the file list of folders that take a while to read, so the [fuzzy view](/docs/usage/navigation#large-folders) shows results right away next time.
 
 ## Exclude paths
 
